@@ -310,7 +310,7 @@ class HomeController extends ChangeNotifier
   void dispose() {
     _disposed = true; // §141 P1.9a — до super.dispose, гейтит async-колбэки
     _stopHeartbeat();
-    _autoPingTimer?.cancel();
+    _invalidateAutoPingLifecycle();
     _transientTimeoutTimer?.cancel();
     _statusSub?.cancel();
     _ccStatusSub?.cancel();
@@ -1629,6 +1629,9 @@ class HomeController extends ChangeNotifier
   /// Event-driven (не polling) — дёргается только на lifecycle resume,
   /// в steady-state ничего не крутится.
   void onAppResumed() {
+    // §307 — новый lifecycle: старые async-вызовы _scheduleAutoPing(),
+    // пережившие уход в фон, больше не имеют права создать Timer после resume.
+    _invalidateAutoPingLifecycle();
     unawaited(_resyncOnResume());
   }
 
