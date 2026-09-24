@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/home_controller.dart';
 import '../controllers/subscription_controller.dart';
@@ -121,6 +123,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   /// §107 single-flight: текущая пересборка конфига. Гейт на Start и
   /// повторные триггеры await'ят её вместо параллельного запуска второй.
   Future<void>? _rebuildInFlight;
+  static const _keepUiOnBackPrefsKey = 'keep_ui_on_back';
+  static const _backUiTimerPrefsKey = 'keep_ui_on_back_close_after_minutes';
+  static const _backUiMinimizePrefsKey = 'keep_ui_on_back_close_on_minimize';
+  bool _backHandling = false;
+  bool _backgroundTimerScheduled = false;
+
 
   /// §338 — авто-применение в полёте: воронка пересобирает при включённой
   /// галке. На это окно (rebuild + reload, ~1–3с) розовая плашка подавляется —
@@ -548,6 +556,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _lifecycle = state;
     if (state == AppLifecycleState.resumed) {
+      _backgroundTimerScheduled = false;
+      unawaited(_cancelBackUiCloseTimer());
       _controller.onAppResumed();
       _ruleSetAutoUpdater.onAppResumed(); // §366
       // §291 — досмотреть подписки на возврате из фона: periodic-таймер спит
@@ -564,6 +574,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // переходы (шторка, звонок, app-switcher preview), не настоящий фон.
       _pausedAt = DateTime.now(); // §216
       _controller.onAppPaused();
+      if (!_backgroundTimerScheduled) {
+        _backgroundTimerScheduled = true;
+        unawaited(_scheduleBackUiCloseTimerIfMinimized());
+      }
       // §366 — в фоне rule-set'ы не качаем: отменяем запланированную проверку.
       _ruleSetAutoUpdater.onAppPaused();
     }
@@ -753,9 +767,80 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (mounted) setState(() {});
   }
 
+  Future<void> _cancelBackUiCloseTimer() async {
+    try {
+      await const MethodChannel('com.leadaxe.lxbox/utils')
+          .invokeMethod<void>('cancelBackUiClose');
+    } catch (_) {}
+  }
+
+  Future<void> _scheduleBackUiCloseTimer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final minutes = prefs.getInt(_backUiTimerPrefsKey) ?? 0;
+    if (minutes <= 0) return;
+    final delayMs = minutes * 60 * 1000;
+    try {
+      await const MethodChannel('com.leadaxe.lxbox/utils').invokeMethod<void>(
+        'scheduleBackUiClose',
+        {'delayMs': delayMs},
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _scheduleBackUiCloseTimerIfMinimized() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    if (_lifecycle != AppLifecycleState.paused &&
+        _lifecycle != AppLifecycleState.hidden) {
+      return;
+    }
+    final enabled = prefs.getBool(_backUiMinimizePrefsKey) ?? false;
+    if (!enabled) return;
+    await _scheduleBackUiCloseTimer();
+  }
+
+  Future<void> _handleSystemBack() async {
+    if (_backHandling) return;
+    _backHandling = true;
+    try {
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop();
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final keepUi = prefs.getBool(_keepUiOnBackPrefsKey) ?? false;
+      if (!mounted) return;
+
+      if (!keepUi) {
+        await SystemNavigator.pop();
+        return;
+      }
+
+      try {
+        await _scheduleBackUiCloseTimer();
+        _backgroundTimerScheduled = true;
+        await const MethodChannel('com.leadaxe.lxbox/utils')
+            .invokeMethod<bool>('moveTaskToBack');
+      } on PlatformException {
+        await SystemNavigator.pop();
+      } catch (_) {
+        await SystemNavigator.pop();
+      }
+    } finally {
+      _backHandling = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_handleSystemBack());
+      },
+      child: AnimatedBuilder(
       animation: Listenable.merge([_controller, _subController]),
       builder: (context, _) {
         // Debug API `POST /action/preview-empty-state?on=true` имитирует
@@ -873,6 +958,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           ),
         );
       },
+      ),
     );
   }
 
