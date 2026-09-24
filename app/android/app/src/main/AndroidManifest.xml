@@ -157,6 +157,9 @@
              гонка interfaceRemoved/unbind vs binder-death в AMS). Explicit
              PendingIntent от AlarmManager — non-exported легален. -->
         <receiver
+            android:name=".ModBoxBackUiTimerReceiver"
+            android:exported="false" />
+        <receiver
             android:name=".vpn.VpnWatchdogReceiver"
             android:exported="false" />
 
