@@ -338,7 +338,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                               .onSurfaceVariant,
                         ),
                         const SizedBox(width: 8),
-                        const Expanded(child: Text(getLocalText.s("How the timer works"))),
+                        Expanded(child: Text(getLocalText.s("How the timer works"))),
                       ],
                     ),
                     content: Text(
@@ -376,7 +376,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool(_minimizeTimerPrefsKey, enabled);
                 },
-                title: const Text(getLocalText.s("Timer on minimize")),
+                title: Text(getLocalText.s("Timer on minimize")),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               const SizedBox(height: 8),
