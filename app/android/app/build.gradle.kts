@@ -71,43 +71,24 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // ABI filter (build-size optimization). Flutter `--target-platform`
-        // влияет только на свой engine + Dart AOT; нативные .so из Maven
-        // (libbox 1.13 — 55-66 MB per ABI) gradle подтягивает для всех
-        // ABI, и APK раздувается до ~76MB.
-        //
-        // Сужаем через переменную окружения `LXBOX_ABI_FILTER` (выставляется
-        // в scripts/build-local-apk.sh). `-P` props из flutter build не
-        // пробрасываются стабильно, env-var универсально срабатывает.
-        // Если var не задан — поведение не меняется (CI-сборка по
-        // умолчанию остаётся универсальной, как раньше).
+        // Всегда собираем только arm64-v8a.
+        // Это ограничивает как локальные native-библиотеки, так и содержимое
+        // итогового APK. Flutter `--target-platform android-arm64` сам по себе
+        // не фильтрует .so из подключённых AAR, поэтому фильтрация задаётся
+        // непосредственно здесь.
+        ndk.abiFilters.clear()
+        ndk.abiFilters.add("arm64-v8a")
     }
 
-    // ABI filter (build-size optimization). Flutter gradle plugin по
-    // умолчанию выставляет `ndk.abiFilters` для всех 3 ABI
-    // (armeabi-v7a, arm64-v8a, x86_64) — даже если передан
-    // `--target-platform android-arm64` это влияет только на flutter engine
-    // и Dart AOT, native libs из Maven AAR (libbox 55-66 MB / ABI)
-    // подтягиваются под все 3.
-    //
-    // Очищаем `ndk.abiFilters` и задаём только нужный ABI через env-var
-    // `LXBOX_ABI_FILTER` (выставляется в scripts/build-local-apk.sh).
-    // Если var не задан — поведение не меняется (CI-сборка остаётся
-    // универсальной для всех 3 ABI).
-    val abiFilterEnv: String? = System.getenv("LXBOX_ABI_FILTER")
-    if (!abiFilterEnv.isNullOrBlank()) {
-        val keepAbis = abiFilterEnv.split(",").map { it.trim() }.toSet()
-        defaultConfig.ndk.abiFilters.clear()
-        defaultConfig.ndk.abiFilters.addAll(keepAbis)
-        // Дополнительно: исключаем JNI-libs других ABI из AAR (libbox).
-        // `ndk.abiFilters` контролирует только локально-собранные .so;
-        // AAR-вложенные .so отфильтровываются именно `packaging.jniLibs.excludes`.
-        val allAbis = setOf("armeabi-v7a", "arm64-v8a", "x86_64", "x86")
-        val excludeAbis = allAbis - keepAbis
-        packaging {
-            for (abi in excludeAbis) {
-                jniLibs.excludes += "lib/$abi/**"
+    // Исключаем native-библиотеки всех ABI, кроме arm64-v8a, в том числе
+    // .so, вложенные в AAR (например, libbox).
+    packaging {
+        val nonArm64Abis = setOf("armeabi-v7a", "x86", "x86_64")
+        jniLibs {
+            for (abi in nonArm64Abis) {
+                excludes += "lib/$abi/**"
             }
+            useLegacyPackaging = true
         }
     }
 
@@ -131,10 +112,6 @@ android {
                     signingConfigs.getByName("debug")
                 }
         }
-    }
-
-    packaging {
-        jniLibs { useLegacyPackaging = true }
     }
 }
 
