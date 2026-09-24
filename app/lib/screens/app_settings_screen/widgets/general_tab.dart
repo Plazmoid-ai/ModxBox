@@ -321,10 +321,10 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
           title: Row(
             children: [
               const Expanded(
-                child: Text('Закрытие интерфейса'),
+                child: Text(getLocalText.s("Close interface")),
               ),
               IconButton(
-                tooltip: 'Справка',
+                tooltip: getLocalText.s("Help"),
                 onPressed: () => showDialog<void>(
                   context: dialogContext,
                   builder: (helpContext) => AlertDialog(
@@ -338,19 +338,19 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                               .onSurfaceVariant,
                         ),
                         const SizedBox(width: 8),
-                        const Expanded(child: Text('Как работает таймер')),
+                        const Expanded(child: Text(getLocalText.s("How the timer works"))),
                       ],
                     ),
-                    content: const Text(
-                      '• Таймер отсчитывается после выхода из приложения кнопкой или жестом «Назад».\n'
-                      '• При включённой настройке «Таймер при сворачивании» отсчёт также начинается, когда приложение уходит в фон.\n'
-                      '• Если вернуться в приложение до окончания отсчёта, таймер отменяется.\n'
-                      '• По окончании таймера приложение закрывается полностью.',
+                    content: Text(
+                      getLocalText.s("• The timer starts after leaving the app with the Back button or gesture.\n• When ‘Timer on minimize’ is enabled, it also starts when the app goes to the background.\n• Returning to the app before the countdown ends cancels the timer.\n• When the timer expires, the app closes completely.")
+                      
+                      
+                      ,
                     ),
                     actions: [
                       FilledButton(
                         onPressed: () => Navigator.pop(helpContext),
-                        child: Text('Понятно'),
+                        child: Text(getLocalText.s("Got it")),
                       ),
                     ],
                   ),
@@ -379,7 +379,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool(_minimizeTimerPrefsKey, enabled);
                 },
-                title: const Text('Таймер при сворачивании'),
+                title: const Text(getLocalText.s("Timer on minimize")),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               const SizedBox(height: 8),
@@ -410,7 +410,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                         );
                       }
                     },
-                    decoration: const InputDecoration(labelText: 'Часы', hintText: '0', counterText: ''),
+                    decoration: InputDecoration(labelText: getLocalText.s("Hours"), hintText: '0', counterText: ''),
                   )),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 10),
@@ -441,7 +441,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                         );
                       }
                     },
-                    decoration: const InputDecoration(labelText: 'Минуты', hintText: '0', counterText: ''),
+                    decoration: InputDecoration(labelText: getLocalText.s("Minutes"), hintText: '0', counterText: ''),
                   )),
                 ],
               ),
@@ -458,7 +458,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
               children: [
                 FilledButton(
                   onPressed: () => Navigator.pop(dialogContext, 0),
-                  child: const Text('Без таймера'),
+                  child: Text(getLocalText.s("No timer")),
                 ),
                 const SizedBox(height: 8),
                 FilledButton(
@@ -466,20 +466,20 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                     final hours = int.tryParse(hoursController.text.trim());
                     final minutes = int.tryParse(minutesController.text.trim());
                     if (hours == null || hours < 0 || hours > 99) {
-                      setDialogState(() => error = 'Введите часы от 0 до 99.');
+                      setDialogState(() => error = getLocalText.s("Enter hours from 0 to 99."));
                       return;
                     }
                     if (minutes == null || minutes < 0 || minutes > 59) {
-                      setDialogState(() => error = 'Минуты должны быть от 0 до 59.');
+                      setDialogState(() => error = getLocalText.s("Minutes must be from 0 to 59."));
                       return;
                     }
                     if (hours == 0 && minutes == 0) {
-                      setDialogState(() => error = 'Укажите время больше 00:00.');
+                      setDialogState(() => error = getLocalText.s("Set a time greater than 00:00."));
                       return;
                     }
                     Navigator.pop(dialogContext, hours * 60 + minutes);
                   },
-                  child: const Text('Применить'),
+                  child: Text(getLocalText.s("Apply")),
                 ),
               ],
             ),
@@ -507,9 +507,9 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
   Widget build(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.exit_to_app),
-      title: const Text('Сохранять интерфейс при выходе'),
-      subtitle: const Text(
-        'Кнопка/жест «Назад» сворачивает приложение вместо закрытия интерфейса.',
+      title: Text(getLocalText.s("Keep interface on exit")),
+      subtitle: Text(
+        getLocalText.s("The Back button/gesture minimizes the app instead of closing its interface."),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -535,7 +535,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
             )
           else
             IconButton(
-              tooltip: 'Таймер',
+              tooltip: getLocalText.s("Timer"),
               onPressed: _loaded && _enabled ? _editTimer : null,
               icon: const Icon(Icons.schedule),
             ),
