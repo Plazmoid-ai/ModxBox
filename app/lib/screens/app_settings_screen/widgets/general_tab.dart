@@ -320,7 +320,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
           scrollable: false,
           title: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(getLocalText.s("Close interface")),
               ),
               IconButton(
@@ -342,10 +342,7 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                       ],
                     ),
                     content: Text(
-                      getLocalText.s("• The timer starts after leaving the app with the Back button or gesture.\n• When ‘Timer on minimize’ is enabled, it also starts when the app goes to the background.\n• Returning to the app before the countdown ends cancels the timer.\n• When the timer expires, the app closes completely.")
-                      
-                      
-                      ,
+                      getLocalText.s("• The timer starts after leaving the app with the Back button or gesture.\n• When ‘Timer on minimize’ is enabled, it also starts when the app goes to the background.\n• Returning to the app before the countdown ends cancels the timer.\n• When the timer expires, the app closes completely."),
                     ),
                     actions: [
                       FilledButton(
