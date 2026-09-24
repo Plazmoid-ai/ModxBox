@@ -27,6 +27,60 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterShellArgs
 import io.flutter.plugin.common.MethodChannel
 
+private object ModBoxBackUiTimer {
+    private const val REQUEST_CODE = 240924
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var pending: Runnable? = null
+
+    private fun pendingIntent(context: android.content.Context): android.app.PendingIntent {
+        val intent = android.content.Intent(context, ModBoxBackUiTimerReceiver::class.java)
+        return android.app.PendingIntent.getBroadcast(
+            context,
+            REQUEST_CODE,
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    fun schedule(activity: android.app.Activity, delayMs: Long) {
+        cancel(activity)
+        val delay = delayMs.coerceAtLeast(1000L)
+        val task = Runnable {
+            cancel(activity)
+            activity.finishAndRemoveTask()
+        }
+        pending = task
+        handler.postDelayed(task, delay)
+
+        val alarmManager = activity.getSystemService(android.content.Context.ALARM_SERVICE)
+            as android.app.AlarmManager
+        alarmManager.setAndAllowWhileIdle(
+            android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            android.os.SystemClock.elapsedRealtime() + delay,
+            pendingIntent(activity),
+        )
+    }
+
+    fun cancel(context: android.content.Context) {
+        pending?.let(handler::removeCallbacks)
+        pending = null
+        val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE)
+            as android.app.AlarmManager
+        alarmManager.cancel(pendingIntent(context))
+    }
+}
+
+/** AlarmManager fallback for the Back-UI timer. */
+class ModBoxBackUiTimerReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: android.content.Context, intent: android.content.Intent?) {
+        val activityManager = context.getSystemService(android.content.Context.ACTIVITY_SERVICE)
+            as android.app.ActivityManager
+        activityManager.appTasks.forEach { task ->
+            runCatching { task.finishAndRemoveTask() }
+        }
+    }
+}
+
 class MainActivity : FlutterActivity() {
 
     companion object {
@@ -240,6 +294,22 @@ class MainActivity : FlutterActivity() {
                         } else {
                             BoxApplication.wifiObserver.stop()
                         }
+                        result.success(null)
+                    }
+                    "moveTaskToBack" -> {
+                        result.success(moveTaskToBack(true))
+                    }
+                    "scheduleBackUiClose" -> {
+                        val delayMs = call.argument<Number>("delayMs")?.toLong() ?: 0L
+                        if (delayMs > 0L) {
+                            ModBoxBackUiTimer.schedule(this, delayMs)
+                        } else {
+                            ModBoxBackUiTimer.cancel(this)
+                        }
+                        result.success(null)
+                    }
+                    "cancelBackUiClose" -> {
+                        ModBoxBackUiTimer.cancel(this)
                         result.success(null)
                     }
                     else -> result.notImplemented()
