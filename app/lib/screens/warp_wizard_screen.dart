@@ -281,7 +281,11 @@ class _WarpWizardScreenState extends State<WarpWizardScreen> with SnackHelper {
     if (_picker?.scan == null || _busy) return;
 
     // §305 — параметры эксперимента (число нод + JSON-пул) на отдельном экране.
-    final exp = await Navigator.of(context).push<({int count, ScanPool pool})>(
+    final exp = await Navigator.of(context).push<({
+      int count,
+      ScanPool pool,
+      bool deleteOldWarpFolders,
+    })>(
       MaterialPageRoute(builder: (_) => const WarpExperimentScreen()),
     );
     if (exp == null || !mounted) return;
@@ -290,7 +294,10 @@ class _WarpWizardScreenState extends State<WarpWizardScreen> with SnackHelper {
     int? folderIdx;
     try {
       folderIdx = await widget.subController.generateWarp(
-          seedCount: exp.count, poolOverride: exp.pool);
+          seedCount: exp.count,
+          poolOverride: exp.pool,
+          deleteOldWarpFolders: exp.deleteOldWarpFolders,
+        );
     } catch (e) {
       if (mounted) {
         showSnack(getLocalText.s("Generation failed — no WARP account."));
