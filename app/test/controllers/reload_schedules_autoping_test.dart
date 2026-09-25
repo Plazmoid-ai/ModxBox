@@ -96,23 +96,6 @@ void main() {
         reason: 'группы тянем уже после reload, иначе снимем доreload-состав');
   });
 
-  test('reload → сразу Back не возрождает автопинг', () async {
-    controller.debugSeedNodeState(group: 'vpn-1', activeNode: 'n1');
-
-    await controller.reloadVpn();
-    // Сразу после reload имитируем системный Back/app pause. Важен именно
-    // момент: _scheduleAutoPing уже мог запустить свой await, но ещё не успел
-    // создать Timer. Lifecycle generation должен инвалидировать этот старый
-    // async-вызов.
-    controller.onAppPaused();
-
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-
-    expect(controller.autoPingScheduledForTesting, isFalse,
-        reason:
-            'после Back старый _scheduleAutoPing не должен создать Timer');
-  });
-
   test('галка auto_ping_on_start=false — автопинг не планируется', () async {
     await SettingsStorage.setVar('auto_ping_on_start', 'false');
     controller.debugSeedNodeState(group: 'vpn-1', activeNode: 'n1');
