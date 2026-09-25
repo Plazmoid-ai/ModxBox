@@ -441,7 +441,8 @@ mixin _PingMixin on ChangeNotifier {
   ///  2. folder-probe sweep'ы — длинные (100+ нод) прогоны по живому ядру,
   ///     ради которых §286 и заводился (флуд `ccUrlTestOutbound` после стопа).
   void haltBackgroundProbing() {
-    _invalidateAutoPingLifecycle();
+    _autoPingTimer?.cancel();
+    _autoPingTimer = null;
     ProbeLifecycle.I.haltAll();
   }
 
