@@ -217,34 +217,15 @@ mixin _PingMixin on ChangeNotifier {
   /// выбранного selector'а). Отменяется при disconnect.
   static const _autoPingDelay = Duration(seconds: 5);
 
-  // §307 — lifecycle generation для отложенного автопинга. Отмена Timer
-  // недостаточна: _scheduleAutoPing() проходит через await getVar(), поэтому
-  // после onAppPaused()/onAppResumed() старый вызов может вернуться и создать
-  // новый Timer. Любое изменение lifecycle/down-сессии увеличивает поколение;
-  // старый async-вызов после await уже не имеет права планировать автопинг.
-  int _autoPingGeneration = 0;
-
-  void _invalidateAutoPingLifecycle() {
-    _autoPingGeneration++;
-    _autoPingTimer?.cancel();
-    _autoPingTimer = null;
-  }
-
   Future<void> _scheduleAutoPing() async {
     _autoPingTimer?.cancel();
     _autoPingTimer = null;
-    final generation = _autoPingGeneration;
     final enabled =
         await SettingsStorage.getVar('auto_ping_on_start', 'true');
     if (enabled != 'true') return;
-    // §307 — lifecycle мог измениться, пока ждали storage.
-    if (generation != _autoPingGeneration) return;
-    // §141 P1.2c — read-after-await: туннель мог упасть, пока ждали getVar
-    // (disconnect-ветка _handleStatusEvent уже отменила старый таймер).
+    // §141 P1.2c — read-after-await: туннель мог упасть, пока ждали getVar.
     if (!_state.tunnelUp) return;
     _autoPingTimer = Timer(_autoPingDelay, () {
-      // §307 — Timer тоже принадлежит конкретному lifecycle-поколению.
-      if (generation != _autoPingGeneration) return;
       if (!_state.tunnelUp || _state.nodes.isEmpty) return;
       unawaited(runMassUrltest());
     });
@@ -446,7 +427,8 @@ mixin _PingMixin on ChangeNotifier {
   /// Сворачивание приложения сюда НЕ входит — см. [haltBackgroundProbing].
   void haltAllProbing() {
     cancelMassPing();
-    _invalidateAutoPingLifecycle();
+    _autoPingTimer?.cancel();
+    _autoPingTimer = null;
     ProbeLifecycle.I.haltAll();
   }
 
