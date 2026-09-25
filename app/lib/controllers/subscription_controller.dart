@@ -1653,15 +1653,6 @@ class SubscriptionController extends ChangeNotifier {
   List<String> _candidatesToUris(List<ScanCandidate> cs, ScanNodeBuilder b) =>
       [for (final c in cs) b.uriFor(c)].whereType<String>().toList();
 
-  /// Индекс папки «WARP GENERATOR» в [_entries] или null.
-  int? _scanFolderIndex() {
-    for (var i = 0; i < _entries.length; i++) {
-      final l = _entries[i].list;
-      if (l is FolderServers && l.name == kScanFolderName) return i;
-    }
-    return null;
-  }
-
   /// §284 — DNS-независимый ping-URL для папки «WARP GENERATOR»: HTTP через сам
   /// тестируемый узел на IP-литерал (без резолва). Кладётся в саму папку
   /// (FolderServers.pingUrl) — Test в папке идёт по нему.
