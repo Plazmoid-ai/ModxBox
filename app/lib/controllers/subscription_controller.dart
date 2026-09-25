@@ -1558,7 +1558,12 @@ class SubscriptionController extends ChangeNotifier {
   }
 
   /// §284 — имя папки-генератора WARP-узлов. Повторный GENERATE её пересоздаёт.
-  static const kScanFolderName = 'WARP GENERATOR';
+  static const kScanFolderName = 'WARP GEN';
+
+  static const kScanFolderSequenceDateVar =
+      'warp_generator_sequence_date';
+  static const kScanFolderSequenceNumberVar =
+      'warp_generator_sequence_number';
 
   /// §284 — заметка о последней генерации (напр. почему пропал MASQUE).
   /// Показывается снеком в визарде. null = без замечаний.
@@ -1577,6 +1582,7 @@ class SubscriptionController extends ChangeNotifier {
     WarpClient? client,
     // §305 — override пула из JSON-окна эксперимента. null → bundled asset.
     ScanPool? poolOverride,
+    bool deleteOldWarpFolders = false,
   }) async {
     lastScanNote = null;
     final pool = poolOverride ?? (await WarpEndpointPicker.load()).scan;
@@ -1613,6 +1619,11 @@ class SubscriptionController extends ChangeNotifier {
     final gen = CandidateGenerator(pool, rng: rng, allowV6: allowV6);
     final seedUris = _candidatesToUris(gen.seed(seedCount), builder);
     if (seedUris.isEmpty) return null;
+
+    if (deleteOldWarpFolders) {
+      await _deleteOldWarpFolders();
+    }
+
     return _recreateScanFolder(seedUris);
   }
 
@@ -1656,16 +1667,76 @@ class SubscriptionController extends ChangeNotifier {
   /// (FolderServers.pingUrl) — Test в папке идёт по нему.
   static const kScanProbeUrl = 'https://1.1.1.1/cdn-cgi/trace';
 
-  /// Пересоздаёт папку «WARP GENERATOR» с заданными узлами. Возвращает её индекс.
-  /// Папка несёт свой ping-URL (IP, без DNS) в собственном объекте — при
-  /// пересоздании/удалении опции уходят вместе с ней.
+  Future<void> _deleteOldWarpFolders() async {
+    final oldEntries = <SubscriptionEntry>[];
+
+    for (final entry in _entries) {
+      final list = entry.list;
+      if (list is FolderServers &&
+          list.name.startsWith('$kScanFolderName.')) {
+        oldEntries.add(entry);
+      }
+    }
+
+    if (oldEntries.isEmpty) return;
+
+    final before = _lists();
+    final goneIds = <String>{};
+
+    for (final entry in oldEntries) {
+      goneIds.add(entry.list.id);
+      _entries.remove(entry);
+    }
+
+    await _relink(before, goneContainers: goneIds);
+    await _persist();
+    notifyListeners();
+    AppLog.I.info('WARP Generator: removed old generated folders');
+  }
+
+  Future<String> _nextScanFolderName() async {
+    final now = DateTime.now();
+
+    final dateKey =
+        '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+
+    final savedDate =
+        await SettingsStorage.getVar(kScanFolderSequenceDateVar, '');
+
+    final savedNumber = int.tryParse(
+          await SettingsStorage.getVar(
+            kScanFolderSequenceNumberVar,
+            '0',
+          ),
+        ) ??
+        0;
+
+    final number = savedDate == dateKey ? savedNumber + 1 : 1;
+
+    await SettingsStorage.setVar(
+      kScanFolderSequenceDateVar,
+      dateKey,
+    );
+    await SettingsStorage.setVar(
+      kScanFolderSequenceNumberVar,
+      number.toString(),
+    );
+
+    final dd = now.day.toString().padLeft(2, '0');
+    final month = now.month.toString().padLeft(2, '0');
+
+    return '$kScanFolderName.$number $dd/$month';
+  }
+
   Future<int> _recreateScanFolder(List<String> uris) async {
-    final old = _scanFolderIndex();
-    if (old != null) _entries.removeAt(old);
+    final folderName = await _nextScanFolderName();
+
     _entries.add(SubscriptionEntry(
       list: FolderServers(
         id: newUuidV4(),
-        name: kScanFolderName,
+        name: folderName,
         enabled: true,
         tagPrefix: '',
         detourPolicy: DetourPolicy.defaults,
@@ -1675,6 +1746,7 @@ class SubscriptionController extends ChangeNotifier {
       ),
       nodeCount: uris.length,
     ));
+
     await _persist();
     notifyListeners();
     return _entries.length - 1;
