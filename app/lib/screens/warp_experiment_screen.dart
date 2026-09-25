@@ -24,6 +24,7 @@ class _WarpExperimentScreenState extends State<WarpExperimentScreen> {
   final _jsonCtl = TextEditingController();
   String? _error;
   bool _loading = true;
+  bool _deleteOldWarpFolders = false;
 
   @override
   void initState() {
@@ -72,7 +73,11 @@ class _WarpExperimentScreenState extends State<WarpExperimentScreen> {
       return;
     }
     final count = (int.tryParse(_countCtl.text.trim()) ?? 20).clamp(1, 200);
-    Navigator.of(context).pop((count: count, pool: pool));
+    Navigator.of(context).pop((
+      count: count,
+      pool: pool,
+      deleteOldWarpFolders: _deleteOldWarpFolders,
+    ));
   }
 
   @override
@@ -96,6 +101,24 @@ class _WarpExperimentScreenState extends State<WarpExperimentScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(16), // bottom-inset: handled — footer SafeArea ниже
                     children: [
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: CheckboxListTile(
+                          value: _deleteOldWarpFolders,
+                          onChanged: (value) {
+                            setState(() =>
+                                _deleteOldWarpFolders = value ?? false);
+                          },
+                          title: Text(getLocalText.s(
+                              "Delete old WARP GEN folders before creating")),
+                          subtitle: Text(getLocalText.s(
+                              "Removes previously generated WARP GEN folders only.")),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         getLocalText.s(
                             "Generates random WARP nodes (WireGuard/AWG/MASQUE h2/h3) into the «WARP GENERATOR» folder. Test them there and keep what works."),
