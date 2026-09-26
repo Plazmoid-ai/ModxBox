@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../controllers/subscription_controller.dart';
 import '../../../models/server_list.dart';
 import '../../../services/l10n/locale_controller.dart';
-import '../../../widgets/reorder_grab_strip.dart';
 import '../entry_warnings.dart';
 import 'subscription_entry_subtitle.dart';
 
@@ -63,13 +62,14 @@ class SubscriptionEntryTile extends StatelessWidget {
     final enabled = entry.enabled;
     final tile = ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: SizedBox(
-        width: 40,
+      minLeadingWidth: 0,
+      horizontalTitleGap: 4,
+      leading: Transform.scale(
+        scale: 0.85,
+        alignment: Alignment.centerLeft,
         child: Switch(
           value: enabled,
-          onChanged: (_) {
-            onToggle();
-                    },
+          onChanged: (_) => onToggle(),
         ),
       ),
       title: Row(
@@ -125,25 +125,53 @@ class SubscriptionEntryTile extends StatelessWidget {
         ],
       ),
       subtitle: buildSubscriptionEntrySubtitle(context, entry, subController),
-      trailing: _buildTrailing(context, entry),
-      onLongPress: () => onLongPress(context),
-      onTap: () => onTap(context),
-    );
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          ReorderGrabStrip(index: dragIndex),
-          Expanded(
-            child: Column(
-              children: [
-                tile,
-                const Divider(height: 1),
-              ],
+          if (_buildTrailing(context, entry) case final trailing?)
+            trailing,
+          SizedBox(
+            width: 30,
+            child: ReorderableDragStartListener(
+              index: dragIndex,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  const SizedBox.expand(),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      width: 18,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Icon(
+                        Icons.drag_indicator,
+                        size: 16,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
+      onLongPress: () => onLongPress(context),
+      onTap: () => onTap(context),
+    );
+    return Column(
+      children: [
+        tile,
+        const Divider(height: 1),
+      ],
     );
   }
 }
