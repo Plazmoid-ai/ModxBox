@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/node_spec.dart';
-import '../models/server_list.dart';
 import '../services/l10n/locale_controller.dart';
 import '../services/settings_storage.dart';
 import '../services/warp/warp_chain_probe.dart';
