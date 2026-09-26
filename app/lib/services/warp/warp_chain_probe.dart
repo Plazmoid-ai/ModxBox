@@ -22,10 +22,12 @@ class WarpChainProbe {
     BoxVpnClient? vpn,
     CcChannel? cc,
   })  : _runner = runner ?? ProbeRunner(cc: cc),
-        _vpn = vpn ?? BoxVpnClient();
+        _vpn = vpn ?? BoxVpnClient(),
+        _cc = cc ?? CcChannel.instance;
 
   final ProbeRunner _runner;
   final BoxVpnClient _vpn;
+  final CcChannel _cc;
 
   bool _cancelled = false;
 
@@ -77,7 +79,7 @@ class WarpChainProbe {
       chainNodes,
       url: url,
       timeoutMs: timeoutMs,
-      get: (tag) => CcChannel.instance.probeGetUrl(
+      get: (tag) => _cc.probeGetUrl(
         tag,
         link: url,
         timeoutMs: timeoutMs,
