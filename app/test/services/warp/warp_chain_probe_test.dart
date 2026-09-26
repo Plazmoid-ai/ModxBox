@@ -11,15 +11,24 @@ class _FakeRunner extends ProbeRunner {
   List<NodeSpec>? seenNodes;
 
   @override
-  Future<String> run(
+  Future<String> runGet(
     List<NodeSpec?> nodes, {
     required String url,
     required int timeoutMs,
-    required void Function(int index, ProbeResult result) onResult,
+    int maxBytes = 64 * 1024,
+    required Future<CcGetUrlResult> Function(String tag) get,
+    required void Function(int index, ProbeGetResult result) onResult,
   }) async {
     seenNodes = [for (final node in nodes) node!];
     for (var i = 0; i < nodes.length; i++) {
-      onResult(i, const ProbeResult(ProbeStatus.ok, delayMs: 123));
+      onResult(
+        i,
+        const ProbeGetResult(
+          ok: true,
+          content: '{"ip":"185.10.20.30","country":"DE","country_name":"Germany"}',
+          delayMs: 123,
+        ),
+      );
     }
     return '';
   }
@@ -84,6 +93,9 @@ void main() {
     );
     expect(firstPair.ok, isTrue);
     expect(firstPair.delayMs, 123);
+    expect(firstPair.ip, '185.10.20.30');
+    expect(firstPair.country, 'DE');
+    expect(firstPair.countryName, 'Germany');
 
     final chain = runner.seenNodes!.firstWhere(
       (n) => n.tag == 'WARP 2',
