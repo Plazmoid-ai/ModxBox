@@ -246,6 +246,25 @@ class ProbeRunner {
   }
 }
 
+/// Результат диагностического GET через probe-сессию.
+class ProbeGetResult {
+  const ProbeGetResult({
+    required this.ok,
+    this.content = '',
+    this.statusCode = 0,
+    this.delayMs = 0,
+    this.remoteAddr = '',
+    this.message = '',
+  });
+
+  final bool ok;
+  final String content;
+  final int statusCode;
+  final int delayMs;
+  final String remoteAddr;
+  final String message;
+}
+
 /// §236 — пороги цветовой шкалы (мс). Дефолты — из запроса NeoCat (4PDA).
 class ProbeThresholds {
   const ProbeThresholds({
