@@ -141,6 +141,79 @@ class ProbeRunner {
     }
   }
 
+  /// Выполняет GET-запрос через те же headless probe-сессии, что и обычный
+  /// Test servers. Нужен для диагностических тестов, где важен не только
+  /// факт доступности, но и тело ответа (например, exit-IP/GeoIP цепочки).
+  Future<String> runGet(
+    List<NodeSpec?> nodes, {
+    required String url,
+    required int timeoutMs,
+    int maxBytes = 64 * 1024,
+    required Future<CcGetUrlResult> Function(String tag) get,
+    required void Function(int index, ProbeGetResult result) onResult,
+  }) async {
+    _cancelled = false;
+    final canceller = ProbeLifecycle.I.register(cancel);
+    try {
+      final batches = buildProbeBatches(nodes);
+      final broken = batches.isEmpty
+          ? buildProbeConfig(nodes).brokenByIndex
+          : batches.first.brokenByIndex;
+      broken.forEach((i, why) {
+        onResult(
+          i,
+          ProbeGetResult(
+            ok: false,
+            message: why,
+          ),
+        );
+      });
+      if (batches.isEmpty) return '';
+
+      for (final cfg in batches) {
+        if (_cancelled) return '';
+        if (cfg.configJson == null) continue;
+        final err = await _cc.probeStart(cfg.configJson!);
+        if (err.isNotEmpty) {
+          if (_looksLikeVpnRunning(err)) return kProbeVpnRunning;
+          AppLog.I.warning('Probe session failed to start: $err');
+          return err;
+        }
+        try {
+          final queue = cfg.tagByIndex.entries.toList();
+          var next = 0;
+          Future<void> worker() async {
+            while (true) {
+              if (_cancelled || next >= queue.length) return;
+              final entry = queue[next++];
+              final r = await get(entry.value);
+              if (_cancelled) return;
+              onResult(
+                entry.key,
+                ProbeGetResult(
+                  ok: r.ok,
+                  content: r.content,
+                  statusCode: r.status,
+                  delayMs: r.elapsedMs,
+                  remoteAddr: r.remoteAddr,
+                  message: r.error,
+                ),
+              );
+            }
+          }
+          await Future.wait([
+            for (var w = 0; w < _concurrency; w++) worker(),
+          ]);
+        } finally {
+          await _cc.probeStop();
+        }
+      }
+      return '';
+    } finally {
+      ProbeLifecycle.I.deregister(canceller);
+    }
+  }
+
   static bool _looksLikeVpnRunning(String err) =>
       err.toLowerCase().contains('vpn is running');
 
