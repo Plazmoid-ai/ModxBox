@@ -181,6 +181,7 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
               children: [
                 Expanded(
                   child: Text(
+                    // l10n-exempt: diagnostic counter for the WARP chain test screen.
                     '${_selected.length} selected · $_pairCount directed pairs',
                   ),
                 ),
@@ -290,7 +291,9 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
           ),
           subtitle: Text(
             r.ok
+                // l10n-exempt: compact diagnostic result format for the WARP chain test screen.
                 ? '${r.ip} · ${r.countryName.isNotEmpty ? r.countryName : r.country} · ${r.delayMs} ms'
+                // l10n-exempt: fallback diagnostic status for the WARP chain test screen.
                 : (r.message.isNotEmpty ? r.message : 'Failed'),
             overflow: TextOverflow.ellipsis,
           ),
