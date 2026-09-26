@@ -12,7 +12,6 @@ import '../../../services/haptic_service.dart';
 import '../../../services/subscription/auto_updater.dart';
 import '../../../widgets/node_row.dart';
 import '../../../widgets/node_view_item.dart';
-import '../../../widgets/reorder_grab_strip.dart';
 import '../../direction_edit_screen.dart';
 import '../node_actions.dart';
 import '../node_filter_view_model.dart';
@@ -386,62 +385,20 @@ class HomeNodeList extends StatelessWidget {
                     homeController: controller,
                     openDependents: true)
                 : null,
+            // §071 — trailing drag-zone: визуальная ручка и вся невидимая
+            // область захвата находятся в правой части карточки. Сама зона
+            // тянется до края сепаратора; иконка действия лежит поверх неё.
+            reorderIndex: i,
+            showReorderHandle: isManual,
           ),
         );
         // §203 — GlobalKey на сам row (для Scrollable.ensureVisible); reorder-key
         // остаётся ValueKey('node-$tag') (его требует ReorderableListView).
         final keyedRow = KeyedSubtree(key: rowKeyFor(tag), child: row);
-        // Pinned ряды — без grab strip.
-        if (i < pinnedCount) {
-          return KeyedSubtree(key: ValueKey('node-$tag'), child: keyedRow);
-        }
-        // §098 — manual-режим: видимый grab-strip слева (как routing/DNS/subs),
-        // immediate-drag (dedicated handle не конфликтует со scroll-ареной).
-        if (isManual) {
-          return KeyedSubtree(
-            key: ValueKey('node-$tag'),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ReorderGrabStrip(index: i),
-                  Expanded(child: keyedRow),
-                ],
-              ),
-            ),
-          );
-        }
-        // Non-pinned, не-manual — overlay strip 5% от ширины слева (transparent).
-        // LayoutBuilder даёт actual row width → strip всегда proportional.
+        // Pinned ряды — без drag-зоны.
         return KeyedSubtree(
           key: ValueKey('node-$tag'),
-          child: LayoutBuilder(
-            builder: (ctx, c) => Stack(
-              children: [
-                keyedRow,
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: c.maxWidth * 0.08,
-                  // ReorderableDelayedDragStartListener (long-press → drag)
-                  // вместо ReorderableDragStartListener (immediate). С
-                  // immediate scroll-жест Scrollable выигрывает gesture
-                  // arena у нашего vertical drag и reorder не начинается.
-                  // Delayed обходит арбитраж: scroll работает immediately,
-                  // drag активируется после long-press hold.
-                  child: ReorderableDelayedDragStartListener(
-                    index: i,
-                    // Container(color:...) — иначе пустой SizedBox не
-                    // hit-testable (RenderConstrainedBox.hitTestSelf=false,
-                    // нет child'а → жест проваливается на NodeRow ниже,
-                    // InkWell его съедает).
-                    child: Container(color: Colors.transparent),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: keyedRow,
         );
       },
     );
