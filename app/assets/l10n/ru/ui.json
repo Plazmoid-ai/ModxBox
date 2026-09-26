@@ -1643,6 +1643,9 @@
   "Delete hop chain?": {
     "value": "Удалить цепочку?"
   },
+  "Delete old WARP GEN folders before creating": {
+    "value": "Удалять старые папки WARP GEN перед созданием"
+  },
   "Delete rule": {
     "value": "Удалить правило"
   },
@@ -3696,6 +3699,9 @@
   },
   "Remove position": {
     "value": "Убрать позицию"
+  },
+  "Removes previously generated WARP GEN folders only.": {
+    "value": "Удаляет только ранее сгенерированные папки WARP GEN."
   },
   "Rename": {
     "value": "Переименовать"
