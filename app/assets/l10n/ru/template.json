@@ -616,5 +616,11 @@
   },
   "Also route UDP 500/4500 directly. Some modems get the gateway address from the carrier network and never send a DNS query, so the domain rule alone misses them. Those ports carry nothing but IPsec key exchange.": {
     "value": "Направлять напрямую и UDP 500/4500. Часть модемов получает адрес шлюза от сети оператора и не делает DNS-запрос — доменное правило их не поймает. На этих портах нет ничего кроме обмена ключами IPsec."
+  },
+  "Delete old WARP GEN folders before creating": {
+    "value": "Delete old WARP GEN folders before creating"
+  },
+  "Removes previously generated WARP GEN folders only.": {
+    "value": "Removes previously generated WARP GEN folders only."
   }
 }
