@@ -527,7 +527,7 @@ class NodeRow extends StatelessWidget {
                               item.active
                                   ? Icons.check_circle
                                   : Icons.play_circle_outline,
-                              size: 19,
+                              size: 18.7,
                               color: item.active
                                   ? colorScheme.primary
                                   : colorScheme.onSurfaceVariant,
