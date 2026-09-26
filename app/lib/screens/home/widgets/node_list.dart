@@ -388,8 +388,8 @@ class HomeNodeList extends StatelessWidget {
             // §071 — trailing drag-zone: визуальная ручка и вся невидимая
             // область захвата находятся в правой части карточки. Сама зона
             // тянется до края сепаратора; иконка действия лежит поверх неё.
-            reorderIndex: i,
-            showReorderHandle: isManual,
+            reorderIndex: i < pinnedCount ? null : i,
+            showReorderHandle: isManual && i >= pinnedCount,
           ),
         );
         // §203 — GlobalKey на сам row (для Scrollable.ensureVisible); reorder-key
