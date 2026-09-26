@@ -616,5 +616,26 @@
   },
   "Also route UDP 500/4500 directly. Some modems get the gateway address from the carrier network and never send a DNS query, so the domain rule alone misses them. Those ports carry nothing but IPsec key exchange.": {
     "value": "Направлять напрямую и UDP 500/4500. Часть модемов получает адрес шлюза от сети оператора и не делает DNS-запрос — доменное правило их не поймает. На этих портах нет ничего кроме обмена ключами IPsec."
+  },
+  "No WARP nodes found in saved server lists.": {
+    "value": "No WARP nodes found in saved server lists."
+  },
+  "Select WARP nodes. Each pair is tested in both directions: A → B and B → A.": {
+    "value": "Select WARP nodes. Each pair is tested in both directions: A → B and B → A."
+  },
+  "Test URL is not configured.": {
+    "value": "Test URL is not configured."
+  },
+  "Test WARP chains": {
+    "value": "Test WARP chains"
+  },
+  "Test selected chains": {
+    "value": "Test selected chains"
+  },
+  "Testing…": {
+    "value": "Testing…"
+  },
+  "WARP chain test": {
+    "value": "WARP chain test"
   }
 }
