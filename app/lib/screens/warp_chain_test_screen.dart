@@ -20,7 +20,7 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
   final _selected = <String>{};
   final _results = <WarpChainProbeResult>[];
 
-  String _url = '';
+  String _url = 'https://api.ip2location.io/?format=json';
   int _timeoutMs = 5000;
   String? _loadError;
   String? _runError;
@@ -68,8 +68,11 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
         }
       }
 
-      final url = (opts['url'] as String?)?.trim() ?? '';
-      final timeout = (opts['timeout_ms'] as num?)?.toInt() ?? 5000;
+      final configuredUrl = (opts['url'] as String?)?.trim() ?? '';
+      final url = configuredUrl.isNotEmpty
+          ? configuredUrl
+          : 'https://api.ip2location.io/?format=json';
+      final timeout = (opts['timeout_ms'] as num?)?.toInt() ?? 10000;
 
       if (!mounted) return;
       setState(() {
@@ -304,7 +307,7 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
           subtitle: Text(
             r.ok
                 // l10n-exempt: compact diagnostic result format for the WARP chain test screen.
-                ? '${r.ip} · ${r.countryName.isNotEmpty ? r.countryName : r.country} · ${r.delayMs} ms'
+                ? '${r.ip} · ${r.country}${r.countryName.isNotEmpty ? ' (${r.countryName})' : ''} · ${r.delayMs} ms'
                 // l10n-exempt: fallback diagnostic status for the WARP chain test screen.
                 : (r.message.isNotEmpty ? r.message : 'Failed'),
             overflow: TextOverflow.ellipsis,
