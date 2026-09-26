@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import '../../models/node_spec.dart';
 import '../../models/tunnel_status.dart';
 import '../../vpn/box_vpn_client.dart';
+import '../../vpn/cc_channel.dart';
 import '../probe/probe_runner.dart';
 
 /// Самостоятельный тест направленных пар WARP.
@@ -17,7 +20,8 @@ class WarpChainProbe {
   WarpChainProbe({
     ProbeRunner? runner,
     BoxVpnClient? vpn,
-  })  : _runner = runner ?? ProbeRunner(),
+    CcChannel? cc,
+  })  : _runner = runner ?? ProbeRunner(cc: cc),
         _vpn = vpn ?? BoxVpnClient();
 
   final ProbeRunner _runner;
@@ -69,23 +73,39 @@ class WarpChainProbe {
       for (final pair in pairs) withChained(pair.second, pair.first),
     ];
 
-    final error = await _runner.run(
+    final error = await _runner.runGet(
       chainNodes,
       url: url,
       timeoutMs: timeoutMs,
+      get: (tag) => CcChannel.instance.probeGetUrl(
+        tag,
+        link: url,
+        timeoutMs: timeoutMs,
+        maxBytes: 64 * 1024,
+      ),
       onResult: (index, probe) {
         if (_cancelled) return;
         done++;
         final pair = pairs[index];
+        final info = _parseIpInfo(probe);
         onResult(
           done,
           pairs.length,
           WarpChainProbeResult(
             first: pair.first,
             second: pair.second,
-            status: probe.status,
+            status: probe.ok && info != null
+                ? ProbeStatus.ok
+                : ProbeStatus.failed,
             delayMs: probe.delayMs,
-            message: probe.message,
+            ip: info?.ip ?? '',
+            country: info?.country ?? '',
+            countryName: info?.countryName ?? '',
+            message: probe.message.isNotEmpty
+                ? probe.message
+                : info == null
+                    ? 'Invalid IP response'
+                    : '',
           ),
         );
       },
@@ -102,6 +122,9 @@ class WarpChainProbeResult {
     required this.second,
     required this.status,
     this.delayMs = 0,
+    this.ip = '',
+    this.country = '',
+    this.countryName = '',
     this.message = '',
   });
 
@@ -113,9 +136,28 @@ class WarpChainProbeResult {
 
   final ProbeStatus status;
   final int delayMs;
+  final String ip;
+  final String country;
+  final String countryName;
   final String message;
 
   bool get ok => status == ProbeStatus.ok;
+}
+
+({String ip, String country, String countryName})? _parseIpInfo(
+    ProbeGetResult probe) {
+  if (!probe.ok || probe.content.isEmpty) return null;
+  try {
+    final raw = jsonDecode(probe.content);
+    if (raw is! Map) return null;
+    final ip = raw['ip']?.toString().trim() ?? '';
+    final country = raw['country']?.toString().trim() ?? '';
+    final countryName = raw['country_name']?.toString().trim() ?? '';
+    if (ip.isEmpty) return null;
+    return (ip: ip, country: country, countryName: countryName);
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Число направленных пар без повторения одного и того же узла.
