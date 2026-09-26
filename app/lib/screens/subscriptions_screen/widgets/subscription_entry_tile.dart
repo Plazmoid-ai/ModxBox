@@ -60,6 +60,7 @@ class SubscriptionEntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = entry.enabled;
+    final trailingWidget = _buildTrailing(context, entry);
     final tile = ListTile(
       contentPadding: EdgeInsets.zero,
       minLeadingWidth: 0,
@@ -128,8 +129,7 @@ class SubscriptionEntryTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_buildTrailing(context, entry) case final trailing?)
-            trailing,
+          if (trailingWidget != null) trailingWidget,
           SizedBox(
             width: 30,
             child: ReorderableDragStartListener(
