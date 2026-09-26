@@ -5314,5 +5314,11 @@
   },
   "Timer": {
     "value": "Таймер"
+  },
+  "Delete old WARP GEN folders before creating": {
+    "value": "Delete old WARP GEN folders before creating"
+  },
+  "Removes previously generated WARP GEN folders only.": {
+    "value": "Removes previously generated WARP GEN folders only."
   }
 }
