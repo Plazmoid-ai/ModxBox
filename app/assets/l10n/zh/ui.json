@@ -1453,9 +1453,6 @@
   "Delete hop chain?": {
     "value": "删除跳转链路？"
   },
-  "Delete old WARP GEN folders before creating": {
-    "value": "创建前删除旧的 WARP GEN 文件夹"
-  },
   "Delete rule": {
     "value": "删除规则"
   },
@@ -3493,9 +3490,6 @@
   },
   "Remove position": {
     "value": "移除位置"
-  },
-  "Removes previously generated WARP GEN folders only.": {
-    "value": "仅删除之前生成的 WARP GEN 文件夹。"
   },
   "Rename": {
     "value": "重命名"
