@@ -153,7 +153,8 @@ class WarpChainProbeResult {
     final raw = jsonDecode(probe.content);
     if (raw is! Map) return null;
     final ip = raw['ip']?.toString().trim() ?? '';
-    final country = raw['country']?.toString().trim() ?? '';
+    final country = raw['country_code']?.toString().trim() ??
+        raw['country']?.toString().trim() ?? '';
     final countryName = raw['country_name']?.toString().trim() ?? '';
     if (ip.isEmpty) return null;
     return (ip: ip, country: country, countryName: countryName);
