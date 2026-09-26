@@ -20,6 +20,7 @@ import 'qr_scan_screen.dart';
 import 'subscription_detail_screen.dart';
 import 'subscription_detail_screen/widgets/node_warnings_sheet.dart';
 import 'warp_wizard_screen.dart';
+import 'warp_chain_test_screen.dart';
 import 'subscriptions_screen/clipboard_analysis.dart';
 import 'subscriptions_screen/entry_context_menu.dart';
 import 'subscriptions_screen/folder_picker.dart';
@@ -985,6 +986,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                       ],
                     ),
                   ),
+                _buildWarpChainsEntry(),
                 Expanded(
                   child: RefreshIndicator(
                     // Pull-to-refresh (night T3-2): стандартный Android UX-жест,
@@ -1002,6 +1004,35 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildWarpChainsEntry() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          leading: const Icon(Icons.account_tree_outlined),
+          title: Text(getLocalText.s("Test WARP chains")),
+          subtitle: Text(
+            getLocalText.s(
+              "Select WARP nodes. Each pair is tested in both directions: A → B and B → A.",
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const WarpChainTestScreen(),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
