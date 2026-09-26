@@ -66,7 +66,7 @@ class WarpChainProbe {
 
     var done = 0;
     final chainNodes = <NodeSpec>[
-      for (final pair in pairs) NodeSpec.withChained(pair.second, pair.first),
+      for (final pair in pairs) withChained(pair.second, pair.first),
     ];
 
     final error = await _runner.run(
