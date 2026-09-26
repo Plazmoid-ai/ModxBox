@@ -28,6 +28,8 @@ class NodeRow extends StatelessWidget {
     this.onSelectServer,
     this.onViewPool,
     this.onSickTap,
+    this.reorderIndex,
+    this.showReorderHandle = false,
   });
 
   final NodeViewItem item;
@@ -55,6 +57,12 @@ class NodeRow extends StatelessWidget {
   /// §355 — тап по ⚠-метке корня беды ([NodeViewItem.isSickRoot]) — caller
   /// открывает sheet со списком пострадавших. null при isSickRoot=false.
   final VoidCallback? onSickTap;
+
+  /// §071 — индекс строки в ReorderableListView. Когда задан, trailing-зона
+  /// карточки получает drag hitbox; визуальная ручка показывается только
+  /// в manual-сортировке.
+  final int? reorderIndex;
+  final bool showReorderHandle;
 
   /// Right-side delay label (или PING… / ERR), цвет по latency.
   ///
@@ -465,23 +473,91 @@ class NodeRow extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
-                tooltip: item.active
-                    ? getLocalText.s("Active")
-                    : getLocalText.s("Use node"),
-                onPressed: canActivate ? onActivate : null,
-                icon: Icon(
-                  item.active ? Icons.check_circle : Icons.play_circle_outline,
-                  size: 22,
-                  color: item.active
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
+              if (reorderIndex != null)
+                SizedBox(
+                  width: 70,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (showReorderHandle)
+                        ReorderableDragStartListener(
+                          index: reorderIndex!,
+                          child: const SizedBox.expand(),
+                        )
+                      else
+                        ReorderableDelayedDragStartListener(
+                          index: reorderIndex!,
+                          child: const SizedBox.expand(),
+                        ),
+                      if (showReorderHandle)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: 18,
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Icon(
+                              Icons.drag_indicator,
+                              size: 16,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        left: 20,
+                        top: 0,
+                        bottom: 0,
+                        child: SizedBox(
+                          width: 31,
+                          child: IconButton(
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 31,
+                              minHeight: 40,
+                            ),
+                            tooltip: item.active
+                                ? getLocalText.s("Active")
+                                : getLocalText.s("Use node"),
+                            onPressed: canActivate ? onActivate : null,
+                            icon: Icon(
+                              item.active
+                                  ? Icons.check_circle
+                                  : Icons.play_circle_outline,
+                              size: 19,
+                              color: item.active
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 40),
+                  tooltip: item.active
+                      ? getLocalText.s("Active")
+                      : getLocalText.s("Use node"),
+                  onPressed: canActivate ? onActivate : null,
+                  icon: Icon(
+                    item.active
+                        ? Icons.check_circle
+                        : Icons.play_circle_outline,
+                    size: 22,
+                    color: item.active
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
             ],
           ),
         ),
