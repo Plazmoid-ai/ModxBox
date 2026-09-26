@@ -181,7 +181,7 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    '${_selected.length} selected · ${_pairCount} directed pairs',
+                    '${_selected.length} selected · $_pairCount directed pairs',
                   ),
                 ),
                 TextButton(
@@ -285,7 +285,7 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
                 : Theme.of(context).colorScheme.error,
           ),
           title: Text(
-            '${first} → ${second}',
+            '$first → $second',
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
@@ -311,7 +311,7 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
           if (_running) ...[
             LinearProgressIndicator(value: progress),
             const SizedBox(height: 6),
-            Text('${_done} / ${_total}', textAlign: TextAlign.center),
+            Text('$_done / $_total', textAlign: TextAlign.center),
             const SizedBox(height: 6),
           ],
           FilledButton.icon(
