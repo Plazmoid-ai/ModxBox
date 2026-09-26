@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lxbox/models/node_spec.dart';
 import 'package:lxbox/services/platform_channels.dart';
+import 'package:lxbox/vpn/cc_channel.dart';
 import 'package:lxbox/services/warp/warp_chain_probe.dart';
 import 'package:lxbox/services/probe/probe_runner.dart';
 
