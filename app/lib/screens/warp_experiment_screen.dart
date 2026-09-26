@@ -7,6 +7,7 @@ import '../services/l10n/locale_controller.dart';
 import '../services/warp/scan/scan_pool.dart';
 import '../services/warp/warp_endpoint_picker.dart';
 import '../services/usage_region.dart';
+import 'warp_chain_test_screen.dart';
 
 /// §305 — экран настройки WARP-эксперимента (генератор нод). Вынесен из попапа:
 /// JSON-пул большой, в диалоге тесно. Пользователь задаёт число нод и
@@ -145,21 +146,38 @@ class _WarpExperimentScreenState extends State<WarpExperimentScreen> {
                   ),
                 ),
                 SafeArea(
-                  minimum: const EdgeInsets.all(16),
-                  child: Row(
+                  minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(getLocalText.s("Cancel")),
-                        ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.alt_route),
+                        label: Text(getLocalText.s("Test WARP chains")),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const WarpChainTestScreen(),
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _create,
-                          child: Text(getLocalText.s("Create")),
-                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(getLocalText.s("Cancel")),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _create,
+                              child: Text(getLocalText.s("Create")),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
