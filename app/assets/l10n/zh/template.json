@@ -617,10 +617,4 @@
  "Also route UDP 500/4500 directly. Some modems get the gateway address from the carrier network and never send a DNS query, so the domain rule alone misses them. Those ports carry nothing but IPsec key exchange.": {
   "value": "同时把 UDP 500/4500 直连。部分基带从运营商网络获取网关地址，从不发 DNS 查询，仅靠域名规则会漏掉它们。这两个端口上除了 IPsec 密钥交换没有别的内容。"
  },
-  "Delete old WARP GEN folders before creating": {
-    "value": "Delete old WARP GEN folders before creating"
-  },
-  "Removes previously generated WARP GEN folders only.": {
-    "value": "Removes previously generated WARP GEN folders only."
-  }
 }
