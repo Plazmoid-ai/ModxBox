@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/node_spec.dart';
+import '../models/server_list.dart';
 import '../services/l10n/locale_controller.dart';
 import '../services/settings_storage.dart';
 import '../services/warp/warp_chain_probe.dart';
@@ -16,7 +17,7 @@ class WarpChainTestScreen extends StatefulWidget {
 
 class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
   final _probe = WarpChainProbe();
-  List<NodeSpec> _nodes = const [];
+  List<({NodeSpec node, String sourceId, String sourceName})> _nodes = const [];
   final _selected = <String>{};
   final _results = <WarpChainProbeResult>[];
 
@@ -45,16 +46,26 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
     try {
       final lists = await SettingsStorage.getServerLists();
       final opts = await SettingsStorage.getPingOptions();
-      final nodes = <NodeSpec>[];
+      final nodes = <({NodeSpec node, String sourceId, String sourceName})>[];
       final seen = <String>{};
 
       for (final list in lists) {
         for (final node in list.nodes) {
-          if (node is! WireguardSpec) continue;
-          final isWarp = node.peers.any((p) => p.reserved != null);
+          final isWarp = switch (node) {
+            WireguardSpec s =>
+              s.peers.any((p) => p.reserved != null) || s.awg != null,
+            MasqueSpec s => s.profile == 'cloudflare',
+            _ => false,
+          };
           if (!isWarp) continue;
-          final key = '${node.id}${node.tag}';
-          if (seen.add(key)) nodes.add(node);
+          final key = '${list.id}|${node.tag}';
+          if (seen.add(key)) {
+            nodes.add((
+              node: node,
+              sourceId: list.id,
+              sourceName: list.name,
+            ));
+          }
         }
       }
 
@@ -79,7 +90,8 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
 
   int get _pairCount => warpChainPairCount(_selected.length);
 
-  String _nodeKey(NodeSpec node) => '${node.id}${node.tag}';
+  String _nodeKey(({NodeSpec node, String sourceId, String sourceName}) item) =>
+      '${item.sourceId}|${item.node.tag}';
 
   void _toggleAll(bool value) {
     setState(() {
@@ -97,8 +109,8 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
     if (_running || _selected.length < 2) return;
 
     final nodes = [
-      for (final node in _nodes)
-        if (_selected.contains(_nodeKey(node))) node,
+      for (final item in _nodes)
+        if (_selected.contains(_nodeKey(item))) item.node,
     ];
 
     if (_url.isEmpty) {
@@ -239,8 +251,9 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
     return ListView.builder(
       itemCount: _nodes.length,
       itemBuilder: (context, index) {
-        final node = _nodes[index];
-        final selected = _selected.contains(_nodeKey(node));
+        final item = _nodes[index];
+        final node = item.node;
+        final selected = _selected.contains(_nodeKey(item));
         return CheckboxListTile(
           value: selected,
           onChanged: _running
@@ -248,9 +261,9 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
               : (value) {
                   setState(() {
                     if (value == true) {
-                      _selected.add(_nodeKey(node));
+                      _selected.add(_nodeKey(item));
                     } else {
-                      _selected.remove(_nodeKey(node));
+                      _selected.remove(_nodeKey(item));
                     }
                   });
                 },
@@ -259,7 +272,7 @@ class _WarpChainTestScreenState extends State<WarpChainTestScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
-            '${node.server}:${node.port} · ${node.protocol}',
+            '${item.sourceName} · ${node.server}:${node.port} · ${node.protocol}',
             overflow: TextOverflow.ellipsis,
           ),
           secondary: Text('${index + 1}'),
