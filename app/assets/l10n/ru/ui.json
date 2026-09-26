@@ -5314,5 +5314,26 @@
   },
   "Timer": {
     "value": "Таймер"
+  },
+  "No WARP nodes found in saved server lists.": {
+    "value": "No WARP nodes found in saved server lists."
+  },
+  "Select WARP nodes. Each pair is tested in both directions: A → B and B → A.": {
+    "value": "Select WARP nodes. Each pair is tested in both directions: A → B and B → A."
+  },
+  "Test URL is not configured.": {
+    "value": "Test URL is not configured."
+  },
+  "Test WARP chains": {
+    "value": "Test WARP chains"
+  },
+  "Test selected chains": {
+    "value": "Test selected chains"
+  },
+  "Testing…": {
+    "value": "Testing…"
+  },
+  "WARP chain test": {
+    "value": "WARP chain test"
   }
 }
