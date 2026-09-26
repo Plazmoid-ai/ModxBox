@@ -83,7 +83,7 @@ void main() {
       [first, second],
       url: 'https://probe.example/204',
       timeoutMs: 3000,
-      onResult: (_, __, result) => results.add(result),
+      onResult: (_, _, result) => results.add(result),
     );
 
     expect(error, isEmpty);
@@ -117,7 +117,7 @@ void main() {
       [_node('A'), _node('B')],
       url: 'https://probe.example/204',
       timeoutMs: 3000,
-      onResult: (_, __, result) => results.add(result),
+      onResult: (_, _, result) => results.add(result),
     );
 
     expect(error, kProbeVpnRunning);
