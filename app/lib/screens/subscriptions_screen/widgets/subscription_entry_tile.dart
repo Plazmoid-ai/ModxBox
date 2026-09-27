@@ -133,30 +133,47 @@ class SubscriptionEntryTile extends StatelessWidget {
         width: 58,
         child: ReorderableDragStartListener(
           index: dragIndex,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: FractionallySizedBox(
-                  widthFactor: 0.72,
-                  heightFactor: 0.70,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: _DragDots(),
+          child: Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.72,
+              heightFactor: 0.70,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Center(
+                        child: _DragDots(rows: 2),
+                      ),
                     ),
                   ),
-                ),
+                  SizedBox(
+                    height: 30,
+                    child: Center(
+                      child: trailingWidget,
+                    ),
+                  ),
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Center(
+                        child: _DragDots(rows: 2),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              if (trailingWidget != null)
-                Center(child: trailingWidget),
-            ],
+            ),
           ),
         ),
       ),
@@ -174,20 +191,22 @@ class SubscriptionEntryTile extends StatelessWidget {
 
 
 class _DragDots extends StatelessWidget {
-  const _DragDots();
+  const _DragDots({required this.rows});
+
+  final int rows;
 
   @override
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.onSurfaceVariant;
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        _row(color),
-        const SizedBox(height: 7),
-        _row(color),
-        const SizedBox(height: 7),
-        _row(color),
-      ],
+      children: List.generate(
+        rows,
+        (index) => Padding(
+          padding: EdgeInsets.only(bottom: index + 1 < rows ? 7 : 0),
+          child: _row(color),
+        ),
+      ),
     );
   }
 
