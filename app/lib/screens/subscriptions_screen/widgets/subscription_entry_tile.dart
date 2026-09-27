@@ -136,55 +136,16 @@ class SubscriptionEntryTile extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Positioned(
-                left: 10,
-                right: 10,
-                top: 4,
-                height: 26,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Center(
-                    child: CustomPaint(
-                      size: const Size(24, 14),
-                      painter: _DragChevronPainter(
-                        direction: AxisDirection.up,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
               Center(
-                child: trailingWidget,
-              ),
-              Positioned(
-                left: 10,
-                right: 10,
-                bottom: 4,
-                height: 26,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Center(
-                    child: CustomPaint(
-                      size: const Size(24, 14),
-                      painter: _DragChevronPainter(
-                        direction: AxisDirection.down,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+                child: CustomPaint(
+                  size: const Size(38, 42),
+                  painter: _DragBarsPainter(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    splitForIcon: trailingWidget != null,
                   ),
                 ),
               ),
+              if (trailingWidget != null) Center(child: trailingWidget),
             ],
           ),
         ),
@@ -202,41 +163,47 @@ class SubscriptionEntryTile extends StatelessWidget {
 }
 
 
-class _DragChevronPainter extends CustomPainter {
-  const _DragChevronPainter({
-    required this.direction,
+class _DragBarsPainter extends CustomPainter {
+  const _DragBarsPainter({
     required this.color,
+    required this.splitForIcon,
   });
 
-  final AxisDirection direction;
   final Color color;
+  final bool splitForIcon;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
 
-    final path = Path();
-    if (direction == AxisDirection.up) {
-      path
-        ..moveTo(size.width * 0.15, size.height * 0.72)
-        ..lineTo(size.width * 0.5, size.height * 0.28)
-        ..lineTo(size.width * 0.85, size.height * 0.72);
-    } else {
-      path
-        ..moveTo(size.width * 0.15, size.height * 0.28)
-        ..lineTo(size.width * 0.5, size.height * 0.72)
-        ..lineTo(size.width * 0.85, size.height * 0.28);
+    final x1 = size.width * 0.12;
+    final x2 = size.width * 0.88;
+
+    final ys = splitForIcon
+        ? <double>[
+            size.height * 0.18,
+            size.height * 0.30,
+            size.height * 0.70,
+            size.height * 0.82,
+          ]
+        : <double>[
+            size.height * 0.10,
+            size.height * 0.23,
+            size.height * 0.77,
+            size.height * 0.90,
+          ];
+
+    for (final y in ys) {
+      canvas.drawLine(Offset(x1, y), Offset(x2, y), paint);
     }
-    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _DragChevronPainter oldDelegate) {
-    return oldDelegate.direction != direction || oldDelegate.color != color;
+  bool shouldRepaint(covariant _DragBarsPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.splitForIcon != splitForIcon;
   }
 }
