@@ -156,14 +156,15 @@ class SubscriptionEntryTile extends StatelessWidget {
               ),
               Center(
                 child: SizedBox(
-                  width: 36,
+                  width: 42,
+                  height: 34,
                   child: ColoredBox(
                     color: Theme.of(context).colorScheme.surface,
-                    child: Center(
-                      child: trailingWidget,
-                    ),
                   ),
                 ),
+              ),
+              Center(
+                child: trailingWidget,
               ),
             ],
           ),
