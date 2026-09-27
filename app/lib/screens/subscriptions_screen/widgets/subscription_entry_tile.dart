@@ -136,35 +136,54 @@ class SubscriptionEntryTile extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Align(
-                alignment: Alignment.center,
-                child: FractionallySizedBox(
-                  widthFactor: 0.72,
-                  heightFactor: 0.70,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: _DragDots(),
-                    ),
+              Positioned(
+                left: 10,
+                right: 10,
+                top: 4,
+                height: 26,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(13),
                   ),
-                ),
-              ),
-              Center(
-                child: SizedBox(
-                  width: 42,
-                  height: 34,
-                  child: ColoredBox(
-                    color: Theme.of(context).colorScheme.surface,
+                  child: Center(
+                    child: CustomPaint(
+                      size: const Size(24, 14),
+                      painter: _DragChevronPainter(
+                        direction: AxisDirection.up,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ),
               ),
               Center(
                 child: trailingWidget,
+              ),
+              Positioned(
+                left: 10,
+                right: 10,
+                bottom: 4,
+                height: 26,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Center(
+                    child: CustomPaint(
+                      size: const Size(24, 14),
+                      painter: _DragChevronPainter(
+                        direction: AxisDirection.down,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -183,41 +202,41 @@ class SubscriptionEntryTile extends StatelessWidget {
 }
 
 
-class _DragDots extends StatelessWidget {
-  const _DragDots();
+class _DragChevronPainter extends CustomPainter {
+  const _DragChevronPainter({
+    required this.direction,
+    required this.color,
+  });
+
+  final AxisDirection direction;
+  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _row(color),
-        const SizedBox(height: 9),
-        _row(color),
-      ],
-    );
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final path = Path();
+    if (direction == AxisDirection.up) {
+      path
+        ..moveTo(size.width * 0.15, size.height * 0.72)
+        ..lineTo(size.width * 0.5, size.height * 0.28)
+        ..lineTo(size.width * 0.85, size.height * 0.72);
+    } else {
+      path
+        ..moveTo(size.width * 0.15, size.height * 0.28)
+        ..lineTo(size.width * 0.5, size.height * 0.72)
+        ..lineTo(size.width * 0.85, size.height * 0.28);
+    }
+    canvas.drawPath(path, paint);
   }
 
-  Widget _row(Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _dot(color),
-        const SizedBox(width: 9),
-        _dot(color),
-      ],
-    );
-  }
-
-  Widget _dot(Color color) {
-    return Container(
-      width: 4,
-      height: 4,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
-    );
+  @override
+  bool shouldRepaint(covariant _DragChevronPainter oldDelegate) {
+    return oldDelegate.direction != direction || oldDelegate.color != color;
   }
 }
