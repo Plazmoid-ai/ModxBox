@@ -138,7 +138,7 @@ class SubscriptionEntryTile extends StatelessWidget {
             children: [
               Center(
                 child: CustomPaint(
-                  size: const Size(38, 42),
+                  size: const Size(34, 48),
                   painter: _DragBarsPainter(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     splitForIcon: trailingWidget != null,
@@ -176,18 +176,18 @@ class _DragBarsPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 3
+      ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
 
-    final x1 = size.width * 0.12;
-    final x2 = size.width * 0.88;
+    final x1 = size.width * 0.20;
+    final x2 = size.width * 0.80;
 
     final ys = splitForIcon
         ? <double>[
-            size.height * 0.18,
-            size.height * 0.30,
-            size.height * 0.70,
-            size.height * 0.82,
+            size.height * 0.14,
+            size.height * 0.27,
+            size.height * 0.73,
+            size.height * 0.86,
           ]
         : <double>[
             size.height * 0.10,
