@@ -129,7 +129,7 @@ class SubscriptionEntryTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (trailingWidget != null) trailingWidget,
+          ?trailingWidget,
           SizedBox(
             width: 30,
             child: ReorderableDragStartListener(
