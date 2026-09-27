@@ -126,43 +126,39 @@ class SubscriptionEntryTile extends StatelessWidget {
         ],
       ),
       subtitle: buildSubscriptionEntrySubtitle(context, entry, subController),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ?trailingWidget,
-          SizedBox(
-            width: 30,
-            child: ReorderableDragStartListener(
-              index: dragIndex,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  const SizedBox.expand(),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      width: 18,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Icon(
-                        Icons.drag_indicator,
-                        size: 16,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant,
-                      ),
+      // The visible handle is centered on the right side, while the
+      // actual drag hit area is intentionally wider and fills the whole
+      // trailing region for easier touch interaction.
+      trailing: SizedBox(
+        width: 58,
+        child: ReorderableDragStartListener(
+          index: dragIndex,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Align(
+                alignment: Alignment.center,
+                child: FractionallySizedBox(
+                  widthFactor: 0.72,
+                  heightFactor: 0.70,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Center(
+                      child: _DragDots(),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+              if (trailingWidget != null)
+                Center(child: trailingWidget),
+            ],
           ),
-        ],
+        ),
       ),
       onLongPress: () => onLongPress(context),
       onTap: () => onTap(context),
@@ -172,6 +168,48 @@ class SubscriptionEntryTile extends StatelessWidget {
         tile,
         const Divider(height: 1),
       ],
+    );
+  }
+}
+
+
+class _DragDots extends StatelessWidget {
+  const _DragDots();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _row(color),
+        const SizedBox(height: 7),
+        _row(color),
+        const SizedBox(height: 7),
+        _row(color),
+      ],
+    );
+  }
+
+  Widget _row(Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _dot(color),
+        const SizedBox(width: 8),
+        _dot(color),
+      ],
+    );
+  }
+
+  Widget _dot(Color color) {
+    return Container(
+      width: 4,
+      height: 4,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
     );
   }
 }
