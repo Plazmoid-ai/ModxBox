@@ -65,18 +65,21 @@ class SubscriptionEntryTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       minLeadingWidth: 0,
       horizontalTitleGap: 4,
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 6),
-        child: SizedBox(
-          width: 32,
-          height: 56,
-          child: RotatedBox(
-            quarterTurns: 3,
-            child: Transform.scale(
-              scale: 0.68,
-              child: Switch(
-                value: enabled,
-                onChanged: (_) => onToggle(),
+      leading: Transform.translate(
+        offset: const Offset(-20, 0),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 6),
+          child: SizedBox(
+            width: 32,
+            height: 56,
+            child: RotatedBox(
+              quarterTurns: 3,
+              child: Transform.scale(
+                scale: 0.68,
+                child: Switch(
+                  value: enabled,
+                  onChanged: (_) => onToggle(),
+                ),
               ),
             ),
           ),
@@ -138,9 +141,11 @@ class SubscriptionEntryTile extends StatelessWidget {
       // The visible handle is centered on the right side, while the
       // actual drag hit area is intentionally wider and fills the whole
       // trailing region for easier touch interaction.
-      trailing: SizedBox(
-        width: 58,
-        child: ReorderableDragStartListener(
+      trailing: Transform.translate(
+        offset: const Offset(28, 0),
+        child: SizedBox(
+          width: 58,
+          child: ReorderableDragStartListener(
           index: dragIndex,
           child: Stack(
             fit: StackFit.expand,
@@ -149,7 +154,10 @@ class SubscriptionEntryTile extends StatelessWidget {
                 child: CustomPaint(
                   size: const Size(34, 54),
                   painter: _DragBarsPainter(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.72),
                     splitForIcon: trailingWidget != null,
                   ),
                 ),
@@ -185,7 +193,7 @@ class _DragBarsPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 2.2
+      ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round;
 
     final x1 = size.width * 0.20;
