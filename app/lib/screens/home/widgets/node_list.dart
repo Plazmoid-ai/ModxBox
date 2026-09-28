@@ -70,6 +70,8 @@ class HomeNodeList extends StatelessWidget {
     required this.rowKeyFor,
     required this.onSelectServer,
     required this.onViewPool,
+    this.compactTags = const <String>{},
+    this.onCompactChanged,
   });
 
   final HomeController controller;
@@ -92,6 +94,10 @@ class HomeNodeList extends StatelessWidget {
 
   /// §208 — открыть попап пула round_robin-Направления по его auto-тегу (View pool).
   final void Function(String autoTag) onViewPool;
+
+  /// Tags whose cards are shown in the compact one-line mode.
+  final Set<String> compactTags;
+  final void Function(String tag, bool compact)? onCompactChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -357,6 +363,10 @@ class HomeNodeList extends StatelessWidget {
               // ⚠-метка, тап по ней — sheet со списком пострадавших.
               isSickRoot: state.sickRoots.containsKey(tag),
             ),
+            compact: compactTags.contains(tag),
+            onCompactChanged: onCompactChanged == null
+                ? null
+                : (value) => onCompactChanged!(tag, value),
             onHighlight: () => controller.setHighlightedNode(tag),
             onActivate: () => unawaited(controller.switchNode(tag)),
             onPing: () => unawaited(controller.runNodeUrltest(tag)),
