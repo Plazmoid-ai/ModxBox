@@ -67,22 +67,24 @@ class SubscriptionEntryTile extends StatelessWidget {
 
   Widget _indicator(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => onCompactChanged?.call(false),
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: Center(
-          child: Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: entry.enabled ? cs.primary : cs.surface,
-              border: Border.all(
-                color: entry.enabled ? cs.primary : cs.outline,
-                width: 1.5,
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onCompactChanged?.call(false),
+          child: Center(
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: entry.enabled ? cs.primary : cs.surface,
+                border: Border.all(
+                  color: entry.enabled ? cs.primary : cs.outline,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -140,19 +142,22 @@ class SubscriptionEntryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = entry.enabled;
     if (compact) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ReorderGrabStrip(index: dragIndex),
-          Expanded(
-            child: Column(
-              children: [
-                _compactTile(context),
-                const Divider(height: 1),
-              ],
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ReorderGrabStrip(index: dragIndex),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _compactTile(context),
+                  const Divider(height: 1),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
