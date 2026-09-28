@@ -167,6 +167,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           ),
         ),
       ),
+      ),
       onLongPress: () => onLongPress(context),
       onTap: () => onTap(context),
     );
