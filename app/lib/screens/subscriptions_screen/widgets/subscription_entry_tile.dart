@@ -69,10 +69,7 @@ class SubscriptionEntryTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: compact ? () => onCompactChanged?.call(false) : null,
-      onLongPress: onCompactChanged == null
-          ? null
-          : () => onCompactChanged!.call(!compact),
+      onTap: () => onCompactChanged?.call(false),
       child: SizedBox(
         width: 48,
         height: 48,
@@ -161,7 +158,7 @@ class SubscriptionEntryTile extends StatelessWidget {
 
     final tile = ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: _indicator(context),
+      leading: Switch(value: enabled, onChanged: (_) => onToggle()),
       title: Row(
         children: [
           Flexible(
