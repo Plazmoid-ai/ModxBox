@@ -31,8 +31,8 @@ class SubscriptionEntryTile extends StatelessWidget {
   /// §504 — метка «New» у свежедобавленной записи (локальная подсветка экрана).
   final bool showNewBadge;
 
-  /// Дополнительный компактный вид записи. Управляется только индикатором
-  /// слева: long-press включает, single tap по нему раскрывает.
+  /// Дополнительный компактный вид записи. Удержание переключателя сворачивает;
+  /// обычное нажатие на индикатор в компактном виде раскрывает.
   final bool compact;
   final ValueChanged<bool>? onCompactChanged;
 
@@ -79,9 +79,9 @@ class SubscriptionEntryTile extends StatelessWidget {
             height: 14,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: compact ? cs.primary : cs.surface,
+              color: entry.enabled ? cs.primary : cs.surface,
               border: Border.all(
-                color: compact ? cs.primary : cs.outline,
+                color: entry.enabled ? cs.primary : cs.outline,
                 width: 1.5,
               ),
             ),
@@ -158,7 +158,11 @@ class SubscriptionEntryTile extends StatelessWidget {
 
     final tile = ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Switch(value: enabled, onChanged: (_) => onToggle()),
+      leading: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: () => onCompactChanged?.call(true),
+        child: Switch(value: enabled, onChanged: (_) => onToggle()),
+      ),
       title: Row(
         children: [
           Flexible(
