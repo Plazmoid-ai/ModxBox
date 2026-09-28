@@ -80,6 +80,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   /// (иначе ensureVisible получил бы свежий несмонтированный context).
   final Map<String, GlobalKey> _nodeRowKeys = {};
 
+  /// Temporary per-screen compact-card state for the Servers list.
+  /// It deliberately does not change server/config storage.
+  final Set<String> _compactNodeTags = <String>{};
+
   GlobalKey _nodeRowKey(String tag) =>
       _nodeRowKeys.putIfAbsent(tag, () => GlobalKey());
 
@@ -953,6 +957,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 rowKeyFor: _nodeRowKey, // §203
                 onSelectServer: _scrollToNode, // §203
                 onViewPool: _showPool, // §208
+                compactTags: _compactNodeTags,
+                onCompactChanged: (tag, compact) {
+                  setState(() {
+                    if (compact) {
+                      _compactNodeTags.add(tag);
+                    } else {
+                      _compactNodeTags.remove(tag);
+                    }
+                  });
+                },
               ),
             ],
           ),
