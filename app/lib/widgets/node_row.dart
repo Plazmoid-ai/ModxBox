@@ -28,6 +28,8 @@ class NodeRow extends StatelessWidget {
     this.onSelectServer,
     this.onViewPool,
     this.onSickTap,
+    this.compact = false,
+    this.onCompactChanged,
   });
 
   final NodeViewItem item;
@@ -55,6 +57,12 @@ class NodeRow extends StatelessWidget {
   /// §355 — тап по ⚠-метке корня беды ([NodeViewItem.isSickRoot]) — caller
   /// открывает sheet со списком пострадавших. null при isSickRoot=false.
   final VoidCallback? onSickTap;
+
+  /// Дополнительный компактный вид строки сервера.
+  /// Индикатор управляется только удержанием/тапом самого индикатора,
+  /// остальные жесты карточки остаются независимыми.
+  final bool compact;
+  final ValueChanged<bool>? onCompactChanged;
 
   /// Right-side delay label (или PING… / ERR), цвет по latency.
   ///
@@ -390,10 +398,98 @@ class NodeRow extends StatelessWidget {
     }
   }
 
+  Widget _buildCompactContent(BuildContext context, ColorScheme colorScheme) {
+    final special = _special;
+    final icons = <Widget>[
+      if (special != null)
+        Icon(special.icon, size: 19, color: colorScheme.onSurfaceVariant),
+      if (item.hasDetour)
+        Icon(Icons.alt_route, size: 18, color: colorScheme.onSurfaceVariant),
+    ];
+
+    return Material(
+      color: item.highlighted
+          ? colorScheme.primaryContainer.withAlpha(55)
+          : (_isSpecial ? colorScheme.secondaryContainer.withAlpha(40) : null),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(width: 12),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: compact ? () => onCompactChanged?.call(false) : null,
+            onLongPress: onCompactChanged == null
+                ? null
+                : () => onCompactChanged!.call(!compact),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Center(
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: compact
+                        ? colorScheme.primary
+                        : colorScheme.surface,
+                    border: Border.all(
+                      color: compact
+                          ? colorScheme.primary
+                          : colorScheme.outline,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onHighlight,
+              onLongPress: () => unawaited(_openLongPressMenu(context)),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  special?.label ?? item.tag,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight:
+                            item.active ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (icons.isNotEmpty) ...[
+            ...icons.map((icon) => Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: icon,
+                )),
+            const SizedBox(width: 8),
+          ] else
+            const SizedBox(width: 12),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final canActivate = item.tunnelUp && !item.busy && !item.active;
+
+    if (compact) {
+      return Opacity(
+        opacity: item.matches ? 1.0 : 0.4,
+        child: SizedBox(
+          height: 56,
+          child: _buildCompactContent(context, colorScheme),
+        ),
+      );
+    }
 
     final content = Material(
       color: item.highlighted
@@ -414,7 +510,31 @@ class NodeRow extends StatelessWidget {
                     ? colorScheme.primary
                     : Colors.transparent,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 4),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onLongPress: onCompactChanged == null
+                    ? null
+                    : () => onCompactChanged!.call(true),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Center(
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: colorScheme.surface,
+                        border: Border.all(
+                          color: colorScheme.outline,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
