@@ -65,12 +65,21 @@ class SubscriptionEntryTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       minLeadingWidth: 0,
       horizontalTitleGap: 4,
-      leading: Transform.scale(
-        scale: 0.85,
-        alignment: Alignment.centerLeft,
-        child: Switch(
-          value: enabled,
-          onChanged: (_) => onToggle(),
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 6),
+        child: SizedBox(
+          width: 32,
+          height: 56,
+          child: RotatedBox(
+            quarterTurns: 3,
+            child: Transform.scale(
+              scale: 0.68,
+              child: Switch(
+                value: enabled,
+                onChanged: (_) => onToggle(),
+              ),
+            ),
+          ),
         ),
       ),
       title: Row(
@@ -138,7 +147,7 @@ class SubscriptionEntryTile extends StatelessWidget {
             children: [
               Center(
                 child: CustomPaint(
-                  size: const Size(34, 48),
+                  size: const Size(34, 54),
                   painter: _DragBarsPainter(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     splitForIcon: trailingWidget != null,
@@ -184,10 +193,10 @@ class _DragBarsPainter extends CustomPainter {
 
     final ys = splitForIcon
         ? <double>[
-            size.height * 0.14,
-            size.height * 0.27,
-            size.height * 0.73,
-            size.height * 0.86,
+            size.height * 0.08,
+            size.height * 0.20,
+            size.height * 0.80,
+            size.height * 0.92,
           ]
         : <double>[
             size.height * 0.10,
