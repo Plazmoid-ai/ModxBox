@@ -86,6 +86,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   // пишется): focusEntryId (detour-cycle) или свежедобавленная запись.
   final _scrollController = ScrollController();
   final _tileKeys = <String, GlobalKey>{};
+
+  /// Компактность карточек только для текущего экрана «Серверы».
+  /// Не меняет enabled/config и не сохраняется в хранилище.
+  final Set<String> _compactEntryIds = <String>{};
+
   String? _highlightedEntryId;
   _HighlightMode _highlightMode = _HighlightMode.none;
   double _highlightOpacity = 0;
@@ -1187,6 +1192,16 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 entry: entry,
                 subController: widget.subController,
                 showNewBadge: showNewBadge,
+                compact: _compactEntryIds.contains(entry.id),
+                onCompactChanged: (compact) {
+                  setState(() {
+                    if (compact) {
+                      _compactEntryIds.add(entry.id);
+                    } else {
+                      _compactEntryIds.remove(entry.id);
+                    }
+                  });
+                },
                 onToggle: () {
                   _onUserInteractionDismissHighlight();
                   unawaited(widget.subController.toggleAt(at));
