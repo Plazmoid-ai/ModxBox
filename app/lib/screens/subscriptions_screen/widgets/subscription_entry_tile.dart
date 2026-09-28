@@ -66,7 +66,7 @@ class SubscriptionEntryTile extends StatelessWidget {
       minLeadingWidth: 0,
       horizontalTitleGap: 4,
       leading: Transform.translate(
-        offset: const Offset(-20, 0),
+        offset: const Offset(-16, 0),
         child: Padding(
           padding: const EdgeInsets.only(left: 6),
           child: SizedBox(
@@ -142,7 +142,7 @@ class SubscriptionEntryTile extends StatelessWidget {
       // actual drag hit area is intentionally wider and fills the whole
       // trailing region for easier touch interaction.
       trailing: Transform.translate(
-        offset: const Offset(28, 0),
+        offset: const Offset(14, 0),
         child: SizedBox(
           width: 58,
           child: ReorderableDragStartListener(
@@ -197,8 +197,8 @@ class _DragBarsPainter extends CustomPainter {
       ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round;
 
-    final x1 = size.width * 0.20;
-    final x2 = size.width * 0.80;
+    final x1 = size.width * 0.24;
+    final x2 = size.width * 0.76;
 
     final ys = splitForIcon
         ? <double>[
