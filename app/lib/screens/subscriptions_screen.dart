@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -87,9 +88,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   final _scrollController = ScrollController();
   final _tileKeys = <String, GlobalKey>{};
 
-  /// Компактность карточек только для текущего экрана «Серверы».
-  /// Не меняет enabled/config и не сохраняется в хранилище.
+  /// ID отдельных карточек, свёрнутых в разделе «Серверы».
   final Set<String> _compactEntryIds = <String>{};
+  static const _compactEntriesStorageKey = 'servers_compact_entry_ids';
 
   String? _highlightedEntryId;
   _HighlightMode _highlightMode = _HighlightMode.none;
@@ -126,6 +127,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(_loadCompactEntries());
     unawaited(_loadAutoUpdateFlag());
     unawaited(_loadCameraAvailability());
     unawaited(_loadSourceOrder());
@@ -285,6 +287,27 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       return _scrollToEntry(id, attempt: attempt + 1);
     }
   }
+
+  Future<void> _loadCompactEntries() async {
+    final raw = await SettingsStorage.getVar(_compactEntriesStorageKey, '[]');
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        final ids = decoded.whereType<String>().toSet();
+        if (!mounted) return;
+        setState(() => _compactEntryIds
+          ..clear()
+          ..addAll(ids));
+      }
+    } catch (_) {
+      // Повреждённое значение не должно мешать открытию раздела.
+    }
+  }
+
+  Future<void> _saveCompactEntries() => SettingsStorage.setVar(
+        _compactEntriesStorageKey,
+        jsonEncode(_compactEntryIds.toList()),
+      );
 
   Future<void> _loadAutoUpdateFlag() async {
     final v = await SettingsStorage.getAutoUpdateSubs();
@@ -1201,6 +1224,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                       _compactEntryIds.remove(entry.id);
                     }
                   });
+                  unawaited(_saveCompactEntries());
                 },
                 onToggle: () {
                   _onUserInteractionDismissHighlight();
