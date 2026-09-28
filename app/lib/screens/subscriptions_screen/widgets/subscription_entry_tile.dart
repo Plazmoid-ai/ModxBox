@@ -36,23 +36,25 @@ class SubscriptionEntryTile extends StatelessWidget {
   final void Function(BuildContext context) onTap;
 
   Widget? _buildTrailing(BuildContext context, SubscriptionEntry entry) {
-    // Предупреждения остаются в правой части карточки. Значок типа
-    // перенесён под переключатель и больше не занимает место справа.
+    // §499 — счётчик только у подписки/папки. У одиночного сервера значок
+    // живёт в [NodeWarningRow] подписи, иначе он задвоился бы в trailing.
     final summary =
         entry.list is UserServer ? null : entryWarningSummary(entry);
-    if (summary == null) return null;
-    return EntryWarningBadge(summary);
-  }
-
-  Widget _buildTypeIcon(BuildContext context) {
-    final color = Theme.of(context).colorScheme.onSurfaceVariant;
-    if (entry.list is FolderServers) {
-      return Icon(Icons.folder_outlined, size: 18, color: color);
-    }
-    if (entry.url.isEmpty && entry.connections.isNotEmpty) {
-      return Icon(Icons.dns, size: 18, color: color);
-    }
-    return const SizedBox(width: 18, height: 18);
+    final typeIcon = entry.list is FolderServers
+        ? Icon(Icons.folder_outlined,
+            size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant)
+        : entry.url.isEmpty && entry.connections.isNotEmpty
+            ? Icon(Icons.dns,
+                size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant)
+            : null;
+    if (summary == null && typeIcon == null) return null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ?summary == null ? null : EntryWarningBadge(summary),
+        ?typeIcon,
+      ],
+    );
   }
 
   @override
@@ -63,48 +65,24 @@ class SubscriptionEntryTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       minLeadingWidth: 0,
       horizontalTitleGap: 4,
-      leading: SizedBox(
-        width: 46,
-        height: 56,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: 28,
+      leading: Transform.translate(
+        offset: const Offset(-16, 0),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 6),
+          child: SizedBox(
+            width: 32,
+            height: 56,
+            child: RotatedBox(
+              quarterTurns: 3,
               child: Transform.scale(
-                scale: 0.78,
+                scale: 0.68,
                 child: Switch(
                   value: enabled,
                   onChanged: (_) => onToggle(),
                 ),
               ),
             ),
-            const SizedBox(height: 2),
-            SizedBox(
-              width: 46,
-              height: 20,
-              child: ReorderableDragStartListener(
-                index: dragIndex,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildTypeIcon(context),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: CustomPaint(
-                        painter: _DragBarsPainter(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withValues(alpha: 0.78),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
       title: Row(
@@ -117,9 +95,7 @@ class SubscriptionEntryTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: enabled
-                    ? null
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: enabled ? null : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -139,9 +115,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onPrimaryContainer,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
                     ),
                   ),
                 ),
@@ -153,9 +127,7 @@ class SubscriptionEntryTile extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => onLaunchUrl(entry.supportUrl),
                 child: Icon(
-                  entry.supportUrl.contains('t.me')
-                      ? Icons.telegram
-                      : Icons.open_in_new,
+                  entry.supportUrl.contains('t.me') ? Icons.telegram : Icons.open_in_new,
                   size: 16,
                   color: entry.supportUrl.contains('t.me')
                       ? const Color(0xFF2AABEE)
@@ -166,12 +138,39 @@ class SubscriptionEntryTile extends StatelessWidget {
         ],
       ),
       subtitle: buildSubscriptionEntrySubtitle(context, entry, subController),
-      // Warning badges deliberately remain in the trailing area.
-      trailing: trailingWidget,
+      // The visible handle is centered on the right side, while the
+      // actual drag hit area is intentionally wider and fills the whole
+      // trailing region for easier touch interaction.
+      trailing: Transform.translate(
+        offset: const Offset(14, 0),
+        child: SizedBox(
+          width: 58,
+          child: ReorderableDragStartListener(
+          index: dragIndex,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Center(
+                child: CustomPaint(
+                  size: const Size(34, 54),
+                  painter: _DragBarsPainter(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.72),
+                    splitForIcon: trailingWidget != null,
+                  ),
+                ),
+              ),
+              if (trailingWidget != null) Center(child: trailingWidget),
+            ],
+          ),
+        ),
+      ),
+      ),
       onLongPress: () => onLongPress(context),
       onTap: () => onTap(context),
     );
-
     return Column(
       children: [
         tile,
@@ -183,45 +182,46 @@ class SubscriptionEntryTile extends StatelessWidget {
 
 
 class _DragBarsPainter extends CustomPainter {
-  const _DragBarsPainter({required this.color});
+  const _DragBarsPainter({
+    required this.color,
+    required this.splitForIcon,
+  });
 
   final Color color;
+  final bool splitForIcon;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final barPaint = Paint()
+    final paint = Paint()
       ..color = color
-      ..strokeWidth = 3.4
+      ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round;
 
-    final dotPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    final x1 = size.width * 0.24;
+    final x2 = size.width * 0.76;
 
-    final xLeft = size.width * 0.12;
-    final xRight = size.width * 0.96;
-    final yTop = size.height * 0.30;
-    final yBottom = size.height * 0.70;
+    final ys = splitForIcon
+        ? <double>[
+            size.height * 0.08,
+            size.height * 0.20,
+            size.height * 0.80,
+            size.height * 0.92,
+          ]
+        : <double>[
+            size.height * 0.10,
+            size.height * 0.23,
+            size.height * 0.77,
+            size.height * 0.90,
+          ];
 
-    canvas.drawLine(
-      Offset(xLeft, yTop),
-      Offset(xRight, yTop),
-      barPaint,
-    );
-    canvas.drawLine(
-      Offset(xLeft, yBottom),
-      Offset(xRight, yBottom),
-      barPaint,
-    );
-
-    // Белые точки слева — постоянная часть визуального индикатора.
-    const dotRadius = 2.0;
-    canvas.drawCircle(Offset(xLeft, yTop), dotRadius, dotPaint);
-    canvas.drawCircle(Offset(xLeft, yBottom), dotRadius, dotPaint);
+    for (final y in ys) {
+      canvas.drawLine(Offset(x1, y), Offset(x2, y), paint);
+    }
   }
 
   @override
   bool shouldRepaint(covariant _DragBarsPainter oldDelegate) {
-    return oldDelegate.color != color;
+    return oldDelegate.color != color ||
+        oldDelegate.splitForIcon != splitForIcon;
   }
 }
