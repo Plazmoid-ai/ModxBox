@@ -66,6 +66,7 @@ class SubscriptionsScreen extends StatefulWidget {
 class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   final _inputController = TextEditingController();
   bool _autoUpdateEnabled = true;
+  bool _useAlternativeCardStyle = true;
 
   /// §393 D1 / §509 — источники-цепочки. Рисуются СТРОКАМИ ОБЩЕГО СПИСКА
   /// наравне с подписками. В хранении это записи `kind: chain` в `sources[]`,
@@ -847,6 +848,51 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     }
   }
 
+  Future<void> _showCardStyleSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: StatefulBuilder(
+          builder: (context, setSheetState) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Оформление карточек серверов',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                RadioListTile<bool>(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Оригинальное'),
+                  value: false,
+                  groupValue: _useAlternativeCardStyle,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _useAlternativeCardStyle = value);
+                    setSheetState(() {});
+                  },
+                ),
+                RadioListTile<bool>(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Альтернативное'),
+                  value: true,
+                  groupValue: _useAlternativeCardStyle,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _useAlternativeCardStyle = value);
+                    setSheetState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _updateAll() async {
     // Ручной force-refresh: сбрасываем session-cap (5 фейлов) и форсим через
     // AutoUpdater — так получаем `_running` guard от дубль-кликов и общий
@@ -925,6 +971,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     if (v == 'chain') unawaited(_addChain());
                     if (v == 'auto_update') unawaited(_toggleAutoUpdate());
                     if (v == 'sub_settings') _openSubscriptionSettings();
+                    if (v == 'card_style') unawaited(_showCardStyleSheet());
                   },
                   itemBuilder: (_) => [
                     // Раскладка утверждена оператором 24.08: четыре смысловые
@@ -953,6 +1000,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                       value: 'auto_update',
                       checked: _autoUpdateEnabled,
                       child: Text(getLocalText.s("Auto-update subscriptions")),
+                    ),
+                    PopupMenuItem(
+                      value: 'card_style',
+                      child: Text('Оформление карточек серверов…'),
                     ),
                     PopupMenuItem(
                       value: 'sub_settings',
