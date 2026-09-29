@@ -29,6 +29,8 @@ class ChainEntryTile extends StatelessWidget {
     required this.dragIndex,
     required this.onTap,
     required this.onToggle,
+    this.compact = false,
+    this.onCompactChanged,
   });
 
   final SourceChain chain;
@@ -38,17 +40,96 @@ class ChainEntryTile extends StatelessWidget {
   final int dragIndex;
   final VoidCallback onTap;
   final VoidCallback onToggle;
+  final bool compact;
+  final ValueChanged<bool>? onCompactChanged;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    if (compact) {
+      return SizedBox(
+        height: 37,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ReorderGrabStrip(index: dragIndex),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 36,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 36,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => onCompactChanged?.call(false),
+                              child: Center(
+                                child: Container(
+                                  width: 14,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: chain.enabled ? cs.primary : cs.surface,
+                                    border: Border.all(
+                                      color: chain.enabled ? cs.primary : cs.outline,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: onTap,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                chain.displayLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: chain.enabled ? null : cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8, right: 12),
+                          child: Icon(Icons.route, size: 20),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final tile = ListTile(
       contentPadding: EdgeInsets.zero,
       leading: SizedBox(
         width: 40,
-        child: Switch(
-          value: chain.enabled,
-          onChanged: (_) => onToggle(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onLongPress: () => onCompactChanged?.call(true),
+          child: Switch(
+            value: chain.enabled,
+            onChanged: (_) => onToggle(),
+          ),
         ),
       ),
       title: Text(
