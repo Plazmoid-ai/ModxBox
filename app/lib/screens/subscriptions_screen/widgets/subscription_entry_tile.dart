@@ -69,7 +69,7 @@ class SubscriptionEntryTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return SizedBox(
       width: 48,
-      height: 48,
+      height: 36,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -101,7 +101,7 @@ class SubscriptionEntryTile extends StatelessWidget {
             ? Icons.dns
             : null;
     return SizedBox(
-      height: 48,
+      height: 36,
       child: Row(
         children: [
           _indicator(context),
