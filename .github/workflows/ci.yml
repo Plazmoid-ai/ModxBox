@@ -426,70 +426,27 @@ jobs:
             echo "storeFile=upload-keystore.jks"
           } > android/key.properties
 
-      - name: Build APKs (one run per target)
-        # §379 — `--split-per-abi` УБРАН: он переписывает versionCode как
-        # `ABI × 1000 + code` (FlutterPlugin.kt:623), затирая нашу схему.
-        # Вместо одного прогона со сплитом — по прогону на таргет, каждый со
-        # своим `--build-number` (последняя цифра = ABI).
-        #
-        # ABI-цифры: 0=universal, 1=armeabi-v7a, 2=arm64-v8a, 4=x86_64.
-        #
-        # Таргеты:
-        #   - universal:    fat APK, все 3 ABI (~75 MB) — fallback для тех, кто
-        #                   не знает свою архитектуру.
-        #   - arm64-v8a:    95%+ современных Android-устройств.
-        #   - armeabi-v7a:  старые / Android Go бюджет (Itel A48, Tecno Pop 5).
-        #   - x86_64:       эмуляторы / Chromebook с Android-runtime.
-        #
-        # LXBOX_ABI_FILTER сужает native libs из AAR (libbox 55-66 MB на ABI):
-        # `--target-platform` влияет только на flutter engine + Dart AOT, .so из
-        # Maven gradle подтягивает под все ABI и APK раздувается.
-        #
-        # Каждый прогон пишет `app-release.apk` — сразу переименовываем, иначе
-        # следующий таргет перетрёт.
+      - name: Build APK (arm64-v8a only)
+        # One APK only; filter native libraries from AAR as well.
         shell: bash
         run: |
           set -euo pipefail
           OUT=build/app/outputs/flutter-apk
-          build_one() {
-            local VARIANT="$1" PLATFORM="$2" ABI_FILTER="$3"
-            local CODE
-            CODE=$(../scripts/version-code.sh "$CODE_VERSION" "$VARIANT")
-            echo "::group::Build $VARIANT (versionCode=$CODE)"
-            # §390 — БЕЗ `--dart-define=LXBOX_DISTRIBUTION`, намеренно.
-            # F-Droid собирает APK из этих же исходников и сверяет байты со
-            # своей сборкой (`binary:` в рецепте) — это даёт reproducible
-            # builds и подпись НАШИМ ключом вместо F-Droid'овского. Любой
-            # define попадает в скомпилированный Dart и ломает сверку.
-            # Поэтому канал у APK определяется рантаймом по установщику:
-            # GitHub-установка (файловый менеджер/браузер/adb) → github,
-            # установка из клиента F-Droid → fdroid. Обе ветки верны.
-            # Define остаётся только у AAB — Play раздаёт свой артефакт, с
-            # ним `binary:` не сверяется.
-            if [ -n "$ABI_FILTER" ]; then
-              LXBOX_ABI_FILTER="$ABI_FILTER" \
-                flutter build apk --release \
-                  --target-platform "$PLATFORM" \
-                  --build-name "$VERSION_NAME" --build-number "$CODE"
-            else
-              flutter build apk --release \
-                --build-name "$VERSION_NAME" --build-number "$CODE"
-            fi
-            mv "$OUT/app-release.apk" "$OUT/app-${VARIANT}-release.apk"
-            echo "::endgroup::"
-          }
-          build_one universal   "android-arm,android-arm64,android-x64" ""
-          build_one armeabi-v7a android-arm                             armeabi-v7a
-          build_one arm64-v8a   android-arm64                           arm64-v8a
-          build_one x86_64      android-x64                             x86_64
+          VARIANT=arm64-v8a
+          CODE=$(../scripts/version-code.sh "$CODE_VERSION" "$VARIANT")
+          echo "::group::Build $VARIANT (versionCode=$CODE)"
+          LXBOX_ABI_FILTER=arm64-v8a flutter build apk --release \
+            --target-platform android-arm64 \
+            --build-name "$VERSION_NAME" --build-number "$CODE"
+          mv "$OUT/app-release.apk" "$OUT/app-arm64-v8a-release.apk"
+          echo "::endgroup::"
           ls -la "$OUT"/app-*-release.apk
 
-      - name: Upload APKs (release)
-        # Все 4 таргета: universal + 3 per-ABI.
+      - name: Upload APK (arm64-v8a)
         uses: actions/upload-artifact@v7
         with:
-          name: android-apks-release
-          path: app/build/app/outputs/flutter-apk/app-*-release.apk
+          name: android-apk-arm64-v8a
+          path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: ${{ startsWith(github.ref, 'refs/tags/') && 1 || 30 }}
 
@@ -647,26 +604,19 @@ jobs:
           sparse-checkout: RELEASE_NOTES.md
           sparse-checkout-cone-mode: false
 
-      - name: Download APKs
+      - name: Download APK
         uses: actions/download-artifact@v7
         with:
-          name: android-apks-release
+          name: android-apk-arm64-v8a
           path: release-artifacts
 
-      - name: Prepare APKs
-        # Renames per-ABI / universal files to LxBox-vX.Y.Z-<variant>.apk
-        # для консистентности с прошлыми релизами (UpdateChecker парсит имя).
+      - name: Prepare APK
         run: |
           set -euo pipefail
           VERSION="${{ needs.meta.outputs.version }}"
-          for VARIANT in arm64-v8a armeabi-v7a x86_64 universal; do
-            SRC=$(find release-artifacts/ -name "app-${VARIANT}-release.apk" -type f | head -1)
-            if [ -z "$SRC" ]; then
-              echo "ERROR: APK for variant=$VARIANT not found!"
-              exit 1
-            fi
-            cp "$SRC" "LxBox-${VERSION}-${VARIANT}.apk"
-          done
+          SRC=$(find release-artifacts/ -name "app-arm64-v8a-release.apk" -type f | head -1)
+          test -n "$SRC" || { echo "ERROR: arm64-v8a APK not found"; exit 1; }
+          cp "$SRC" "LxBox-${VERSION}-arm64-v8a.apk"
           ls -la LxBox-*.apk
 
       - name: Create GitHub Release
@@ -680,9 +630,6 @@ jobs:
           prerelease: ${{ needs.meta.outputs.is_prerelease == 'true' }}
           files: |
             LxBox-${{ needs.meta.outputs.version }}-arm64-v8a.apk
-            LxBox-${{ needs.meta.outputs.version }}-armeabi-v7a.apk
-            LxBox-${{ needs.meta.outputs.version }}-x86_64.apk
-            LxBox-${{ needs.meta.outputs.version }}-universal.apk
           body_path: RELEASE_NOTES.md
 
   publish-manifest:
@@ -717,12 +664,9 @@ jobs:
             "name": "L×Box ${VERSION}",
             "published_at": "${NOW}",
             "html_url": "https://github.com/Leadaxe/LxBox/releases/tag/${TAG}",
-            "apk_url": "${BASE}/LxBox-${VERSION}-universal.apk",
+            "apk_url": "${BASE}/LxBox-${VERSION}-arm64-v8a.apk",
             "apk_urls": {
-              "arm64-v8a":   "${BASE}/LxBox-${VERSION}-arm64-v8a.apk",
-              "armeabi-v7a": "${BASE}/LxBox-${VERSION}-armeabi-v7a.apk",
-              "x86_64":      "${BASE}/LxBox-${VERSION}-x86_64.apk",
-              "universal":   "${BASE}/LxBox-${VERSION}-universal.apk"
+              "arm64-v8a": "${BASE}/LxBox-${VERSION}-arm64-v8a.apk"
             },
             "min_supported": "1.0.0",
             "_comment": "Updated automatically by CI on every release tag push (see .github/workflows/ci.yml). Used by UpdateChecker as a fallback when api.github.com is rate-limited. apk_url = universal fallback (works on any ABI). apk_urls.<abi> = per-architecture optimized variants."
