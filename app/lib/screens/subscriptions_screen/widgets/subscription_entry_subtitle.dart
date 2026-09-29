@@ -63,7 +63,7 @@ Widget? buildSubscriptionEntrySubtitle(
     statusText = entry.status!.render();
   } else {
     statusText =
-        entry.nodeCount > 0 ? getLocalText.plural("%d nodes", entry.nodeCount) : '';
+        entry.nodeCount > 0 ? '${entry.nodeCount}' : '';
   }
   if (statusText.isNotEmpty) {
     parts.add(Text(statusText, style: textStyle));
@@ -100,21 +100,16 @@ Widget? buildSubscriptionEntrySubtitle(
     final fails = entry.consecutiveFails;
     if (fails > 0) {
       final failColor = entry.enabled ? scheme.error : muted;
-      parts.add(Text(
-        getLocalText.plural("(%d fails)", fails),
-        style: TextStyle(fontSize: 12, color: failColor),
-      ));
+      parts.add(Icon(Icons.warning_amber_rounded, size: 12, color: failColor));
+      parts.add(Text('$fails', style: TextStyle(fontSize: 12, color: failColor)));
     }
 
     // §561 — счётчик записей тела, не ставших узлами; причины — в сводке
     // на экране подписки.
     final dropped = entry.dropped.length;
     if (dropped > 0) {
-      parts.add(Icon(Icons.error_outline, size: 12, color: muted));
-      parts.add(Text(
-        getLocalText.plural("%d dropped", dropped),
-        style: textStyle,
-      ));
+      parts.add(Icon(Icons.block, size: 12, color: muted));
+      parts.add(Text('$dropped', style: textStyle));
     }
   }
 
