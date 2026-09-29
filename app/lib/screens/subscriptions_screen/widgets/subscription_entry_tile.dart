@@ -21,6 +21,8 @@ class SubscriptionEntryTile extends StatelessWidget {
     required this.onLongPress,
     required this.onTap,
     this.showNewBadge = false,
+    this.compact = false,
+    this.onCompactChanged,
   });
 
   final SubscriptionEntry entry;
@@ -28,6 +30,11 @@ class SubscriptionEntryTile extends StatelessWidget {
 
   /// §504 — метка «New» у свежедобавленной записи (локальная подсветка экрана).
   final bool showNewBadge;
+
+  /// Дополнительный компактный вид записи. Удержание переключателя сворачивает;
+  /// обычное нажатие на индикатор в компактном виде раскрывает.
+  final bool compact;
+  final ValueChanged<bool>? onCompactChanged;
 
   /// Индекс в `ReorderableListView` для drag-старта (§098).
   final int dragIndex;
@@ -58,19 +65,109 @@ class SubscriptionEntryTile extends StatelessWidget {
     );
   }
 
+  Widget _indicator(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 48,
+      height: 36,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onCompactChanged?.call(false),
+          child: Center(
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: entry.enabled ? cs.primary : cs.surface,
+                border: Border.all(
+                  color: entry.enabled ? cs.primary : cs.outline,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _compactTile(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final typeIcon = entry.list is FolderServers
+        ? Icons.folder_outlined
+        : entry.url.isEmpty && entry.connections.isNotEmpty
+            ? Icons.dns
+            : null;
+    return SizedBox(
+      height: 36,
+      child: Row(
+        children: [
+          _indicator(context),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onTap(context),
+              onLongPress: () => onLongPress(context),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  entry.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: entry.enabled ? null : cs.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (typeIcon != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 8, right: 12),
+              child: Icon(typeIcon, size: 20, color: cs.onSurfaceVariant),
+            )
+          else
+            const SizedBox(width: 12),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final enabled = entry.enabled;
+    if (compact) {
+      return SizedBox(
+        height: 37,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ReorderGrabStrip(index: dragIndex),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: 36, child: _compactTile(context)),
+                  const Divider(height: 1),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final tile = ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: SizedBox(
-        width: 40,
-        child: Switch(
-          value: enabled,
-          onChanged: (_) {
-            onToggle();
-                    },
-        ),
+      leading: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: () => onCompactChanged?.call(true),
+        child: Switch(value: enabled, onChanged: (_) => onToggle()),
       ),
       title: Row(
         children: [
