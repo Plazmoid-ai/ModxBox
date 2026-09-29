@@ -1176,6 +1176,18 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             child: ChainEntryTile(
               dragIndex: i,
               chain: chain,
+              compact: _compactEntryIds.contains('chain:${chain.tag}'),
+              onCompactChanged: (compact) {
+                final key = 'chain:${chain.tag}';
+                setState(() {
+                  if (compact) {
+                    _compactEntryIds.add(key);
+                  } else {
+                    _compactEntryIds.remove(key);
+                  }
+                });
+                unawaited(_saveCompactEntries());
+              },
               onTap: () => unawaited(_editChain(chain)),
               onToggle: () => unawaited(_toggleChain(chain)),
             ),
