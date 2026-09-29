@@ -142,7 +142,9 @@ class SubscriptionEntryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = entry.enabled;
     if (compact) {
-      return IntrinsicHeight(
+      // Фиксированная высота не зависит от IntrinsicHeight соседних строк.
+      return SizedBox(
+        height: 37,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -151,7 +153,7 @@ class SubscriptionEntryTile extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _compactTile(context),
+                  SizedBox(height: 36, child: _compactTile(context)),
                   const Divider(height: 1),
                 ],
               ),
