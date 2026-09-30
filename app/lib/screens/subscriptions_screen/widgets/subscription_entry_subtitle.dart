@@ -100,7 +100,7 @@ Widget? buildSubscriptionEntrySubtitle(
     final fails = entry.consecutiveFails;
     if (fails > 0) {
       final failColor = entry.enabled ? scheme.error : muted;
-      parts.add(Icon(Icons.warning_amber_rounded, size: 12, color: failColor));
+      parts.add(Icon(Icons.priority_high, size: 12, color: failColor));
       parts.add(Text('$fails', style: TextStyle(fontSize: 12, color: failColor)));
     }
 
