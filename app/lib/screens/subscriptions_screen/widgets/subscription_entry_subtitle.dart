@@ -45,11 +45,18 @@ Widget? buildSubscriptionEntrySubtitle(
     final folder = entry.list as FolderServers;
     final total = folder.members.length;
     final off = folder.disabledCount;
-    statusText = total == 0
-        ? getLocalText.s("Empty folder")
-        : off > 0
-            ? getLocalText.plural("%1\$d servers · %2\$d off", total, off)
-            : getLocalText.plural("%d servers", total);
+    if (total > 0) {
+      parts.add(Icon(Icons.dns_outlined, size: 12, color: muted));
+      parts.add(Text('$total', style: textStyle));
+      // Отключённые элементы пока оставляем текстом: это отдельный статус.
+      if (off > 0) {
+        parts.add(Text(getLocalText.plural("· %d off", off), style: textStyle));
+      }
+    } else {
+      statusText = getLocalText.s("Empty folder");
+      parts.add(Text(statusText, style: textStyle));
+    }
+    statusText = '';
   } else if (isUser) {
     if (!hideUserProtocol) {
       final node = entry.list.nodes.isNotEmpty ? entry.list.nodes.first : null;
@@ -60,10 +67,14 @@ Widget? buildSubscriptionEntrySubtitle(
       statusText = '';
     }
   } else if (entry.status != null) {
+    // Статусы обновления пока сохраняем текстом: их смысл не сводится к счётчику.
     statusText = entry.status!.render();
   } else {
-    statusText =
-        entry.nodeCount > 0 ? '${entry.nodeCount}' : '';
+    statusText = '';
+    if (entry.nodeCount > 0) {
+      parts.add(Icon(Icons.dns_outlined, size: 12, color: muted));
+      parts.add(Text('${entry.nodeCount}', style: textStyle));
+    }
   }
   if (statusText.isNotEmpty) {
     parts.add(Text(statusText, style: textStyle));
