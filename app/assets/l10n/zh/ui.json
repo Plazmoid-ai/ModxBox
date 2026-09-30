@@ -18,12 +18,7 @@
   "%1$d selected · %2$d shown": {
     "value": "已选 %1$d · 显示 %2$d"
   },
-  "%1$d servers · %2$d off": {
-    "value": {
-      "other": "%1$d 个服务器 · %2$d 个已关闭"
-    }
-  },
-  "%1$d snapshots · %2$s. Tap to inspect, share to get the pprof profiles.": {
+    "%1$d snapshots · %2$s. Tap to inspect, share to get the pprof profiles.": {
     "value": {
       "other": "%1$d 个快照 · %2$s。点击查看，分享以获取 pprof 性能文件。"
     }
