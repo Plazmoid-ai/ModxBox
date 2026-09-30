@@ -56,7 +56,7 @@ Widget? buildSubscriptionEntrySubtitle(
     } else {
       statusText = getLocalText.s("Empty folder");
       parts.add(Text("·", style: textStyle));
-      parts.add(Text(getLocalText("%d off").s(off), style: textStyle));
+      parts.add(Text(getLocalText.s("%d off", off), style: textStyle));
     }
     statusText = '';
   } else if (isUser) {
