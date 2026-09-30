@@ -51,7 +51,7 @@ Widget? buildSubscriptionEntrySubtitle(
       // Отключённые элементы пока оставляем текстом: это отдельный статус.
       if (off > 0) {
         parts.add(Text("·", style: textStyle));
-        parts.add(Text(getLocalText.plural("%d off", off), style: textStyle));
+        parts.add(Text(getLocalText("%d off").s(off), style: textStyle));
       }
     } else {
       statusText = getLocalText.s("Empty folder");
