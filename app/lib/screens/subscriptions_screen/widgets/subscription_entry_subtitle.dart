@@ -50,7 +50,7 @@ Widget? buildSubscriptionEntrySubtitle(
       parts.add(Text('$total', style: textStyle));
       // Отключённые элементы пока оставляем текстом: это отдельный статус.
       if (off > 0) {
-        parts.add(Text(getLocalText.plural("· %d off", off), style: textStyle));
+        parts.add(Text("· $off off", style: textStyle));
       }
     } else {
       statusText = getLocalText.s("Empty folder");
