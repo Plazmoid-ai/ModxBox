@@ -45,19 +45,19 @@ Widget? buildSubscriptionEntrySubtitle(
     final folder = entry.list as FolderServers;
     final total = folder.members.length;
     final off = folder.disabledCount;
-    if (total > 0) {
-      parts.add(Icon(Icons.dns_outlined, size: 12, color: muted));
-      parts.add(Text('$total', style: textStyle));
-      // Отключённые элементы пока оставляем текстом: это отдельный статус.
-      if (off > 0) {
-        parts.add(Text("·", style: textStyle));
-        parts.add(Text(getLocalText("%d off").s(off), style: textStyle));
-      }
-    } else {
-      statusText = getLocalText.s("Empty folder");
-      parts.add(Text("·", style: textStyle));
-      parts.add(Text(getLocalText.s("%d off", off), style: textStyle));
-    }
+  if (total > 0) {
+    parts.add(Icon(Icons.dns_outlined, size: 12, color: muted));
+    parts.add(Text('$total', style: textStyle));
+  // Отключённые элементы пока оставляем текстом: это отдельный статус.
+  if (off > 0) {
+    parts.add(Text("·", style: textStyle));
+    parts.add(Text(getLocalText.s("%d off", off), style: textStyle));
+  }
+} else {
+  statusText = getLocalText.s("Empty folder");
+  parts.add(Text("·", style: textStyle));
+  parts.add(Text(getLocalText.s("%d off", off), style: textStyle));
+}
     statusText = '';
   } else if (isUser) {
     if (!hideUserProtocol) {
