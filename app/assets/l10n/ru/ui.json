@@ -24,15 +24,7 @@
   "%1$d selected · %2$d shown": {
     "value": "%1$d выбрано · %2$d показано"
   },
-  "%1$d servers · %2$d off": {
-    "value": {
-      "one": "%1$d сервер · %2$d выкл.",
-      "few": "%1$d сервера · %2$d выкл.",
-      "many": "%1$d серверов · %2$d выкл.",
-      "other": "%1$d сервера · %2$d выкл."
-    }
-  },
-  "%1$d snapshots · %2$s. Tap to inspect, share to get the pprof profiles.": {
+    "%1$d snapshots · %2$s. Tap to inspect, share to get the pprof profiles.": {
     "value": {
       "one": "%1$d снимок · %2$s. Нажмите для просмотра, «Поделиться» — чтобы получить профили pprof.",
       "few": "%1$d снимка · %2$s. Нажмите для просмотра, «Поделиться» — чтобы получить профили pprof.",
