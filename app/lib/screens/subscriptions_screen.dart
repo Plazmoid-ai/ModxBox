@@ -1141,7 +1141,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     return ListView.builder(
       // AlwaysScrollable — pull-to-refresh на коротких списках. Divider остаётся
       // внутри строки списка.
-      scrollController: _scrollController,
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       // Bottom safe-area: последняя подписка не должна прятаться за системной
       // навигацией Android (жесты/кнопки). Паттерн проекта — padding.bottom + 24.
