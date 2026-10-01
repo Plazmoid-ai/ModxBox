@@ -5308,5 +5308,44 @@
   },
   "Comments were removed.": {
     "value": "注释已移除。"
+  },
+  "Close interface": {
+    "value": "关闭界面"
+  },
+  "Enter hours from 0 to 99.": {
+    "value": "请输入 0 到 99 之间的小时数。"
+  },
+  "Hours": {
+    "value": "小时"
+  },
+  "How the timer works": {
+    "value": "计时器工作方式"
+  },
+  "Keep interface on exit": {
+    "value": "退出时保留界面"
+  },
+  "Minutes": {
+    "value": "分钟"
+  },
+  "Minutes must be from 0 to 59.": {
+    "value": "分钟必须在 0 到 59 之间。"
+  },
+  "No timer": {
+    "value": "不使用计时器"
+  },
+  "Set a time greater than 00:00.": {
+    "value": "请设置大于 00:00 的时间。"
+  },
+  "The Back button/gesture minimizes the app instead of closing its interface.": {
+    "value": "返回按钮/手势会最小化应用，而不是关闭其界面。"
+  },
+  "Timer": {
+    "value": "计时器"
+  },
+  "Timer on minimize": {
+    "value": "最小化时启动计时器"
+  },
+  "• The timer starts after leaving the app with the Back button or gesture.\n• When ‘Timer on minimize’ is enabled, it also starts when the app goes to the background.\n• Returning to the app before the countdown ends cancels the timer.\n• When the timer expires, the app closes completely.": {
+    "value": "• 使用返回按钮或手势离开应用后，计时器开始计时。\n• 启用“最小化时启动计时器”后，应用进入后台时也会开始计时。\n• 在倒计时结束前返回应用会取消计时器。\n• 计时结束后，应用将完全关闭。"
   }
 }
