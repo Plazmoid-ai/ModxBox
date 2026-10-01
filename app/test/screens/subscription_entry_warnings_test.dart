@@ -94,7 +94,6 @@ void main() {
         body: SubscriptionEntryTile(
           entry: entry,
           subController: subController,
-          dragIndex: 0,
           onToggle: () {},
           onLaunchUrl: (_) {},
           onLongPress: (_) {},
