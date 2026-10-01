@@ -5520,5 +5520,44 @@
   },
   "Comments were removed.": {
     "value": "Комментарии убраны."
+  },
+  "Close interface": {
+    "value": "Закрыть интерфейс"
+  },
+  "Enter hours from 0 to 99.": {
+    "value": "Введите часы от 0 до 99."
+  },
+  "Hours": {
+    "value": "Часы"
+  },
+  "How the timer works": {
+    "value": "Как работает таймер"
+  },
+  "Keep interface on exit": {
+    "value": "Сохранять интерфейс при выходе"
+  },
+  "Minutes": {
+    "value": "Минуты"
+  },
+  "Minutes must be from 0 to 59.": {
+    "value": "Минуты должны быть от 0 до 59."
+  },
+  "No timer": {
+    "value": "Без таймера"
+  },
+  "Set a time greater than 00:00.": {
+    "value": "Установите время больше 00:00."
+  },
+  "The Back button/gesture minimizes the app instead of closing its interface.": {
+    "value": "Кнопка или жест «Назад» сворачивает приложение вместо закрытия его интерфейса."
+  },
+  "Timer": {
+    "value": "Таймер"
+  },
+  "Timer on minimize": {
+    "value": "Таймер при сворачивании"
+  },
+  "• The timer starts after leaving the app with the Back button or gesture.\n• When ‘Timer on minimize’ is enabled, it also starts when the app goes to the background.\n• Returning to the app before the countdown ends cancels the timer.\n• When the timer expires, the app closes completely.": {
+    "value": "• Таймер запускается после выхода из приложения кнопкой или жестом «Назад».\n• Если включён параметр «Таймер при сворачивании», таймер также запускается при переходе приложения в фон.\n• Возврат в приложение до окончания обратного отсчёта отменяет таймер.\n• По истечении времени приложение полностью закрывается."
   }
 }
