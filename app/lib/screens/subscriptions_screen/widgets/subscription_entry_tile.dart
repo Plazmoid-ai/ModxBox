@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../controllers/subscription_controller.dart';
 import '../../../models/server_list.dart';
 import '../../../services/l10n/locale_controller.dart';
-import '../../../widgets/reorder_grab_strip.dart';
 import '../entry_warnings.dart';
 import 'subscription_entry_subtitle.dart';
 
@@ -15,7 +14,6 @@ class SubscriptionEntryTile extends StatelessWidget {
     super.key,
     required this.entry,
     required this.subController,
-    required this.dragIndex,
     required this.onToggle,
     required this.onLaunchUrl,
     required this.onLongPress,
@@ -36,8 +34,6 @@ class SubscriptionEntryTile extends StatelessWidget {
   final bool compact;
   final ValueChanged<bool>? onCompactChanged;
 
-  /// Индекс в `ReorderableListView` для drag-старта (§098).
-  final int dragIndex;
   final VoidCallback onToggle;
   final void Function(String url) onLaunchUrl;
   final void Function(BuildContext context) onLongPress;
@@ -144,19 +140,11 @@ class SubscriptionEntryTile extends StatelessWidget {
     if (compact) {
       return SizedBox(
         height: 37,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ReorderGrabStrip(index: dragIndex),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(height: 36, child: _compactTile(context)),
-                  const Divider(height: 1),
-                ],
-              ),
-            ),
+            SizedBox(height: 36, child: _compactTile(context)),
+            const Divider(height: 1),
           ],
         ),
       );
@@ -227,18 +215,10 @@ class SubscriptionEntryTile extends StatelessWidget {
       onTap: () => onTap(context),
     );
     return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Column(
         children: [
-          ReorderGrabStrip(index: dragIndex),
-          Expanded(
-            child: Column(
-              children: [
-                tile,
-                const Divider(height: 1),
-              ],
-            ),
-          ),
+          tile,
+          const Divider(height: 1),
         ],
       ),
     );
