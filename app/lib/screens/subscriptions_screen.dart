@@ -1138,24 +1138,17 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       );
     }
     final rows = _rows(ctrl);
-    return ReorderableListView.builder(
-      // §098 — drag-reorder источников (grab-strip слева, как routing rules).
-      // AlwaysScrollable — pull-to-refresh на коротких списках. Divider теперь
-      // внутри самой строки (у ReorderableListView нет separatorBuilder).
+    return ListView.builder(
+      // AlwaysScrollable — pull-to-refresh на коротких списках. Divider остаётся
+      // внутри строки списка.
       scrollController: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       // Bottom safe-area: последняя подписка не должна прятаться за системной
       // навигацией Android (жесты/кнопки). Паттерн проекта — padding.bottom + 24.
       padding: EdgeInsets.fromLTRB(
-          12, 0, 12,
+          0, 0, 12,
           MediaQuery.of(context).padding.bottom + 24 + _snackBarClearance),
-      buildDefaultDragHandles: false,
       itemCount: rows.length,
-      onReorderItem: (oldIndex, newIndex) {
-        _onUserInteractionDismissHighlight();
-        // onReorderItem уже нормализует newIndex под удалённый элемент.
-        unawaited(_reorderRows(ctrl, oldIndex, newIndex));
-      },
       itemBuilder: (context, i) {
         final row = rows[i];
         final chain = row.chain;
@@ -1163,7 +1156,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           return KeyedSubtree(
             key: ValueKey('chain:${chain.tag}'),
             child: ChainEntryTile(
-              dragIndex: i,
               chain: chain,
               compact: _compactEntryIds.contains('chain:${chain.tag}'),
               onCompactChanged: (compact) {
@@ -1212,8 +1204,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             child: Material(
               type: MaterialType.transparency,
               child: SubscriptionEntryTile(
-                dragIndex: i,
-                entry: entry,
+                  entry: entry,
                 subController: widget.subController,
                 showNewBadge: showNewBadge,
                 compact: _compactEntryIds.contains(entry.id),
