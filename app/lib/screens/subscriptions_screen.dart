@@ -93,6 +93,16 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   final _scrollController = ScrollController();
   final _tileKeys = <String, GlobalKey>{};
 
+  // Browser-like header collapse: count real user scroll distance, not the
+  // number of scroll notifications. A short swipe across one or two cards
+  // therefore does not hide the title and URL field.
+  static const double _headerScrollThreshold = 160;
+  bool _headerCollapsed = false;
+  bool _headerUserScroll = false;
+  bool _headerGestureStartedCollapsed = false;
+  double _headerScrollDistance = 0;
+  int _headerScrollDirection = 0;
+
   /// ID отдельных карточек, свёрнутых в разделе «Серверы».
   final Set<String> _compactEntryIds = <String>{};
   static const _compactEntriesStorageKey = 'servers_compact_entry_ids';
@@ -159,6 +169,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   void _onScrollForHighlightDismiss() {
+    if (_scrollController.hasClients &&
+        _headerCollapsed &&
+        _scrollController.offset <=
+            _scrollController.position.minScrollExtent + 0.5) {
+      _setHeaderCollapsed(false);
+    }
     if (_programmaticScroll) return;
     if (_highlightMode != _HighlightMode.newEntry) return;
     if (!_scrollController.hasClients) return;
@@ -168,6 +184,69 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     if ((_scrollController.offset - baseline).abs() > screenH) {
       _dismissHighlight(animated: true);
     }
+  }
+
+  void _setHeaderCollapsed(bool collapsed) {
+    if (!mounted || _headerCollapsed == collapsed) return;
+    setState(() => _headerCollapsed = collapsed);
+  }
+
+  bool _handleHeaderScrollNotification(ScrollNotification notification) {
+    // The screen has one vertical list. Ignore notifications from any nested
+    // scrollable that a row might add in the future.
+    if (notification.depth != 0) return false;
+
+    if (notification is ScrollStartNotification) {
+      _headerUserScroll = notification.dragDetails != null;
+      _headerGestureStartedCollapsed = _headerCollapsed;
+      _headerScrollDistance = 0;
+      _headerScrollDirection = 0;
+      return false;
+    }
+
+    if (notification is ScrollUpdateNotification &&
+        _headerUserScroll &&
+        !_programmaticScroll) {
+      final delta = notification.scrollDelta ?? 0;
+      if (delta.abs() >= 0.1) {
+        // Positive pixels = moving down the list (finger swipes up).
+        final direction = delta > 0 ? 1 : -1;
+        if (_headerScrollDirection != direction) {
+          _headerScrollDirection = direction;
+          _headerScrollDistance = 0;
+        }
+        _headerScrollDistance += delta.abs();
+        if (_headerScrollDistance >= _headerScrollThreshold) {
+          if (direction > 0 && !_headerCollapsed) {
+            _setHeaderCollapsed(true);
+          } else if (direction < 0 && _headerCollapsed) {
+            _setHeaderCollapsed(false);
+          }
+          _headerScrollDistance = 0;
+        }
+      }
+    } else if (notification is OverscrollNotification &&
+        _headerUserScroll &&
+        !_programmaticScroll &&
+        notification.overscroll < 0 &&
+        _headerCollapsed) {
+      // At the very top the list cannot produce a negative scroll offset.
+      // Count the pull gesture here so the header can still be restored.
+      _headerScrollDirection = -1;
+      _headerScrollDistance += notification.overscroll.abs();
+      if (_headerScrollDistance >= _headerScrollThreshold) {
+        _setHeaderCollapsed(false);
+        _headerScrollDistance = 0;
+      }
+    }
+
+    if (notification is ScrollEndNotification) {
+      _headerUserScroll = false;
+      _headerGestureStartedCollapsed = false;
+      _headerScrollDistance = 0;
+      _headerScrollDirection = 0;
+    }
+    return false;
   }
 
   void _onUserInteractionDismissHighlight() {
@@ -917,8 +996,26 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             }
           },
           child: Scaffold(
-            appBar: AppBar(
-              title: Column(
+            body: SafeArea(
+              top: true,
+              child: Column(
+                children: [
+                  ClipRect(
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.topCenter,
+                      child: _headerCollapsed
+                          ? const SizedBox.shrink()
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: kToolbarHeight,
+                                  child: AppBar(
+                                    primary: false,
+                                    toolbarHeight: kToolbarHeight,
+                                    title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(getLocalText.s("Servers")),
@@ -984,11 +1081,14 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     ),
                   ],
                 ),
-              ],
-            ),
-            body: Column(
-              children: [
-                _buildInputBar(ctrl),
+                                    ],
+                                  ),
+                                ),
+                                _buildInputBar(ctrl),
+                              ],
+                            ),
+                    ),
+                  ),
                 if (ctrl.lastError != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1010,15 +1110,22 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     ),
                   ),
                 Expanded(
-                  child: RefreshIndicator(
-                    // Pull-to-refresh (night T3-2): стандартный Android UX-жест,
-                    // альтернативный кнопке refresh в AppBar. Эквивалент
-                    // `_updateAll()`; noop если уже busy.
-                    onRefresh: () async {
-                      if (ctrl.busy) return;
-                      await _updateAll();
-                    },
-                    child: _buildList(ctrl),
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: _handleHeaderScrollNotification,
+                    child: RefreshIndicator(
+                      // Когда шапка свёрнута, жест вниз сначала раскрывает её.
+                      // Обновление остаётся доступным после раскрытия, отдельным
+                      // жестом; так один pull не запускает сразу оба действия.
+                      notificationPredicate: (notification) =>
+                          !_headerGestureStartedCollapsed &&
+                          !_headerCollapsed &&
+                          notification.depth == 0,
+                      onRefresh: () async {
+                        if (ctrl.busy) return;
+                        await _updateAll();
+                      },
+                      child: _buildList(ctrl),
+                    ),
                   ),
                 ),
               ],
