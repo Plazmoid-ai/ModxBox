@@ -20,13 +20,11 @@ import 'package:flutter/material.dart';
 
 import '../../../models/source_chain.dart';
 import '../../../services/l10n/locale_controller.dart';
-import '../../../widgets/reorder_grab_strip.dart';
 
 class ChainEntryTile extends StatelessWidget {
   const ChainEntryTile({
     super.key,
     required this.chain,
-    required this.dragIndex,
     required this.onTap,
     required this.onToggle,
     this.compact = false,
@@ -35,9 +33,6 @@ class ChainEntryTile extends StatelessWidget {
 
   final SourceChain chain;
 
-  /// Индекс в `ReorderableListView` для drag-старта (§098) — тот же счёт, что
-  /// у подписок: список общий.
-  final int dragIndex;
   final VoidCallback onTap;
   final VoidCallback onToggle;
   final bool compact;
@@ -49,14 +44,9 @@ class ChainEntryTile extends StatelessWidget {
     if (compact) {
       return SizedBox(
         height: 37,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ReorderGrabStrip(index: dragIndex),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
                   SizedBox(
                     height: 36,
                     child: Row(
@@ -112,9 +102,6 @@ class ChainEntryTile extends StatelessWidget {
                     ),
                   ),
                   const Divider(height: 1),
-                ],
-              ),
-            ),
           ],
         ),
       );
@@ -153,18 +140,10 @@ class ChainEntryTile extends StatelessWidget {
       onTap: onTap,
     );
     return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Column(
         children: [
-          ReorderGrabStrip(index: dragIndex),
-          Expanded(
-            child: Column(
-              children: [
-                tile,
-                const Divider(height: 1),
-              ],
-            ),
-          ),
+          tile,
+          const Divider(height: 1),
         ],
       ),
     );
