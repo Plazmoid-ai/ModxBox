@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lxbox/models/node_link.dart';
 import 'package:lxbox/models/source_chain.dart';
 import 'package:lxbox/screens/subscriptions_screen/widgets/chains_section.dart';
-import 'package:lxbox/widgets/reorder_grab_strip.dart';
 
 // §393 D1 — цепочка СТРОКОЙ общего списка источников (директива оператора
 // 24.08): отдельной секции «Цепочки хопов» больше нет, ряд тот же, что у
@@ -21,7 +20,6 @@ Widget _host(List<SourceChain> chains,
             for (var i = 0; i < chains.length; i++)
               ChainEntryTile(
                 chain: chains[i],
-                dragIndex: i,
                 onTap: () => onTap?.call(chains[i]),
                 onToggle: () => onToggle?.call(chains[i]),
               ),
@@ -49,13 +47,12 @@ void main() {
     expect(find.text('chain-1'), findsOneWidget);
   });
 
-  testWidgets('у ряда есть grab-strip: цепочка перетаскивается наравне со всеми',
-      (tester) async {
+  testWidgets('у ряда нет отдельной зоны перетаскивания', (tester) async {
     await tester.pumpWidget(_host(const [
       SourceChain(tag: 'chain-1', hops: [NodeLink(tag: 'a'), NodeLink(tag: 'b')]),
     ]));
     await tester.pumpAndSettle();
-    expect(find.byType(ReorderGrabStrip), findsOneWidget);
+    expect(find.byIcon(Icons.drag_indicator), findsNothing);
   });
 
   testWidgets('тап уходит в нужную цепочку', (tester) async {
