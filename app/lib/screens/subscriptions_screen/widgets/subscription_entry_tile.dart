@@ -63,6 +63,12 @@ class SubscriptionEntryTile extends StatelessWidget {
 
   Widget _indicator(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    if (entry.list is FolderServers) {
+      return _folderIndicator(
+        context,
+        onTap: () => onCompactChanged?.call(false),
+      );
+    }
     return SizedBox(
       width: 48,
       height: 36,
@@ -81,6 +87,41 @@ class SubscriptionEntryTile extends StatelessWidget {
                   color: entry.enabled ? cs.primary : cs.outline,
                   width: 1.5,
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _folderIndicator(
+    BuildContext context, {
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final active = entry.enabled;
+    return SizedBox(
+      width: 48,
+      height: 36,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Center(
+            child: Container(
+              width: 30,
+              height: 26,
+              decoration: BoxDecoration(
+                color: active
+                    ? cs.primary.withValues(alpha: 0.16)
+                    : cs.onSurfaceVariant.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.folder,
+                size: 19,
+                color: active ? cs.primary : cs.onSurfaceVariant,
               ),
             ),
           ),
@@ -155,7 +196,9 @@ class SubscriptionEntryTile extends StatelessWidget {
       leading: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onLongPress: () => onCompactChanged?.call(true),
-        child: Switch(value: enabled, onChanged: (_) => onToggle()),
+        child: entry.list is FolderServers
+            ? _folderIndicator(context, onTap: onToggle)
+            : Switch(value: enabled, onChanged: (_) => onToggle()),
       ),
       title: Row(
         children: [
