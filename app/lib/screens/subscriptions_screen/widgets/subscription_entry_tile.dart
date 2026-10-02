@@ -120,8 +120,8 @@ class SubscriptionEntryTile extends StatelessWidget {
           child: Center(
             child: Container(
               // В компактном виде равные отступы со всех сторон папки.
-              width: compact ? 28 : 52,
-              height: compact ? 28 : 32,
+              width: compact ? 24 : 52,
+              height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: backgroundColor,
