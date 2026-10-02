@@ -104,9 +104,10 @@ class SubscriptionEntryTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final active = entry.enabled;
     // Контрастная заливка одинаково читается в Light и Dark.
-    // Светлый оттенок активной дорожки переключателя; одинаков в обеих темах.
+    // Заданный светлый цвет активного состояния одинаков для обеих тем.
+    const activeFillColor = Color(0xFFBAC3FF);
     final backgroundColor =
-        active ? cs.primaryFixed : cs.surfaceContainerHighest;
+        active ? activeFillColor : cs.surfaceContainerHighest;
     return SizedBox(
       // Размер близок к штатному Switch; ширина немного увеличена,
       // чтобы контурная папка не выглядела сжатой.
@@ -118,10 +119,9 @@ class SubscriptionEntryTile extends StatelessWidget {
           onTap: onTap,
           child: Center(
             child: Container(
-              // В компактном виде площадка уменьшена, но сохраняет
-              // заметный отступ вокруг папки.
-              width: compact ? 39 : 52,
-              height: compact ? 24 : 32,
+              // В компактном виде равные отступы со всех сторон папки.
+              width: compact ? 28 : 52,
+              height: compact ? 28 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: backgroundColor,
