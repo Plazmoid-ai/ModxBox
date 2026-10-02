@@ -67,6 +67,7 @@ class SubscriptionEntryTile extends StatelessWidget {
       return _folderIndicator(
         context,
         onTap: () => onCompactChanged?.call(false),
+        compact: true,
       );
     }
     return SizedBox(
@@ -98,24 +99,26 @@ class SubscriptionEntryTile extends StatelessWidget {
   Widget _folderIndicator(
     BuildContext context, {
     required VoidCallback onTap,
+    bool compact = false,
   }) {
     final cs = Theme.of(context).colorScheme;
     final active = entry.enabled;
+    // Контрастная заливка одинаково читается в Light и Dark.
     final backgroundColor =
-        active ? cs.primary : cs.surfaceContainerHighest;
+        active ? cs.primaryContainer : cs.surfaceContainerHighest;
     return SizedBox(
       // Размер близок к штатному Switch; ширина немного увеличена,
       // чтобы контурная папка не выглядела сжатой.
-      width: 56,
-      height: 40,
+      width: compact ? 48 : 56,
+      height: compact ? 36 : 40,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           child: Center(
             child: Container(
-              width: 52,
-              height: 32,
+              width: compact ? 26 : 52,
+              height: compact ? 16 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: backgroundColor,
@@ -126,10 +129,14 @@ class SubscriptionEntryTile extends StatelessWidget {
                 children: [
                   // Внутренность папки совпадает с фоном карточки;
                   // цвет состояния остаётся только снаружи контура.
-                  Icon(Icons.folder, size: 29, color: cs.surface),
+                  Icon(
+                    Icons.folder,
+                    size: compact ? 20 : 29,
+                    color: cs.surface,
+                  ),
                   Icon(
                     Icons.folder_outlined,
-                    size: 29,
+                    size: compact ? 20 : 29,
                     color: cs.onSurfaceVariant,
                   ),
                 ],
