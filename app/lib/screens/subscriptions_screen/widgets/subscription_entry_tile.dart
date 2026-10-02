@@ -70,6 +70,13 @@ class SubscriptionEntryTile extends StatelessWidget {
         compact: true,
       );
     }
+    if (entry.url.isEmpty && entry.connections.isNotEmpty) {
+      return _serverIndicator(
+        context,
+        onTap: () => onCompactChanged?.call(false),
+        compact: true,
+      );
+    }
     return SizedBox(
       width: 48,
       height: 36,
@@ -151,6 +158,43 @@ class SubscriptionEntryTile extends StatelessWidget {
     );
   }
 
+  Widget _serverIndicator(
+    BuildContext context, {
+    required VoidCallback onTap,
+    bool compact = false,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    const activeFillColor = Color(0xFFBAC3FF);
+    final backgroundColor =
+        entry.enabled ? activeFillColor : cs.surfaceContainerHighest;
+    return SizedBox(
+      width: compact ? 48 : 56,
+      height: compact ? 36 : 40,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Center(
+            child: Container(
+              width: compact ? 24 : 52,
+              height: compact ? 24 : 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.dns,
+                size: compact ? 20 : 29,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _compactTile(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final typeIcon = entry.list is FolderServers
@@ -219,7 +263,9 @@ class SubscriptionEntryTile extends StatelessWidget {
         onLongPress: () => onCompactChanged?.call(true),
         child: entry.list is FolderServers
             ? _folderIndicator(context, onTap: onToggle)
-            : Switch(value: enabled, onChanged: (_) => onToggle()),
+            : entry.url.isEmpty && entry.connections.isNotEmpty
+                ? _serverIndicator(context, onTap: onToggle)
+                : Switch(value: enabled, onChanged: (_) => onToggle()),
       ),
       title: Row(
         children: [
