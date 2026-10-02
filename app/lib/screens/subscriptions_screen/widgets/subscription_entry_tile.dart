@@ -101,8 +101,8 @@ class SubscriptionEntryTile extends StatelessWidget {
   }) {
     final cs = Theme.of(context).colorScheme;
     final active = entry.enabled;
-    final fillColor = active ? cs.primary : cs.surfaceContainerHighest;
-    final outlineColor = active ? cs.primary : cs.outline;
+    final backgroundColor =
+        active ? cs.primary : cs.surfaceContainerHighest;
     return SizedBox(
       // Размер близок к штатному Switch; ширина немного увеличена,
       // чтобы контурная папка не выглядела сжатой.
@@ -113,15 +113,18 @@ class SubscriptionEntryTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Center(
-            child: SizedBox(
-              width: 32,
-              height: 28,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(Icons.folder, size: 29, color: fillColor),
-                  Icon(Icons.folder_outlined, size: 29, color: outlineColor),
-                ],
+            child: Container(
+              width: 52,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.folder_outlined,
+                size: 29,
+                color: cs.onSurfaceVariant,
               ),
             ),
           ),
