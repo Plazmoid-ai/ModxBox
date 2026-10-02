@@ -121,10 +121,18 @@ class SubscriptionEntryTile extends StatelessWidget {
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(
-                Icons.folder_outlined,
-                size: 29,
-                color: cs.onSurfaceVariant,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Внутренность папки совпадает с фоном карточки;
+                  // цвет состояния остаётся только снаружи контура.
+                  Icon(Icons.folder, size: 29, color: cs.surface),
+                  Icon(
+                    Icons.folder_outlined,
+                    size: 29,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ],
               ),
             ),
           ),
