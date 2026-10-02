@@ -101,27 +101,27 @@ class SubscriptionEntryTile extends StatelessWidget {
   }) {
     final cs = Theme.of(context).colorScheme;
     final active = entry.enabled;
+    final fillColor = active ? cs.primary : cs.surfaceContainerHighest;
+    final outlineColor = active ? cs.primary : cs.outline;
     return SizedBox(
-      width: 48,
-      height: 36,
+      // Размер близок к штатному Switch; ширина немного увеличена,
+      // чтобы контурная папка не выглядела сжатой.
+      width: 56,
+      height: 40,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           child: Center(
-            child: Container(
-              width: 30,
-              height: 26,
-              decoration: BoxDecoration(
-                color: active
-                    ? cs.primary.withValues(alpha: 0.16)
-                    : cs.onSurfaceVariant.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.folder,
-                size: 19,
-                color: active ? cs.primary : cs.onSurfaceVariant,
+            child: SizedBox(
+              width: 32,
+              height: 28,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(Icons.folder, size: 29, color: fillColor),
+                  Icon(Icons.folder_outlined, size: 29, color: outlineColor),
+                ],
               ),
             ),
           ),
