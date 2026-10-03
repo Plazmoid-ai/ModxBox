@@ -169,7 +169,8 @@ class SubscriptionEntryTile extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: backgroundColor,
-                borderRadius: BorderRadius.circular(20),
+                // Те же форма и размеры заливки, что у индикатора папки.
+                borderRadius: BorderRadius.circular(compact ? 8 : 12),
               ),
               child: CustomPaint(
                 size: Size.square(compact ? 20 : 29),
