@@ -126,15 +126,25 @@ class SubscriptionEntryTile extends StatelessWidget {
                 children: [
                   // Внутренность папки совпадает с фоном карточки;
                   // цвет состояния остаётся только снаружи контура.
-                  Icon(
-                    Icons.folder,
-                    size: compact ? 20 : 29,
-                    color: cs.surface,
+                  // Увеличиваем высоту рисунка папки, чтобы её видимый
+                  // размер совпадал с двухсекционным значком узла.
+                  Transform.scale(
+                    scaleX: 1.0,
+                    scaleY: 1.25,
+                    child: Icon(
+                      Icons.folder,
+                      size: compact ? 20 : 29,
+                      color: cs.surface,
+                    ),
                   ),
-                  Icon(
-                    Icons.folder_outlined,
-                    size: compact ? 20 : 29,
-                    color: cs.onSurfaceVariant,
+                  Transform.scale(
+                    scaleX: 1.0,
+                    scaleY: 1.25,
+                    child: Icon(
+                      Icons.folder_outlined,
+                      size: compact ? 20 : 29,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
