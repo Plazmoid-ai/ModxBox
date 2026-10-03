@@ -186,7 +186,9 @@ class SubscriptionEntryTile extends StatelessWidget {
               child: Icon(
                 Icons.dns,
                 size: compact ? 20 : 29,
-                color: cs.onSurfaceVariant,
+                color: entry.enabled && Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : cs.onSurfaceVariant,
               ),
             ),
           ),
