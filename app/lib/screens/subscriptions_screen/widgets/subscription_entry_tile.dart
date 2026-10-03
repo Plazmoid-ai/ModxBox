@@ -44,21 +44,8 @@ class SubscriptionEntryTile extends StatelessWidget {
     // живёт в [NodeWarningRow] подписи, иначе он задвоился бы в trailing.
     final summary =
         entry.list is UserServer ? null : entryWarningSummary(entry);
-    final typeIcon = entry.list is FolderServers
-        ? Icon(Icons.folder_outlined,
-            size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant)
-        : entry.url.isEmpty && entry.connections.isNotEmpty
-            ? Icon(Icons.dns,
-                size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant)
-            : null;
-    if (summary == null && typeIcon == null) return null;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ?summary == null ? null : EntryWarningBadge(summary),
-        ?typeIcon,
-      ],
-    );
+    if (summary == null) return null;
+    return EntryWarningBadge(summary);
   }
 
   Widget _indicator(BuildContext context) {
@@ -164,6 +151,7 @@ class SubscriptionEntryTile extends StatelessWidget {
     bool compact = false,
   }) {
     final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const activeFillColor = Color(0xFFBAC3FF);
     final backgroundColor =
         entry.enabled ? activeFillColor : cs.surfaceContainerHighest;
@@ -183,12 +171,12 @@ class SubscriptionEntryTile extends StatelessWidget {
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(
-                Icons.dns,
-                size: compact ? 20 : 29,
-                color: entry.enabled && Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : cs.onSurfaceVariant,
+              child: CustomPaint(
+                size: Size.square(compact ? 20 : 29),
+                painter: _ServerGlyphPainter(
+                  fill: isDark ? Colors.black : Colors.white,
+                  detail: isDark ? Colors.white : Colors.black,
+                ),
               ),
             ),
           ),
@@ -199,11 +187,6 @@ class SubscriptionEntryTile extends StatelessWidget {
 
   Widget _compactTile(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final typeIcon = entry.list is FolderServers
-        ? Icons.folder_outlined
-        : entry.url.isEmpty && entry.connections.isNotEmpty
-            ? Icons.dns
-            : null;
     return SizedBox(
       height: 36,
       child: Row(
@@ -230,13 +213,7 @@ class SubscriptionEntryTile extends StatelessWidget {
               ),
             ),
           ),
-          if (typeIcon != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 8, right: 12),
-              child: Icon(typeIcon, size: 20, color: cs.onSurfaceVariant),
-            )
-          else
-            const SizedBox(width: 12),
+          const SizedBox(width: 12),
         ],
       ),
     );
@@ -335,4 +312,53 @@ class SubscriptionEntryTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Рисует двухсекционный индикатор сервера с независимыми цветами
+/// заливки, контура и точек. Геометрия повторяет пропорции Icons.dns.
+class _ServerGlyphPainter extends CustomPainter {
+  const _ServerGlyphPainter({required this.fill, required this.detail});
+
+  final Color fill;
+  final Color detail;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const base = 29.0;
+    canvas.save();
+    canvas.scale(size.width / base, size.height / base);
+
+    final fillPaint = Paint()
+      ..color = fill
+      ..style = PaintingStyle.fill;
+    final outlinePaint = Paint()
+      ..color = detail
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.7
+      ..strokeJoin = StrokeJoin.round;
+    final dotPaint = Paint()
+      ..color = detail
+      ..style = PaintingStyle.fill;
+
+    final top = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(1.5, 2.5, 26, 9.5),
+      const Radius.circular(2.2),
+    );
+    final bottom = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(1.5, 17, 26, 9.5),
+      const Radius.circular(2.2),
+    );
+
+    canvas.drawRRect(top, fillPaint);
+    canvas.drawRRect(bottom, fillPaint);
+    canvas.drawRRect(top, outlinePaint);
+    canvas.drawRRect(bottom, outlinePaint);
+    canvas.drawCircle(const Offset(7, 7.25), 2.15, dotPaint);
+    canvas.drawCircle(const Offset(7, 21.75), 2.15, dotPaint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _ServerGlyphPainter oldDelegate) =>
+      fill != oldDelegate.fill || detail != oldDelegate.detail;
 }
