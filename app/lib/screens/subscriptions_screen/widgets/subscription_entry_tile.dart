@@ -119,7 +119,7 @@ class SubscriptionEntryTile extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: backgroundColor,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(compact ? 8 : 12),
               ),
               child: Stack(
                 alignment: Alignment.center,
@@ -176,6 +176,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                 painter: _ServerGlyphPainter(
                   fill: isDark ? Colors.black : Colors.white,
                   detail: isDark ? Colors.white : Colors.black,
+                  compact: compact,
                 ),
               ),
             ),
@@ -317,16 +318,28 @@ class SubscriptionEntryTile extends StatelessWidget {
 /// Рисует двухсекционный индикатор сервера с независимыми цветами
 /// заливки, контура и точек. Геометрия повторяет пропорции Icons.dns.
 class _ServerGlyphPainter extends CustomPainter {
-  const _ServerGlyphPainter({required this.fill, required this.detail});
+  const _ServerGlyphPainter({
+    required this.fill,
+    required this.detail,
+    required this.compact,
+  });
 
   final Color fill;
   final Color detail;
+  final bool compact;
 
   @override
   void paint(Canvas canvas, Size size) {
     const base = 29.0;
+    // В компактном виде оставляем те же 20 px для области иконки,
+    // но возвращаем размер самого рисунка к масштабу штатного Icons.dns.
+    final glyphScale = compact ? 0.85 : 1.0;
     canvas.save();
-    canvas.scale(size.width / base, size.height / base);
+    canvas.translate(
+      size.width * (1 - glyphScale) / 2,
+      size.height * (1 - glyphScale) / 2,
+    );
+    canvas.scale(size.width / base * glyphScale, size.height / base * glyphScale);
 
     final fillPaint = Paint()
       ..color = fill
@@ -360,5 +373,7 @@ class _ServerGlyphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ServerGlyphPainter oldDelegate) =>
-      fill != oldDelegate.fill || detail != oldDelegate.detail;
+      fill != oldDelegate.fill ||
+      detail != oldDelegate.detail ||
+      compact != oldDelegate.compact;
 }
