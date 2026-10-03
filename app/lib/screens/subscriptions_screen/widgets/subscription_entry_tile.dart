@@ -140,7 +140,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                   ),
                   Transform.scale(
                     scaleX: 1.0,
-                    scaleY: 1.25,
+                    scaleY: compact ? 1.25 : 1.15,
                     child: Icon(
                       Icons.folder_outlined,
                       size: compact ? 20 : 29,
