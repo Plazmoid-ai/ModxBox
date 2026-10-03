@@ -97,6 +97,7 @@ class SubscriptionEntryTile extends StatelessWidget {
   }) {
     final cs = Theme.of(context).colorScheme;
     final active = entry.enabled;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Контрастная заливка одинаково читается в Light и Dark.
     // Заданный светлый цвет активного состояния одинаков для обеих тем.
     const activeFillColor = Color(0xFFBAC3FF);
@@ -114,7 +115,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           child: Center(
             child: Container(
               // В компактном виде равные отступы со всех сторон папки.
-              width: compact ? 24 : 52,
+              width: compact ? 24 : 50,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -130,7 +131,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                   // размер совпадал с двухсекционным значком узла.
                   Transform.scale(
                     scaleX: 1.0,
-                    scaleY: 1.25,
+                    scaleY: compact ? 1.25 : 1.15,
                     child: Icon(
                       Icons.folder,
                       size: compact ? 20 : 29,
@@ -143,7 +144,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                     child: Icon(
                       Icons.folder_outlined,
                       size: compact ? 20 : 29,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                 ],
@@ -174,7 +175,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           onTap: onTap,
           child: Center(
             child: Container(
-              width: compact ? 24 : 52,
+              width: compact ? 24 : 50,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -365,11 +366,11 @@ class _ServerGlyphPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final top = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(1.5, 2.5, 26, 9.5),
+      const Rect.fromLTWH(2, 2.5, 25, 9.5),
       const Radius.circular(2.2),
     );
     final bottom = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(1.5, 17, 26, 9.5),
+      const Rect.fromLTWH(2, 17, 25, 9.5),
       const Radius.circular(2.2),
     );
 
