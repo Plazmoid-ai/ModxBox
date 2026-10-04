@@ -101,7 +101,6 @@ class ChainEntryTile extends StatelessWidget {
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: onTap,
-                      onLongPress: () => onCompactChanged?.call(true),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
