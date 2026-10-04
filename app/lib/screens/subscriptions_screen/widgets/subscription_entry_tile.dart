@@ -115,7 +115,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           child: Center(
             child: Container(
               // В компактном виде равные отступы со всех сторон папки.
-              width: compact ? 24 : 48,
+              width: compact ? 24 : 43.2,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -406,7 +406,7 @@ class _FolderOutlinePainter extends CustomPainter {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = 1.7
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round;
 
