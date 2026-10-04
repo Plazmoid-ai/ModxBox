@@ -142,7 +142,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                     scaleX: 1.0,
                     scaleY: 1.1,
                     child: CustomPaint(
-                      size: Size.square(compact ? 15 : 29),
+                      size: Size.square(compact ? 17 : 29),
                       painter: _FolderOutlinePainter(
                         color: isDark ? Colors.white : Colors.black,
                       ),
