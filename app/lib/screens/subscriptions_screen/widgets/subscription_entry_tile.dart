@@ -157,6 +157,47 @@ class SubscriptionEntryTile extends StatelessWidget {
     );
   }
 
+  Widget _subscriptionIndicator(
+    BuildContext context, {
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const activeFillColor = Color(0xFFBAC3FF);
+    final backgroundColor = entry.enabled
+        ? activeFillColor
+        : Theme.of(context).colorScheme.surfaceContainerHighest;
+    return SizedBox(
+      width: 56,
+      height: 40,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Center(
+            child: Container(
+              width: 43.2,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Transform.scale(
+                scaleX: 1.0,
+                scaleY: 1.1,
+                child: Icon(
+                  Icons.cloud_download,
+                  size: 29,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _serverIndicator(
     BuildContext context, {
     required VoidCallback onTap,
@@ -256,9 +297,11 @@ class SubscriptionEntryTile extends StatelessWidget {
         onLongPress: () => onCompactChanged?.call(true),
         child: entry.list is FolderServers
             ? _folderIndicator(context, onTap: onToggle)
-            : entry.url.isEmpty && entry.connections.isNotEmpty
-                ? _serverIndicator(context, onTap: onToggle)
-                : Switch(value: enabled, onChanged: (_) => onToggle()),
+            : entry.list is SubscriptionServers
+                ? _subscriptionIndicator(context, onTap: onToggle)
+                : entry.url.isEmpty && entry.connections.isNotEmpty
+                    ? _serverIndicator(context, onTap: onToggle)
+                    : Switch(value: enabled, onChanged: (_) => onToggle()),
       ),
       title: Row(
         children: [
