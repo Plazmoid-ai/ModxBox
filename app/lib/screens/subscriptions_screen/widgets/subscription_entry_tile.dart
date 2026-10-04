@@ -57,6 +57,13 @@ class SubscriptionEntryTile extends StatelessWidget {
         compact: true,
       );
     }
+    if (entry.list is SubscriptionServers) {
+      return _subscriptionIndicator(
+        context,
+        onTap: () => onCompactChanged?.call(false),
+        compact: true,
+      );
+    }
     if (entry.url.isEmpty && entry.connections.isNotEmpty) {
       return _serverIndicator(
         context,
@@ -160,6 +167,7 @@ class SubscriptionEntryTile extends StatelessWidget {
   Widget _subscriptionIndicator(
     BuildContext context, {
     required VoidCallback onTap,
+    bool compact = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const activeFillColor = Color(0xFFBAC3FF);
@@ -167,28 +175,27 @@ class SubscriptionEntryTile extends StatelessWidget {
         ? activeFillColor
         : Theme.of(context).colorScheme.surfaceContainerHighest;
     return SizedBox(
-      width: 56,
-      height: 40,
+      width: compact ? 48 : 56,
+      height: compact ? 36 : 40,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           child: Center(
             child: Container(
-              width: 43.2,
-              height: 32,
+              width: compact ? 24 : 43,
+              height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(7),
               ),
-              child: Transform.scale(
-                scaleX: 1.0,
-                scaleY: 1.1,
-                child: Icon(
-                  Icons.cloud_download,
-                  size: 29,
-                  color: isDark ? Colors.white : Colors.black,
+              child: CustomPaint(
+                size: Size.square(compact ? 20 : 29),
+                painter: _SubscriptionGlyphPainter(
+                  fill: isDark ? Colors.black : Colors.white,
+                  detail: isDark ? Colors.white : Colors.black,
+                  compact: compact,
                 ),
               ),
             ),
@@ -444,6 +451,76 @@ class _ServerGlyphPainter extends CustomPainter {
       compact != oldDelegate.compact;
 }
 
+
+/// Контурная иконка облака загрузки подписки.
+/// Цвета и масштабирование повторяют двухсекционный индикатор узла.
+class _SubscriptionGlyphPainter extends CustomPainter {
+  const _SubscriptionGlyphPainter({
+    required this.fill,
+    required this.detail,
+    required this.compact,
+  });
+
+  final Color fill;
+  final Color detail;
+  final bool compact;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const base = 29.0;
+    final glyphScale = compact ? 0.85 : 1.0;
+    canvas.save();
+    canvas.translate(
+      size.width * (1 - glyphScale) / 2,
+      size.height * (1 - glyphScale) / 2,
+    );
+    canvas.scale(size.width / base * glyphScale, size.height / base * glyphScale);
+
+    final fillPaint = Paint()
+      ..color = fill
+      ..style = PaintingStyle.fill;
+    final outlinePaint = Paint()
+      ..color = detail
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.7
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    final arrowPaint = Paint()
+      ..color = detail
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+
+    final cloud = Path()
+      ..moveTo(6.2, 22.8)
+      ..cubicTo(2.8, 22.8, 1.2, 20.2, 1.2, 17.4)
+      ..cubicTo(1.2, 14.1, 3.5, 11.7, 6.8, 11.4)
+      ..cubicTo(7.5, 6.8, 11.2, 3.8, 15.3, 3.8)
+      ..cubicTo(19.2, 3.8, 22.4, 6.3, 23.3, 10.0)
+      ..cubicTo(26.5, 10.1, 28.2, 12.6, 28.2, 15.6)
+      ..cubicTo(28.2, 19.7, 25.8, 22.8, 21.9, 22.8)
+      ..close();
+
+    canvas.drawPath(cloud, fillPaint);
+    canvas.drawPath(cloud, outlinePaint);
+
+    final arrow = Path()
+      ..moveTo(14.7, 8.2)
+      ..lineTo(14.7, 18.0)
+      ..moveTo(10.5, 14.0)
+      ..lineTo(14.7, 18.2)
+      ..lineTo(18.9, 14.0);
+    canvas.drawPath(arrow, arrowPaint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _SubscriptionGlyphPainter oldDelegate) =>
+      fill != oldDelegate.fill ||
+      detail != oldDelegate.detail ||
+      compact != oldDelegate.compact;
+}
 
 /// Контур папки с явно заданной толщиной линии.
 class _FolderOutlinePainter extends CustomPainter {
