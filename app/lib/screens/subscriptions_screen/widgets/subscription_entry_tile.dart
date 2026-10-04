@@ -115,7 +115,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           child: Center(
             child: Container(
               // В компактном виде равные отступы со всех сторон папки.
-              width: compact ? 24 : 43.2,
+              width: compact ? 19 : 43.2,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -176,7 +176,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           onTap: onTap,
           child: Center(
             child: Container(
-              width: compact ? 24 : 48,
+              width: compact ? 24 : 33,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -371,7 +371,7 @@ class _ServerGlyphPainter extends CustomPainter {
       const Radius.circular(2.2),
     );
     final bottom = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(3, 17, 23, 9),
+      const Rect.fromLTWH(3, 15, 23, 9),
       const Radius.circular(2.2),
     );
 
