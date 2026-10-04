@@ -115,7 +115,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           child: Center(
             child: Container(
               // В компактном виде равные отступы со всех сторон папки.
-              width: compact ? 19 : 43.2,
+              width: compact ? 24 : 43.2,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -134,7 +134,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                     scaleY: compact ? 1.1 : 1.1,
                     child: Icon(
                       Icons.folder,
-                      size: compact ? 20 : 29,
+                      size: compact ? 15 : 29,
                       color: cs.surface,
                     ),
                   ),
@@ -142,7 +142,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                     scaleX: 1.0,
                     scaleY: 1.1,
                     child: CustomPaint(
-                      size: Size.square(compact ? 20 : 29),
+                      size: Size.square(compact ? 15 : 29),
                       painter: _FolderOutlinePainter(
                         color: isDark ? Colors.white : Colors.black,
                       ),
@@ -176,7 +176,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           onTap: onTap,
           child: Center(
             child: Container(
-              width: compact ? 24 : 33,
+              width: compact ? 24 : 43,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -366,12 +366,14 @@ class _ServerGlyphPainter extends CustomPainter {
       ..color = detail
       ..style = PaintingStyle.fill;
 
+    final topY = compact ? 2.5 : 3.25;
+    final bottomY = compact ? 17.0 : 16.75;
     final top = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(3, 2.5, 23, 9),
+      Rect.fromLTWH(3, topY, 23, 9),
       const Radius.circular(2.2),
     );
     final bottom = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(3, 15, 23, 9),
+      Rect.fromLTWH(3, bottomY, 23, 9),
       const Radius.circular(2.2),
     );
 
@@ -379,8 +381,16 @@ class _ServerGlyphPainter extends CustomPainter {
     canvas.drawRRect(bottom, fillPaint);
     canvas.drawRRect(top, outlinePaint);
     canvas.drawRRect(bottom, outlinePaint);
-    canvas.drawCircle(const Offset(7, 7.25), 2.15, dotPaint);
-    canvas.drawCircle(const Offset(7, 21.75), 2.15, dotPaint);
+    canvas.drawCircle(
+      Offset(7, compact ? 7.25 : 7.75),
+      2.15,
+      dotPaint,
+    );
+    canvas.drawCircle(
+      Offset(7, compact ? 21.75 : 21.25),
+      2.15,
+      dotPaint,
+    );
     canvas.restore();
   }
 
