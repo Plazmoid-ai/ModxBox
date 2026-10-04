@@ -382,12 +382,12 @@ class _ServerGlyphPainter extends CustomPainter {
     canvas.drawRRect(top, outlinePaint);
     canvas.drawRRect(bottom, outlinePaint);
     canvas.drawCircle(
-      Offset(7, compact ? 7.25 : 7.75),
+      Offset(7, compact ? 7.25 : 8.0),
       2.15,
       dotPaint,
     );
     canvas.drawCircle(
-      Offset(7, compact ? 21.75 : 21.25),
+      Offset(7, compact ? 21.75 : 21.5),
       2.15,
       dotPaint,
     );
