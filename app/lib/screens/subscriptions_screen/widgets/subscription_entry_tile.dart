@@ -115,12 +115,12 @@ class SubscriptionEntryTile extends StatelessWidget {
           child: Center(
             child: Container(
               // В компактном виде равные отступы со всех сторон папки.
-              width: compact ? 24 : 50,
+              width: compact ? 24 : 48,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: backgroundColor,
-                borderRadius: BorderRadius.circular(compact ? 8 : 12),
+                borderRadius: BorderRadius.circular(7),
               ),
               child: Stack(
                 alignment: Alignment.center,
@@ -131,7 +131,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                   // размер совпадал с двухсекционным значком узла.
                   Transform.scale(
                     scaleX: 1.0,
-                    scaleY: compact ? 1.25 : 1.15,
+                    scaleY: compact ? 1.1 : 1.1,
                     child: Icon(
                       Icons.folder,
                       size: compact ? 20 : 29,
@@ -141,10 +141,11 @@ class SubscriptionEntryTile extends StatelessWidget {
                   Transform.scale(
                     scaleX: 1.0,
                     scaleY: compact ? 1.25 : 1.15,
-                    child: Icon(
-                      Icons.folder_outlined,
-                      size: compact ? 20 : 29,
-                      color: isDark ? Colors.white : Colors.black,
+                    child: CustomPaint(
+                      size: Size.square(compact ? 20 : 29),
+                      painter: _FolderOutlinePainter(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                     ),
                   ),
                 ],
@@ -175,7 +176,7 @@ class SubscriptionEntryTile extends StatelessWidget {
           onTap: onTap,
           child: Center(
             child: Container(
-              width: compact ? 24 : 50,
+              width: compact ? 24 : 48,
               height: compact ? 24 : 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -366,11 +367,11 @@ class _ServerGlyphPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final top = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(2, 2.5, 25, 9.5),
+      const Rect.fromLTWH(3, 2.5, 23, 9),
       const Radius.circular(2.2),
     );
     final bottom = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(2, 17, 25, 9.5),
+      const Rect.fromLTWH(3, 17, 23, 9),
       const Radius.circular(2.2),
     );
 
@@ -389,3 +390,40 @@ class _ServerGlyphPainter extends CustomPainter {
       detail != oldDelegate.detail ||
       compact != oldDelegate.compact;
 }
+
+
+/// Контур папки с явно заданной толщиной линии.
+class _FolderOutlinePainter extends CustomPainter {
+  const _FolderOutlinePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const base = 24.0;
+    canvas.save();
+    canvas.scale(size.width / base, size.height / base);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path()
+      ..moveTo(2.5, 4.5)
+      ..lineTo(9.7, 4.5)
+      ..lineTo(11.7, 6.5)
+      ..lineTo(21.5, 6.5)
+      ..lineTo(21.5, 19.5)
+      ..lineTo(2.5, 19.5)
+      ..close();
+    canvas.drawPath(path, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _FolderOutlinePainter oldDelegate) =>
+      color != oldDelegate.color;
+}
+
