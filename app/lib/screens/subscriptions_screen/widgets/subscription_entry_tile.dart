@@ -134,7 +134,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                     scaleY: compact ? 1.1 : 1.1,
                     child: Icon(
                       Icons.folder,
-                      size: compact ? 15 : 29,
+                      size: compact ? 17 : 29,
                       color: cs.surface,
                     ),
                   ),
