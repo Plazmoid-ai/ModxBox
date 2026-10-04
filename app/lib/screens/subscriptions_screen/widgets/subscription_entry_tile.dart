@@ -140,7 +140,7 @@ class SubscriptionEntryTile extends StatelessWidget {
                   ),
                   Transform.scale(
                     scaleX: 1.0,
-                    scaleY: compact ? 1.25 : 1.15,
+                    scaleY: 1.1,
                     child: CustomPaint(
                       size: Size.square(compact ? 20 : 29),
                       painter: _FolderOutlinePainter(
@@ -182,7 +182,7 @@ class SubscriptionEntryTile extends StatelessWidget {
               decoration: BoxDecoration(
                 color: backgroundColor,
                 // Те же форма и размеры заливки, что у индикатора папки.
-                borderRadius: BorderRadius.circular(compact ? 8 : 12),
+                borderRadius: BorderRadius.circular(7),
               ),
               child: CustomPaint(
                 size: Size.square(compact ? 20 : 29),
