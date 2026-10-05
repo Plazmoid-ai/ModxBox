@@ -65,20 +65,13 @@ class ChainEntryTile extends StatelessWidget {
               ),
               child: Transform.scale(
                 scaleY: 1.1,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(
-                      Icons.route,
-                      size: compact ? 20 : 29,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                    Icon(
-                      Icons.route,
-                      size: compact ? 16.5 : 24,
-                      color: isDark ? Colors.black : Colors.white,
-                    ),
-                  ],
+                child: CustomPaint(
+                  size: Size.square(compact ? 20 : 29),
+                  painter: _ChainGlyphPainter(
+                    fill: isDark ? Colors.black : Colors.white,
+                    detail: isDark ? Colors.white : Colors.black,
+                    compact: compact,
+                  ),
                 ),
               ),
             ),
@@ -176,3 +169,83 @@ class ChainEntryTile extends StatelessWidget {
     );
   }
 }
+/// Контурная иконка цепочки хопов по образцу: извилистая линия с двумя
+/// круглыми окончаниями и светлой/тёмной каймой, повторяющей её форму.
+class _ChainGlyphPainter extends CustomPainter {
+  const _ChainGlyphPainter({
+    required this.fill,
+    required this.detail,
+    required this.compact,
+  });
+
+  final Color fill;
+  final Color detail;
+  final bool compact;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const base = 29.0;
+    final glyphScale = compact ? 0.85 : 1.0;
+
+    canvas.save();
+    canvas.translate(
+      size.width * (1 - glyphScale) / 2,
+      size.height * (1 - glyphScale) / 2,
+    );
+    canvas.scale(
+      size.width / base * glyphScale,
+      size.height / base * glyphScale,
+    );
+
+    final haloPaint = Paint()
+      ..color = detail
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 8.2
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+
+    final routePaint = Paint()
+      ..color = fill
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.6
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+
+    final haloDotPaint = Paint()
+      ..color = detail
+      ..style = PaintingStyle.fill;
+
+    final dotPaint = Paint()
+      ..color = fill
+      ..style = PaintingStyle.fill;
+
+    // Та же форма, что на образце: слева вниз, плавная U-образная дуга,
+    // затем вверх и снова вниз справа. Круги являются окончаниями маршрута.
+    final route = Path()
+      ..moveTo(7.0, 8.8)
+      ..lineTo(7.0, 14.6)
+      ..cubicTo(7.0, 19.2, 9.3, 21.7, 13.1, 21.7)
+      ..cubicTo(16.9, 21.7, 19.2, 19.2, 19.2, 14.6)
+      ..lineTo(19.2, 8.8);
+
+    const leftDot = Offset(7.0, 6.4);
+    const rightDot = Offset(19.2, 21.1);
+
+    canvas.drawPath(route, haloPaint);
+    canvas.drawCircle(leftDot, 4.9, haloDotPaint);
+    canvas.drawCircle(rightDot, 4.9, haloDotPaint);
+
+    canvas.drawPath(route, routePaint);
+    canvas.drawCircle(leftDot, 2.65, dotPaint);
+    canvas.drawCircle(rightDot, 2.65, dotPaint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChainGlyphPainter oldDelegate) =>
+      fill != oldDelegate.fill ||
+      detail != oldDelegate.detail ||
+      compact != oldDelegate.compact;
+}
+
