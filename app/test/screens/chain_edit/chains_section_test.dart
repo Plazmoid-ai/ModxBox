@@ -80,7 +80,7 @@ void main() {
       onToggle: (c) => toggled = c,
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(Switch).last);
+    await tester.tap(find.byKey(const ValueKey('chain-toggle-chain-2')));
     await tester.pumpAndSettle();
     expect(toggled?.tag, 'chain-2');
   });
