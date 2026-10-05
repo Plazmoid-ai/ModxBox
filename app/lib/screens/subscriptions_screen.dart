@@ -926,7 +926,20 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             }
           },
           child: Scaffold(
-            appBar: AppBar(
+            body: RefreshIndicator(
+              // SliverAppBar + CustomScrollView позволяют верхней части
+              // (заголовок + поле URL) автоматически уезжать при прокрутке
+              // вниз и возвращаться при прокрутке вверх.
+              onRefresh: () async {
+                if (ctrl.busy) return;
+                await _updateAll();
+              },
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+            slivers: [
+              SliverAppBar(
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -995,43 +1008,35 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 ),
               ],
             ),
-            body: Column(
-              children: [
-                _buildInputBar(ctrl),
-                if (ctrl.lastError != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: ParseInputErrorBanner(ctrl.lastError!),
-                  ),
-                if (ctrl.progressMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(ctrl.progressMessage!.render())),
-                      ],
+
+                  if (ctrl.lastError != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ParseInputErrorBanner(ctrl.lastError!),
+                      ),
                     ),
-                  ),
-                Expanded(
-                  child: RefreshIndicator(
-                    // Pull-to-refresh (night T3-2): стандартный Android UX-жест,
-                    // альтернативный кнопке refresh в AppBar. Эквивалент
-                    // `_updateAll()`; noop если уже busy.
-                    onRefresh: () async {
-                      if (ctrl.busy) return;
-                      await _updateAll();
-                    },
-                    child: _buildList(ctrl),
-                  ),
-                ),
-              ],
-            ),
+                  if (ctrl.progressMessage != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(ctrl.progressMessage!.render())),
+                          ],
+                        ),
+                      ),
+                    ),
+                  _buildList(ctrl),
+                ],
+              ),
+            )
           ),
         );
       },
