@@ -198,29 +198,23 @@ class _ChainGlyphPainter extends CustomPainter {
       size.height / base * glyphScale,
     );
 
-    const haloWidth = 8.0;
-    const lineWidth = 4.5;
+    const haloWidth = 7.0;
+    const lineWidth = 3.15;
     const haloDotRadius = 4.8;
     const dotRadius = 2.6;
 
     final route = Path()
-      ..moveTo(8.5, 7.5)
-      ..lineTo(8.5, 15.5)
-      ..cubicTo(
-        8.5, 19.5,
-        11.0, 21.5,
-        14.5, 21.5,
-      )
-      ..lineTo(14.5, 8.5)
-      ..cubicTo(
-        14.5, 5.5,
-        20.5, 5.5,
-        20.5, 11.5,
-      )
-      ..lineTo(20.5, 21.5);
+      ..moveTo(7.5, 13.2)
+      ..lineTo(7.5, 17.8)
+      ..cubicTo(7.5, 19.733, 9.067, 21.3, 11.0, 21.3)
+      ..cubicTo(12.933, 21.3, 14.5, 19.733, 14.5, 17.8)
+      ..lineTo(14.5, 10.3)
+      ..cubicTo(14.5, 8.367, 16.067, 6.8, 18.0, 6.8)
+      ..cubicTo(19.933, 6.8, 21.5, 8.367, 21.5, 10.3)
+      ..lineTo(21.5, 15.8);
 
-    const leftDot = Offset(8.5, 5.5);
-    const rightDot = Offset(20.5, 21.5);
+    const leftDot = Offset(7.5, 8.1);
+    const rightDot = Offset(21.5, 20.9);
 
     final haloPaint = Paint()
       ..color = detail
