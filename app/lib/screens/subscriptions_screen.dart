@@ -1148,147 +1148,141 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   Widget _buildList(SubscriptionController ctrl) {
-    if (_rows(ctrl).isEmpty) {
-      return SubscriptionsEmptyState(
-        busy: ctrl.busy,
-        onPickPublicTestServer: CommunityServersLoader.enabled
-            ? () => unawaited(_pickPublicTestServer())
-            : null,
+    final rows = _rows(ctrl);
+    if (rows.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: SubscriptionsEmptyState(
+          busy: ctrl.busy,
+          onPickPublicTestServer: CommunityServersLoader.enabled
+              ? () => unawaited(_pickPublicTestServer())
+              : null,
+        ),
       );
     }
-    final rows = _rows(ctrl);
+
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(
-          12, 0, 12,
-          MediaQuery.of(context).padding.bottom + 24 + _snackBarClearance),
+        12,
+        0,
+        12,
+        MediaQuery.of(context).padding.bottom + 24 + _snackBarClearance,
+      ),
       sliver: SliverList.builder(
-      // Bottom safe-area: последняя подписка не должна прятаться за системной
-      // навигацией Android (жесты/кнопки). Паттерн проекта — padding.bottom + 24.
-      padding: EdgeInsets.fromLTRB(
-          12, 0, 12,
-          MediaQuery.of(context).padding.bottom + 24 + _snackBarClearance),
-      buildDefaultDragHandles: false,
-      itemCount: rows.length,
-      onReorderItem: (oldIndex, newIndex) {
-        _onUserInteractionDismissHighlight();
-        // onReorderItem уже нормализует newIndex под удалённый элемент.
-        unawaited(_reorderRows(ctrl, oldIndex, newIndex));
-      },
-      itemBuilder: (context, i) {
-        final row = rows[i];
-        final chain = row.chain;
-        if (chain != null) {
-          return KeyedSubtree(
-            key: ValueKey('chain:${chain.tag}'),
-            child: ChainEntryTile(
-              chain: chain,
-              compact: _compactEntryIds.contains('chain:${chain.tag}'),
-              onCompactChanged: (compact) {
-                final key = 'chain:${chain.tag}';
-                setState(() {
-                  if (compact) {
-                    _compactEntryIds.add(key);
-                  } else {
-                    _compactEntryIds.remove(key);
-                  }
-                });
-                unawaited(_saveCompactEntries());
-              },
-              onTap: () => unawaited(_editChain(chain)),
-              onToggle: () => unawaited(_toggleChain(chain)),
-            ),
-          );
-        }
-        final entry = row.entry!;
-        final at = row.entryIndex;
-        final highlighted = _highlightedEntryId == entry.id;
-        final showNewBadge = highlighted &&
-            _highlightMode == _HighlightMode.newEntry &&
-            _highlightOpacity > 0;
-        final cs = Theme.of(context).colorScheme;
-        // §255 / §504 — reorder-key остаётся top-level (KeyedSubtree);
-        // GlobalKey для ensureVisible + подсветка — на внутреннем Container.
-        return KeyedSubtree(
-          key: ValueKey(entry.id),
-          child: AnimatedContainer(
-            key: _tileKey(entry.id),
-            duration: const Duration(milliseconds: 400),
-            decoration: highlighted
-                ? BoxDecoration(
-                    color: cs.primaryContainer
-                        .withValues(alpha: 0.5 * _highlightOpacity),
-                    border: _highlightMode == _HighlightMode.focus
-                        ? Border(
-                            left: BorderSide(color: cs.primary, width: 3))
-                        : null,
-                  )
-                : null,
-            // Фон подсветки — DecoratedBox над ближайшим Material: без своего
-            // прозрачного Material ink строки рисовался бы под ним (невидим),
-            // а debug-сборка ловила assert ListTile.
-            child: Material(
-              type: MaterialType.transparency,
-              child: SubscriptionEntryTile(
-                  entry: entry,
-                subController: widget.subController,
-                showNewBadge: showNewBadge,
-                onToggle: () {
-                  _onUserInteractionDismissHighlight();
-                  unawaited(widget.subController.toggleAt(at));
-                },
-                onLaunchUrl: _launchUrl,
-                compact: _compactEntryIds.contains(entry.id),
+        itemCount: rows.length,
+        itemBuilder: (context, i) {
+          final row = rows[i];
+          final chain = row.chain;
+          if (chain != null) {
+            return KeyedSubtree(
+              key: ValueKey('chain:${chain.tag}'),
+              child: ChainEntryTile(
+                chain: chain,
+                compact: _compactEntryIds.contains('chain:${chain.tag}'),
                 onCompactChanged: (compact) {
+                  final key = 'chain:${chain.tag}';
                   setState(() {
                     if (compact) {
-                      _compactEntryIds.add(entry.id);
+                      _compactEntryIds.add(key);
                     } else {
-                      _compactEntryIds.remove(entry.id);
+                      _compactEntryIds.remove(key);
                     }
                   });
                   unawaited(_saveCompactEntries());
                 },
-                onLongPress: (context) => _showContextMenu(context, at, entry),
-                onTap: (context) {
-                  _onUserInteractionDismissHighlight();
-                  // §234 — папка открывает свой экран (члены + settings).
-                  if (entry.list is FolderServers) {
+                onTap: () => unawaited(_editChain(chain)),
+                onToggle: () => unawaited(_toggleChain(chain)),
+              ),
+            );
+          }
+
+          final entry = row.entry!;
+          final at = row.entryIndex;
+          final highlighted = _highlightedEntryId == entry.id;
+          final showNewBadge = highlighted &&
+              _highlightMode == _HighlightMode.newEntry &&
+              _highlightOpacity > 0;
+          final cs = Theme.of(context).colorScheme;
+
+          return KeyedSubtree(
+            key: ValueKey(entry.id),
+            child: AnimatedContainer(
+              key: _tileKey(entry.id),
+              duration: const Duration(milliseconds: 400),
+              decoration: highlighted
+                  ? BoxDecoration(
+                      color: cs.primaryContainer
+                          .withValues(alpha: 0.5 * _highlightOpacity),
+                      border: _highlightMode == _HighlightMode.focus
+                          ? Border(
+                              left: BorderSide(color: cs.primary, width: 3))
+                          : null,
+                    )
+                  : null,
+              child: Material(
+                type: MaterialType.transparency,
+                child: SubscriptionEntryTile(
+                  entry: entry,
+                  subController: widget.subController,
+                  showNewBadge: showNewBadge,
+                  onToggle: () {
+                    _onUserInteractionDismissHighlight();
+                    unawaited(widget.subController.toggleAt(at));
+                  },
+                  onLaunchUrl: _launchUrl,
+                  compact: _compactEntryIds.contains(entry.id),
+                  onCompactChanged: (compact) {
+                    setState(() {
+                      if (compact) {
+                        _compactEntryIds.add(entry.id);
+                      } else {
+                        _compactEntryIds.remove(entry.id);
+                      }
+                    });
+                    unawaited(_saveCompactEntries());
+                  },
+                  onLongPress: (context) =>
+                      _showContextMenu(context, at, entry),
+                  onTap: (context) {
+                    _onUserInteractionDismissHighlight();
+                    if (entry.list is FolderServers) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FolderDetailScreen(
+                            entry: entry,
+                            controller: widget.subController,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    final isDirectServer =
+                        entry.url.isEmpty && entry.connections.isNotEmpty;
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => FolderDetailScreen(
-                          entry: entry,
-                          controller: widget.subController,
-                        ),
+                        builder: (_) => isDirectServer
+                            ? NodeSettingsScreen(
+                                entry: entry,
+                                index: at,
+                                subController: widget.subController,
+                              )
+                            : SubscriptionDetailScreen(
+                                entry: entry,
+                                controller: widget.subController,
+                              ),
                       ),
                     );
-                    return;
-                  }
-                  final isDirectServer =
-                      entry.url.isEmpty && entry.connections.isNotEmpty;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => isDirectServer
-                          ? NodeSettingsScreen(
-                              entry: entry,
-                              index: at,
-                              subController: widget.subController,
-                            )
-                          : SubscriptionDetailScreen(
-                              entry: entry,
-                              controller: widget.subController,
-                            ),
-                    ),
-                  );
-                },
+                  },
+                ),
               ),
             ),
-          ),
-        );
-      },
-    ),
-  );
+          );
+        },
+      ),
+    );
+  }
 
   /// §524 — перестановка в общем списке источников: ОДНА запись на жест.
   ///
