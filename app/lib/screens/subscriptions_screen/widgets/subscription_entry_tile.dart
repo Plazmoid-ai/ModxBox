@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../controllers/subscription_controller.dart';
-import '../../../widgets/reorder_grab_strip.dart';
 import '../../../models/server_list.dart';
 import '../../../services/l10n/locale_controller.dart';
 import '../entry_warnings.dart';
@@ -15,7 +14,6 @@ class SubscriptionEntryTile extends StatelessWidget {
     super.key,
     required this.entry,
     required this.subController,
-    required this.dragIndex,
     required this.onToggle,
     required this.onLaunchUrl,
     required this.onLongPress,
@@ -29,8 +27,6 @@ class SubscriptionEntryTile extends StatelessWidget {
   final SubscriptionController subController;
 
   /// Индекс в `ReorderableListView` для drag-старта (§098).
-  final int dragIndex;
-
   /// §504 — метка «New» у свежедобавленной записи (локальная подсветка экрана).
   final bool showNewBadge;
 
@@ -45,25 +41,10 @@ class SubscriptionEntryTile extends StatelessWidget {
   final void Function(BuildContext context) onTap;
 
   Widget? _buildTrailing(BuildContext context, SubscriptionEntry entry) {
-    // §499 — счётчик только у подписки/папки. У одиночного сервера значок
-    // живёт в [NodeWarningRow] подписи, иначе он задвоился бы в trailing.
     final summary =
         entry.list is UserServer ? null : entryWarningSummary(entry);
-    final typeIcon = entry.list is FolderServers
-        ? Icon(Icons.folder_outlined,
-            size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant)
-        : entry.url.isEmpty && entry.connections.isNotEmpty
-            ? Icon(Icons.dns,
-                size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant)
-            : null;
-    if (summary == null && typeIcon == null) return null;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ?summary == null ? null : EntryWarningBadge(summary),
-        ?typeIcon,
-      ],
-    );
+    if (summary == null) return null;
+    return EntryWarningBadge(summary);
   }
 
   Widget _indicator(BuildContext context) {
@@ -403,21 +384,11 @@ class SubscriptionEntryTile extends StatelessWidget {
       onLongPress: () => onLongPress(context),
       onTap: () => onTap(context),
     );
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ReorderGrabStrip(index: dragIndex),
-          Expanded(
-            child: Column(
-              children: [
-                tile,
-                const Divider(height: 1),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        tile,
+        const Divider(height: 1),
+      ],
     );
   }
 }
