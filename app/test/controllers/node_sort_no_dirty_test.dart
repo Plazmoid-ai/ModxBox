@@ -85,9 +85,9 @@ void main() {
     controller.cycleSortMode();
     controller.cycleSortMode();
     controller.cycleSortMode();
-    // _persistSort — unawaited fire-and-forget save; дать ему завершиться
-    // до tearDown (иначе гонка с удалением tempDir следующим тестом).
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    // _persistSort — unawaited fire-and-forget save. Явно дождаться
+    // завершения записи до tearDown, чтобы не удалить tempDir во время rename.
+    await SettingsStorage.flushToDisk();
 
     expect(controller.state.configChangedNeedRestart, isFalse);
   });
