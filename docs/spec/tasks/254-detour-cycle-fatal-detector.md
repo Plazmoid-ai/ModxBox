@@ -1,9 +1,14 @@
 # §254 — detour-циклы: fatal-детектор с минимальным набором виновников (вместо тихого edge-strip)
 
-> **СТАТУС: СОГЛАСОВАНО с владельцем** (06.07.2026). Заменяет
-> «Разрыв detour-циклов» из фичи 248 (`docs/spec/features/248
-> detour-channels/spec.md`) — семантика меняется с авто-правки на
+> **СТАТУС: РЕАЛИЗОВАНО** (согласовано с владельцем 06.07.2026). Заменяет
+> «Разрыв detour-циклов» из фичи 248 (`docs/spec/tasks/248F-detour-channels/spec.md`) — семантика меняется с авто-правки на
 > fatal + диагностику.
+>
+> **С §393 A4 детектор — последний рубеж, а не первый:** штатные кольца рвёт
+> граф-санитайзер (`builder/post_steps/sanitize_outbound_graph.dart`, правила 4–5)
+> ДО валидатора — деградацией с warning, по политике лаунчера. Сюда доезжает только
+> то, что санитайзер развязать не смог; на нормальном пути детектор возвращает
+> пустой список (`builder/validator.dart`).
 
 ## Проблема (реальный кейс, device CPH2411)
 
@@ -182,7 +187,7 @@ SnackBar.
 | `screens/home/widgets/detour_cycle_sheet.dart` | новый: sheet (grabber/header/тап-карточки+chevron/раскрытие/cap-строка) |
 | `screens/home/source_lookup.dart` | `ownerOfTag` (§255 — суперсет `sourcesOfTag`) |
 | `screens/subscriptions_screen.dart` | `focusEntryId` + scroll-to + таймер-вспышка (§255) |
-| `docs/spec/features/248 detour-channels/spec.md` | секция «Разрыв detour-циклов» → ссылка на §254, новая семантика |
+| `docs/spec/tasks/248F-detour-channels/spec.md` | секция «Разрыв detour-циклов» → ссылка на §254, новая семантика |
 | тесты | см. ниже |
 
 ## Тесты

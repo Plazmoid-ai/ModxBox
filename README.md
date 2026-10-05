@@ -1,19 +1,77 @@
-# L×Box
+# L×Box — sing-box VPN client for Android
 
 [![GitHub](https://img.shields.io/badge/GitHub-Leadaxe%2FLxBox-blue)](https://github.com/Leadaxe/LxBox)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/github/v/release/Leadaxe/LxBox?label=version)](https://github.com/Leadaxe/LxBox/releases)
 [![Dart](https://img.shields.io/badge/Dart-3.11%2B-blue)](https://dart.dev/)
 
-Android VPN client powered by [sing-box-lx](https://github.com/Leadaxe/sing-box-lx) — a [sing-box](https://sing-box.sagernet.org/) fork with AmneziaWG 2.0 and native XHTTP. Multi-subscription, smart routing, built-in speed test. English and Russian UI.
+**L×Box** (also written *LxBox*) is a free, open-source **VPN and proxy client for Android**,
+powered by [sing-box-lx](https://github.com/Leadaxe/sing-box-lx) — a [sing-box](https://sing-box.sagernet.org/)
+fork with AmneziaWG 2.0, native XHTTP and a MASQUE outbound.
+
+It runs **VLESS (REALITY, XHTTP, post-quantum ML-KEM-768), VMess, Trojan, Shadowsocks,
+Hysteria2, TUIC v5, AnyTLS, NaïveProxy, WireGuard, AmneziaWG, Cloudflare WARP and
+Tailscale — all in one app, in a single VpnService**, so protocols that would normally
+fight each other for Android's one VPN slot coexist in one core. Multi-subscription
+management, rule-based routing, per-app split tunneling, full DNS control, detour
+chains and load balancing. No ads, no telemetry, no account. English and Russian UI.
 
 <p align="center">
-  <a href="https://f-droid.org/en/packages/com.leadaxe.lxbox/"><img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80"></a>
-  <a href="https://play.google.com/store/apps/details?id=com.leadaxe.lxbox"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80"></a>
-  <a href="https://github.com/Leadaxe/LxBox"><img src="docs/badges/get-it-on-github.png" alt="Get it on GitHub" height="80"></a>
+  <a href="https://f-droid.org/en/packages/com.leadaxe.lxbox/"><img src="https://f-droid.org/badge/get-it-on.png" alt="Get L×Box on F-Droid" height="80"></a>
+  <a href="https://play.google.com/store/apps/details?id=com.leadaxe.lxbox"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get L×Box on Google Play" height="80"></a>
+  <a href="https://github.com/Leadaxe/LxBox/releases/latest"><img src="docs/badges/get-it-on-github.png" alt="Download L×Box APK from GitHub" height="80"></a>
 </p>
 
-**[Download latest release](https://github.com/Leadaxe/LxBox/releases/latest)** | **[Документация на русском](README.ru.md)** | **[User Guide](docs/USER_GUIDE.md)** | **[Support the project](docs/DONATE.md)**
+**[Download the latest APK](https://github.com/Leadaxe/LxBox/releases/latest)** | **[Документация на русском](README.ru.md)** | **[User Guide](docs/USER_GUIDE.md)** | **[Support the project](docs/DONATE.md)** | **[Public servers registry](docs/PUBLIC_SOURCES.md)**
+
+---
+
+## What L×Box is for
+
+- **Run VLESS + WARP + Tailscale at the same time.** Android allows only one active
+  `VpnService`, so a VLESS app, the Cloudflare WARP app and the Tailscale app cannot run
+  together — whichever starts last takes the tunnel. L×Box runs all three as outbounds
+  and endpoints inside one core, with routing rules deciding what goes where.
+- **Chain a proxy through WARP.** Send traffic out through your VLESS server and then
+  through Cloudflare WARP, so the destination site never sees your VPS address. Build it
+  as a **chain** (an explicit multi-hop route you assemble in the UI) or as a **detour**
+  (one node set to go through another) — both are validated before the config is built,
+  with a cycle detector and per-hop latency diagnostics.
+- **Join your tailnet from the phone without the Tailscale app.** A `tailscale` endpoint
+  runs inside the core, with MagicDNS, exit nodes and device ping.
+- **Get past DPI.** REALITY, XHTTP, TLS fragmentation, ECH, uTLS fingerprints,
+  AmneziaWG 1.x/2.0 obfuscation and MASQUE-over-QUIC, all configurable per node.
+- **Manage many subscriptions.** Import by URL, file, QR or pasted link; deduplicate
+  nodes, disable individual servers, rewrite them with filter rules, auto-update on six
+  triggers with anti-spam gates.
+- **Keep the battery.** The core suspends unreachable tunnels instead of retrying them
+  in a loop, and subscription auto-update is gated against request spam.
+
+## Frequently asked questions
+
+**Is L×Box free?** Yes — free and open source under GPL-3.0, with no ads, no trackers,
+no analytics and no account required.
+
+**How is it different from sing-box for Android (SFA)?** SFA is the reference client from
+the SagerNet team: you hand it raw JSON. L×Box has a full UI for subscriptions, nodes,
+routing, DNS and diagnostics, and ships a fork of the core (`sing-box-lx`) that adds
+AmneziaWG 2.0, native XHTTP, a MASQUE outbound, a round-robin load balancer and
+idle-suspend. Raw JSON still works — there is a config editor and config pinning.
+
+**How is it different from Hiddify, NekoBox or Karing?** Those are GUIs over the stock
+sing-box or mihomo core. L×Box ships its own core fork, so it supports transports the
+stock core does not have on the client side — notably Xray's XHTTP, AmneziaWG 2.0 and
+post-quantum VLESS (`mlkem768x25519plus`).
+
+**Does it need root?** No.
+
+**Does it support Cloudflare WARP?** Yes — one tap on *Get WARP* registers an account and
+generates the WireGuard or MASQUE keys on the device. The private key never leaves the
+phone. WARP+ license keys are supported.
+
+**Where can I download it?** [GitHub Releases](https://github.com/Leadaxe/LxBox/releases/latest),
+[F-Droid](https://f-droid.org/en/packages/com.leadaxe.lxbox/) and
+[Google Play](https://play.google.com/store/apps/details?id=com.leadaxe.lxbox).
 
 ---
 
@@ -28,31 +86,66 @@ Use of L×Box is allowed only in strict compliance with the laws of the country 
 ## Screenshots
 
 <p align="center">
-<img src="docs/screenshots/home.jpg" width="240" alt="Home Screen"/>
-<img src="docs/screenshots/routing.jpg" width="240" alt="Routing"/>
-<img src="docs/screenshots/statistics.jpg" width="240" alt="Statistics"/>
+<img src="docs/screenshots/home.jpg" width="240" alt="L×Box home screen — node list with ping and one-tap VPN connect"/>
+<img src="docs/screenshots/routing.jpg" width="240" alt="L×Box routing rules and presets"/>
+<img src="docs/screenshots/statistics.jpg" width="240" alt="L×Box live statistics and connections"/>
 </p>
 <p align="center">
-<img src="docs/screenshots/speed_test.jpg" width="240" alt="Speed Test"/>
-<img src="docs/screenshots/dns_settings.jpg" width="240" alt="DNS Settings"/>
-<img src="docs/screenshots/vpn_settings.jpg" width="240" alt="VPN Settings"/>
+<img src="docs/screenshots/speed_test.jpg" width="240" alt="L×Box built-in speed test"/>
+<img src="docs/screenshots/dns_settings.jpg" width="240" alt="L×Box DNS server groups and rules"/>
+<img src="docs/screenshots/vpn_settings.jpg" width="240" alt="L×Box VPN service settings"/>
 </p>
 <p align="center">
-<img src="docs/screenshots/routing_rules.jpg" width="240" alt="Routing Rules"/>
-<img src="docs/screenshots/app_picker.jpg" width="240" alt="App Picker"/>
-<img src="docs/screenshots/app_settings.jpg" width="240" alt="App Settings"/>
+<img src="docs/screenshots/routing_rules.jpg" width="240" alt="L×Box routing rule editor"/>
+<img src="docs/screenshots/app_picker.jpg" width="240" alt="L×Box per-app split tunneling"/>
+<img src="docs/screenshots/app_settings.jpg" width="240" alt="L×Box application settings"/>
 </p>
 
 ---
 
 ## Features
 
+Every capability below is described as a black-box specification in the
+**[feature catalogue](docs/spec/features/README.md)**: what it promises the
+user, what it takes and gives, where it stops. Start there if you want the
+precise behaviour; the sections below are the tour.
+
+| Area | Feature spec |
+|------|--------------|
+| Subscriptions, file and pasted sources, auto-update, per-node disable | [001-SUBSCRIPTIONS](docs/spec/features/001-SUBSCRIPTIONS/FEATURE.md) |
+| Importing share links and configs: VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, AnyTLS, NaïveProxy, SSH, SOCKS, HTTP, WireGuard, AmneziaWG, MASQUE, Tailscale, Xray and sing-box JSON | [002-NODE_IMPORT](docs/spec/features/002-NODE_IMPORT/FEATURE.md) |
+| Building the sing-box config: template, variables, settings lifecycle | [003-CONFIG_BUILD](docs/spec/features/003-CONFIG_BUILD/FEATURE.md) |
+| Routing rules, presets, rule-set cache, Directions | [004-ROUTING](docs/spec/features/004-ROUTING/FEATURE.md) |
+| DNS servers, rules, groups, FakeIP, cache | [005-DNS](docs/spec/features/005-DNS/FEATURE.md) |
+| Detour, hop chains, load balancing | [006-DETOUR_AND_BALANCE](docs/spec/features/006-DETOUR_AND_BALANCE/FEATURE.md) |
+| Home screen: node list, filters, sorting, folders, active node | [007-NODE_LIST](docs/spec/features/007-NODE_LIST/FEATURE.md) |
+| Custom nodes, node settings, add-server wizard | [008-NODE_EDITOR](docs/spec/features/008-NODE_EDITOR/FEATURE.md) |
+| Ping, URLTest, node diagnostics, auto-disable, speed test | [009-NODE_HEALTH](docs/spec/features/009-NODE_HEALTH/FEATURE.md) |
+| The VPN tunnel: start/stop, VPN and proxy modes, autostart, sleep, recovery | [010-VPN_SERVICE](docs/spec/features/010-VPN_SERVICE/FEATURE.md) |
+| Split tunneling by app | [011-SPLIT_TUNNELING](docs/spec/features/011-SPLIT_TUNNELING/FEATURE.md) |
+| Live status, connections, statistics, per-app traffic, DNS trace | [012-LIVE_STATE](docs/spec/features/012-LIVE_STATE/FEATURE.md) |
+| Logs, crash reports, diagnostic dump, Debug API | [013-DIAGNOSTICS](docs/spec/features/013-DIAGNOSTICS/FEATURE.md) |
+| Quick Connect, Intent API, Tasker integration | [014-AUTOMATION](docs/spec/features/014-AUTOMATION/FEATURE.md) |
+| Cloudflare WARP: one-tap registration, WireGuard and MASQUE nodes | [015-WARP](docs/spec/features/015-WARP/FEATURE.md) |
+| DPI bypass: TLS fragmentation, SNI tricks, ECH, REALITY, XHTTP | [016-DPI_HARDENING](docs/spec/features/016-DPI_HARDENING/FEATURE.md) |
+| Backup, restore, desktop transfer, storage contract | [017-BACKUP_AND_STORAGE](docs/spec/features/017-BACKUP_AND_STORAGE/FEATURE.md) |
+| Workspaces — named settings sets | [018-WORKSPACES](docs/spec/features/018-WORKSPACES/FEATURE.md) |
+| Config editor and config pinning | [019-CONFIG_EDITOR](docs/spec/features/019-CONFIG_EDITOR/FEATURE.md) |
+| App settings, theme, localization, first run, update check | [020-APP_SHELL](docs/spec/features/020-APP_SHELL/FEATURE.md) |
+| The config template, its language and preset language; extending the client through the template | [024-TEMPLATE](docs/spec/features/024-TEMPLATE/FEATURE.md) |
+| Contract registry: protocol schemas, node sanitizing, build gate, warning codes | [025-CONTRACT_REGISTRY](docs/spec/features/025-CONTRACT_REGISTRY/FEATURE.md) |
+| Directions: the routing targets vpn-N, direct-out, block | [026-DIRECTIONS](docs/spec/features/026-DIRECTIONS/FEATURE.md) |
+| Debug API: local HTTP control surface for automation and diagnostics | [027-DEBUG_API](docs/spec/features/027-DEBUG_API/FEATURE.md) |
+| Traffic profiler: per-app connection log, attribution, DNS trace | [028-TRAFFIC_PROFILER](docs/spec/features/028-TRAFFIC_PROFILER/FEATURE.md) |
+| Localization: languages, English-as-key model, translation workflow | [029-LOCALIZATION](docs/spec/features/029-LOCALIZATION/FEATURE.md) |
+| Tailscale: the phone as a node of your tailnet inside the VPN | [030-TAILSCALE](docs/spec/features/030-TAILSCALE/FEATURE.md) |
+
 <details>
 <summary><strong>Servers & Subscriptions</strong> — every proxy source in one place</summary>
 
 Add servers by subscription URL, direct proxy link, WireGuard URI/INI, Amnezia `vpn://` link, raw sing-box JSON — a single outbound or a **whole config**, from which nodes, auto-select groups and detour chains are imported (§368) — or **Import from file…** (a local `.txt`/`.json`; a file with more than one node becomes a file-backed subscription, §129). The smart-paste dialog auto-detects the format and previews the content. Enable/disable subscriptions without deleting them. Offline rehydrate — nodes are restored from the body cache on app restart.
 
-- **13 protocols**: VLESS (incl. post-quantum ML-KEM-768 encryption, §335), VMess, Trojan, Shadowsocks, Hysteria2, **TUIC v5**, **NaïveProxy**, **AnyTLS** (§269), SSH, SOCKS, WireGuard (incl. **AmneziaWG / AWG 2.0** — `awg://` URI, AmneziaWG `.conf`, **Amnezia `vpn://` links**, JSON), **MASQUE** (Cloudflare WARP — `masque://`, QUIC/HTTP-3), **Tailscale** (a sing-box endpoint that joins your tailnet; the node carries its own DNS server, `.ts.net` rule and `100.64.0.0/10` route — §435)
+- **13 protocols**: VLESS (incl. post-quantum ML-KEM-768 encryption, §335), VMess, Trojan, Shadowsocks, Hysteria2, **TUIC v5**, **NaïveProxy**, **AnyTLS** (§269), SSH, SOCKS, WireGuard (incl. **AmneziaWG / AWG 2.0** — `awg://` URI, AmneziaWG `.conf`, **Amnezia `vpn://` links**, JSON), **MASQUE** (Cloudflare WARP — `masque://`, QUIC/HTTP-3), **Tailscale** (a sing-box endpoint that joins your tailnet; the Tailscale preset gives each node its MagicDNS server and routes tailnet traffic to it by `preferred_by`, without fixed `.ts.net` rules or `100.64.0.0/10` routes — §578)
 - Formats: Base64, Xray JSON Array (incl. dialerProxy chains and every protocol in the array, §321), plain text, sing-box JSON — outbound, array, whole config or array of configs, with groups and `detour` chains (§368)
 - **Node deduplication** (§321) — one server listed several times across a subscription collapses into a single node
 - **Auto nodes** (§322) — a provider's "Auto | Best server" entry arrives as one node with a pool inside: the row shows mode and contents (`🔀 [15/7]` — load balance, `🎯 [3]` — single fastest). You can build your own inside a folder: "Add auto node…" — membership by regex rule, by checkbox list, or "all servers in this folder"
@@ -82,7 +175,7 @@ Tap **Get WARP** on the servers screen → a tunnel to Cloudflare is registered 
 - **SCAN WARP** (§284) — the **Make experiment** button in the wizard creates an experiment folder: it generates a pool of WARP variants (WireGuard / AWG / MASQUE h2/h3) across Cloudflare address ranges and pings them; dead nodes disable themselves. Finds a working endpoint on your specific network without manual trial and error.
 - **WARP+** (optional): paste a license key under *Advanced* to bind WARP+ (Argo Smart Routing). Empty = free WARP.
 - **Idempotent**: re-tapping reuses the cached account instead of registering a new device; *Re-register* forces a fresh one.
-- See [spec 025](docs/spec/features/025%20warp%20integration/spec.md)
+- See [spec 025](docs/spec/tasks/025F-warp-integration/spec.md)
 </details>
 
 <details>
@@ -106,7 +199,7 @@ Subscriptions refresh in the background without spamming providers. Every reques
 - **Gates**: `minRetryInterval=15min` (persists via `lastUpdateAttempt`), `maxFailsPerSession=5`, `10s ± 2s` between subscriptions, dedup flags against concurrent runs and double-clicks
 - Crash-safe init sweep: a stuck `inProgress` on disk resets to `failed`
 - Rebuilding the config **never** triggers HTTP — only local assembly from already-loaded nodes
-- See [spec 027](docs/spec/features/027%20subscription%20auto%20update/spec.md)
+- See [spec 027](docs/spec/tasks/027F-subscription-auto-update/spec.md)
 </details>
 
 <details>
@@ -148,7 +241,7 @@ Block ads, route Russian domains directly, send BitTorrent through a chosen dire
 - **SRS is local-only** — no auto-update, manual download via the ☁ icon, the rule stays disabled until it is cached
 - Drag-reorder, long-press → Delete with confirmation, dirty-aware save ("Discard changes?"), a View tab with the exact sing-box fragment
 - Default traffic fallback (`route.final`)
-- See [spec 030](docs/spec/features/030%20custom%20routing%20rules/spec.md), [spec 011](docs/spec/features/011%20local%20ruleset%20cache/spec.md)
+- See [spec 030](docs/spec/tasks/030F-custom-routing-rules/spec.md), [spec 011](docs/spec/tasks/011F-local-ruleset-cache/spec.md)
 </details>
 
 <details>
@@ -175,7 +268,7 @@ Declare rules like *"on this Wi-Fi → direct"* persistently — no temporary ha
 
 The rule editor offers chips with **Add current** (read the live SSID), **Pick saved** (history of visited networks) and **Manual**; Android permission gates are wired in. Network history is recorded only if you opt in (App Settings → Diagnostics), a network is stored after ≥5 minutes on it, and the history is capped at 50 entries.
 
-- See [spec 051](docs/spec/tasks/051-custom-rule-wifi-conditions.md), [feature highlight](docs/features/wifi-aware-routing.md)
+- See [spec 051](docs/spec/tasks/051-custom-rule-wifi-conditions.md), [feature highlight](docs/spec/tasks/051-wifi-aware-routing-guide.md)
 </details>
 
 <details>
@@ -230,7 +323,7 @@ Three orthogonal tricks — combinable on the same outbound.
 - **TLS Record Fragment** — splits the handshake into multiple TLS records
 - **Mixed-case SNI** — randomises `server_name` case (`WwW.gOoGle.CoM`); bypasses naive exact-match DPI used by regional providers (per RFC 6066 the field is case-insensitive, so server behaviour doesn't change). Ineffective against GFW-class filtering
 - All tricks apply to the first hop only (inner hops are inside the tunnel, local DPI can't see them)
-- See [spec 020](docs/spec/features/020%20security%20and%20dpi%20bypass/spec.md), [spec 028](docs/spec/features/028%20antidpi%20sni%20obfuscation/spec.md)
+- See [spec 020](docs/spec/tasks/020F-security-and-dpi-bypass/spec.md), [spec 028](docs/spec/tasks/028F-antidpi-sni-obfuscation/spec.md)
 </details>
 
 <details>
@@ -343,6 +436,8 @@ See [Protocol Documentation](docs/PROTOCOLS.md) for full URI format details and 
 ---
 
 ## Architecture
+
+Specifications live in [`docs/spec/`](docs/spec/README.md): black-box features in `features/`, implementation history in `tasks/`.
 
 L×Box is built around a **3-layer parser/builder pipeline** (spec 026):
 

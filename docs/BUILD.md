@@ -13,7 +13,7 @@
 
 ## The Flutter app
 
-The **`app/`** directory is the L×Box project. Dependencies come from `flutter pub get`. The native VPN lives in `app/android/app/src/main/kotlin/com/leadaxe/lxbox/vpn/` (our own `BoxVpnService`, not a Flutter plugin). libbox on Android is the **[`Leadaxe/sing-box-lx`](https://github.com/Leadaxe/sing-box-lx)** fork (branch `lx-1.14`): AWG/AWG2 (AmneziaWG) + native XHTTP ([§097](spec/features/097%20awg2-amneziawg2/spec.md)) + MASQUE / idle-suspend / balancer. The AAR is wired in as the file `app/android/app/libs/libbox.aar` (a relative `files("libs/libbox.aar")` in `build.gradle`); downloading it and pinning the version is [§104](spec/tasks/104-libbox-fork-ci-fetch.md) — see [“The sing-box-lx core (libbox)”](#the-sing-box-lx-core-libbox). Pin history: stock `com.github.singbox-android:libbox:1.13.11` from JitPack ([task §060](spec/tasks/060-libbox-1-13-migration/spec.md)) ← `io.github.sagernet:libbox:1.12.12`.
+The **`app/`** directory is the L×Box project. Dependencies come from `flutter pub get`. The native VPN lives in `app/android/app/src/main/kotlin/com/leadaxe/lxbox/vpn/` (our own `BoxVpnService`, not a Flutter plugin). libbox on Android is the **[`Leadaxe/sing-box-lx`](https://github.com/Leadaxe/sing-box-lx)** fork (branch `lx-1.14`): AWG/AWG2 (AmneziaWG) + native XHTTP ([§097](spec/tasks/097F-awg2-amneziawg2/spec.md)) + MASQUE / idle-suspend / balancer. The AAR is wired in as the file `app/android/app/libs/libbox.aar` (a relative `files("libs/libbox.aar")` in `build.gradle`); downloading it and pinning the version is [§104](spec/tasks/104-libbox-fork-ci-fetch.md) — see [“The sing-box-lx core (libbox)”](#the-sing-box-lx-core-libbox). Pin history: stock `com.github.singbox-android:libbox:1.13.11` from JitPack ([task §060](spec/tasks/060-libbox-1-13-migration/spec.md)) ← `io.github.sagernet:libbox:1.12.12`.
 
 Config import via the **Read** button accepts **JSON** or **JSON5/JSONC** (`//` and `/* */` comments — the `json5` parser); canonical JSON is then handed to the core. The source is either the clipboard or the system file picker.
 
@@ -169,9 +169,11 @@ Rejected alternatives for delivering the core to CI:
 
 - ⚠ Updating the core means raising the pin in `app/android/libbox.version`, rebuilding locally (fetch re-downloads the AAR on its own), running the smoke tests (Start/Stop, vless + wg + awg regression) and updating the [“Versions”](#versions) section.
 
-## A minimal config for testing on a phone
+## Testing on a phone
 
-The file **[`docs/examples/minimal_local_test.json`](examples/minimal_local_test.json)** is valid sing-box JSON: just **tun** plus **direct/block** in the selector, with no paid or third-party proxy. It is enough to confirm that **Read → Start** brings the tunnel up and that the **proxy** group with the **direct** / **block** nodes appears in the UI. The internet keeps working as usual through direct — this is not a bypass.
+Smoke test after a core bump: **Start → Stop**, then a VLESS, a WireGuard and an
+AmneziaWG node. The config is built from the template; there is no hand-written
+test config to keep in sync.
 
 ⚠ The core is controlled through the **libbox CommandClient**, not Clash HTTP (the Clash API was removed in §122). An `experimental.clash_api` block in a config is a **fatal startup failure** on our core (built without `with_clash_api`): `clash api is not included in this build`. Do not put it in a config you intend to test.
 
@@ -181,11 +183,13 @@ Workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml); the full rel
 
 | Event | What runs |
 |---------|-----------------|
-| push / PR to `main`, `develop` | ✓ `checks` only (`flutter analyze`, L10n checks, `flutter test`) — no Java or Gradle |
-| push of a `v*` tag | ✓ `meta` + `checks` + `android` + `release` + `publish-manifest` (a full release) |
-| `workflow_dispatch`, `run_mode=checks` | ○ `checks` only |
-| `workflow_dispatch`, `run_mode=build` | ○ `checks` + `android` (APK in artifacts, no release) |
+| push / PR to `main`, `develop` | ✓ `checks` (`flutter analyze`, L10n checks, docs parity, contract lock, `flutter test`) + `public-subs` (job `PublicSubsCorpus`: parse-only run over the public subscription corpus, `continue-on-error`, report in artifacts) — no Java or Gradle |
+| push of a `vX.Y.Z` tag | ✓ `meta` + `checks` + `public-subs` + `android` + `release` + `google-play` + `publish-manifest` (a full release) |
+| push of a `vX.Y.Z-rc.N` tag | ✓ the same jobs, but the GitHub Release is marked pre-release, and `google-play` and `publish-manifest` are skipped (§436: a release candidate never reaches users — `/releases/latest`, `docs/latest.json` and Play do not see it) |
+| `workflow_dispatch`, `run_mode=checks` | ○ `checks` + `public-subs` only |
+| `workflow_dispatch`, `run_mode=build` | ○ `checks` + `public-subs` + `android` (APK in artifacts, no release) |
 | `workflow_dispatch`, `run_mode=release` | ○ a full release without a tag (emergency re-issues) |
+| `workflow_dispatch` with `test_path` | ○ pinpoint run: only the listed test files, `flutter analyze` and `public-subs` are skipped |
 
 From the terminal (`gh auth login`):
 
@@ -268,4 +272,4 @@ Before `flutter build apk --release` the workflow recreates temporary `app/andro
 ## Versions
 
 - **Flutter 3.47.1** is pinned in the file `app/android/flutter.version` — CI reads it in the `Flutter version pin` step, so upgrading means editing that file, not the workflow. **JDK 17** is set in `ci.yml` directly; when it changes, update `ci.yml` and this file.
-- The core is **sing-box-lx `v1.14.0-lx.28-rc.1`** (fork branch `lx`): pinned in `app/android/libbox.version` (the single source for local builds and CI, read by `scripts/fetch-libbox.sh`); the local `app/android/app/libs/libbox.aar` must match the pin (fetch tracks this through the `.libbox.version` marker). The single source of truth for the core version and its build tags is [KERNEL.md](KERNEL.md) plus the pin file itself. When updating: raise the pin, rebuild locally, run the smoke tests and update this line.
+- The core is **sing-box-lx** (fork branch `lx`), `v1.14.2-lx.11` as of 2026-09-30: pinned in `app/android/libbox.version` (the single source for local builds and CI, read by `scripts/fetch-libbox.sh`); the local `app/android/app/libs/libbox.aar` must match the pin (fetch tracks this through the `.libbox.version` marker). The single source of truth for the core version and its build tags is [KERNEL.md](KERNEL.md) plus the pin file itself. When updating: raise the pin, rebuild locally, run the smoke tests and update this line.

@@ -13,7 +13,32 @@ Android-клиент на ядре [sing-box-lx](https://github.com/Leadaxe/sing
   <a href="https://github.com/Leadaxe/LxBox"><img src="docs/badges/get-it-on-github.png" alt="Get it on GitHub" height="80"></a>
 </p>
 
-**[Скачать последний релиз](https://github.com/Leadaxe/LxBox/releases/latest)** | **[English README](README.md)** | **[Руководство пользователя](docs/USER_GUIDE.ru.md)** | **[Поддержать проект](docs/DONATE.ru.md)**
+**[Скачать последний релиз](https://github.com/Leadaxe/LxBox/releases/latest)** | **[English README](README.md)** | **[Руководство пользователя](docs/USER_GUIDE.ru.md)** | **[Поддержать проект](docs/DONATE.ru.md)** | **[Реестр публичных серверов](docs/PUBLIC_SOURCES.ru.md)**
+
+---
+
+## Для чего L×Box
+
+- **VLESS, WARP и Tailscale одновременно.** Android разрешает только один активный `VpnService`, поэтому приложение VLESS, приложение Cloudflare WARP и приложение Tailscale вместе не работают: кто стартовал последним, тот и забирает туннель. L×Box запускает все три как исходящие и endpoint'ы внутри одного ядра, а правила маршрутизации решают, куда идёт трафик.
+- **Прокси через WARP.** Трафик выходит через ваш сервер VLESS, а затем через Cloudflare WARP, и сайт назначения не видит адрес VPS. Собирается как **цепочка** (явный многохоповый маршрут в интерфейсе) или как **detour** (один узел идёт через другой). Оба варианта проверяются до сборки конфига: детектор циклов и задержка по каждому хопу.
+- **Tailnet с телефона без приложения Tailscale.** Endpoint `tailscale` работает внутри ядра: MagicDNS, exit node и пинг устройств.
+- **Обход DPI.** REALITY, XHTTP, фрагментация TLS, ECH, отпечатки uTLS, обфускация AmneziaWG 1.x/2.0 и MASQUE поверх QUIC — настраивается на каждом узле.
+- **Много подписок.** Импорт по URL, из файла, по QR или вставленной ссылке; схлопывание повторов, выключение отдельных серверов, переписывание правилами фильтра, автообновление по шести триггерам с защитой от лишних запросов.
+- **Беречь батарею.** Ядро приостанавливает недоступные туннели вместо повторных попыток в цикле, а автообновление подписок не шлёт запросы пачкой.
+
+## Частые вопросы
+
+**L×Box бесплатный?** Да — свободный и открытый, лицензия GPL-3.0, без рекламы, трекеров, аналитики и без учётной записи.
+
+**Чем отличается от sing-box for Android (SFA)?** SFA — эталонный клиент команды SagerNet: ему отдают сырой JSON. У L×Box полный интерфейс для подписок, узлов, маршрутизации, DNS и диагностики и своё ядро (`sing-box-lx`): AmneziaWG 2.0, нативный XHTTP, исходящий MASQUE, round-robin-балансировщик и idle-suspend простаивающих туннелей. Сырой JSON тоже работает — есть редактор конфига и закрепление конфига.
+
+**Чем отличается от Hiddify, NekoBox или Karing?** Это оболочки над обычным ядром sing-box или mihomo. L×Box поставляет свой форк ядра, поэтому на клиенте есть транспорты, которых в обычном ядре нет: XHTTP из Xray, AmneziaWG 2.0 и постквантовый VLESS (`mlkem768x25519plus`).
+
+**Нужен root?** Нет.
+
+**Есть Cloudflare WARP?** Да — одно нажатие «Получить WARP» регистрирует учётную запись и создаёт ключи WireGuard или MASQUE на устройстве. Приватный ключ не покидает телефон. Ключи лицензии WARP+ поддерживаются.
+
+**Где скачать?** [GitHub Releases](https://github.com/Leadaxe/LxBox/releases/latest), [F-Droid](https://f-droid.org/ru/packages/com.leadaxe.lxbox/) и [Google Play](https://play.google.com/store/apps/details?id=com.leadaxe.lxbox).
 
 ---
 
@@ -47,12 +72,47 @@ Android-клиент на ядре [sing-box-lx](https://github.com/Leadaxe/sing
 
 ## Возможности
 
+Каждая возможность ниже описана как спецификация «чёрного ящика» в
+**[каталоге фич](docs/spec/features/README.ru.md)**: что она обещает
+пользователю, что принимает и отдаёт, где заканчивается. За точным
+поведением — туда; разделы ниже — обзор.
+
+| Область | Спецификация |
+|---------|--------------|
+| Подписки, файловые и вставленные источники, автообновление, отключение узлов | [001-SUBSCRIPTIONS](docs/spec/features/001-SUBSCRIPTIONS/FEATURE.ru.md) |
+| Импорт ссылок и конфигов: VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, AnyTLS, NaïveProxy, SSH, SOCKS, HTTP, WireGuard, AmneziaWG, MASQUE, Tailscale, Xray и sing-box JSON | [002-NODE_IMPORT](docs/spec/features/002-NODE_IMPORT/FEATURE.ru.md) |
+| Сборка конфига sing-box: шаблон, переменные, жизненный цикл настроек | [003-CONFIG_BUILD](docs/spec/features/003-CONFIG_BUILD/FEATURE.ru.md) |
+| Правила маршрутизации, пресеты, кэш rule-set, Направления | [004-ROUTING](docs/spec/features/004-ROUTING/FEATURE.ru.md) |
+| DNS: серверы, правила, группы, FakeIP, кэш | [005-DNS](docs/spec/features/005-DNS/FEATURE.ru.md) |
+| Detour, цепочки хопов, балансировка | [006-DETOUR_AND_BALANCE](docs/spec/features/006-DETOUR_AND_BALANCE/FEATURE.ru.md) |
+| Главный экран: список узлов, фильтры, сортировка, папки, активный узел | [007-NODE_LIST](docs/spec/features/007-NODE_LIST/FEATURE.ru.md) |
+| Свои узлы, настройки узла, мастер добавления сервера | [008-NODE_EDITOR](docs/spec/features/008-NODE_EDITOR/FEATURE.ru.md) |
+| Пинг, URLTest, диагностика узла, автоотключение, тест скорости | [009-NODE_HEALTH](docs/spec/features/009-NODE_HEALTH/FEATURE.ru.md) |
+| Туннель: запуск и остановка, режимы VPN и Proxy, автозапуск, сон, восстановление | [010-VPN_SERVICE](docs/spec/features/010-VPN_SERVICE/FEATURE.ru.md) |
+| Раздельное туннелирование по приложениям | [011-SPLIT_TUNNELING](docs/spec/features/011-SPLIT_TUNNELING/FEATURE.ru.md) |
+| Живой статус, соединения, статистика, трафик по приложениям, трасса DNS | [012-LIVE_STATE](docs/spec/features/012-LIVE_STATE/FEATURE.ru.md) |
+| Журналы, отчёты о сбоях, дамп диагностики, Debug API | [013-DIAGNOSTICS](docs/spec/features/013-DIAGNOSTICS/FEATURE.ru.md) |
+| Quick Connect, Intent API, интеграция с Tasker | [014-AUTOMATION](docs/spec/features/014-AUTOMATION/FEATURE.ru.md) |
+| Cloudflare WARP: регистрация в один тап, узлы WireGuard и MASQUE | [015-WARP](docs/spec/features/015-WARP/FEATURE.ru.md) |
+| Обход DPI: фрагментация TLS, приёмы с SNI, ECH, REALITY, XHTTP | [016-DPI_HARDENING](docs/spec/features/016-DPI_HARDENING/FEATURE.ru.md) |
+| Резервная копия, восстановление, перенос на десктоп, контракт хранения | [017-BACKUP_AND_STORAGE](docs/spec/features/017-BACKUP_AND_STORAGE/FEATURE.ru.md) |
+| Наборы настроек (workspaces) | [018-WORKSPACES](docs/spec/features/018-WORKSPACES/FEATURE.ru.md) |
+| Редактор конфига и закрепление конфига | [019-CONFIG_EDITOR](docs/spec/features/019-CONFIG_EDITOR/FEATURE.ru.md) |
+| Настройки приложения, тема, локализация, первый запуск, проверка обновлений | [020-APP_SHELL](docs/spec/features/020-APP_SHELL/FEATURE.ru.md) |
+| Шаблон конфига, его язык и язык пресетов; расширение клиента через шаблон | [024-TEMPLATE](docs/spec/features/024-TEMPLATE/FEATURE.ru.md) |
+| Реестр контракта: схемы протоколов, санитайзинг узлов, гейт сборки, коды предупреждений | [025-CONTRACT_REGISTRY](docs/spec/features/025-CONTRACT_REGISTRY/FEATURE.ru.md) |
+| Направления: адресаты маршрутизации vpn-N, direct-out, block | [026-DIRECTIONS](docs/spec/features/026-DIRECTIONS/FEATURE.ru.md) |
+| Debug API: локальный HTTP-интерфейс для автоматизации и диагностики | [027-DEBUG_API](docs/spec/features/027-DEBUG_API/FEATURE.ru.md) |
+| Профайлер трафика: журнал соединений по приложениям, атрибуция, трасса DNS | [028-TRAFFIC_PROFILER](docs/spec/features/028-TRAFFIC_PROFILER/FEATURE.ru.md) |
+| Локализация: языки, модель «английский как ключ», процесс перевода | [029-LOCALIZATION](docs/spec/features/029-LOCALIZATION/FEATURE.ru.md) |
+| Tailscale: телефон как узел вашей сети tailnet внутри VPN | [030-TAILSCALE](docs/spec/features/030-TAILSCALE/FEATURE.ru.md) |
+
 <details>
 <summary><strong>Серверы и подписки</strong> — все источники прокси в одном месте</summary>
 
 Добавляйте серверы по URL подписки, прямой ссылке, WireGuard URI/INI, Amnezia `vpn://`-ссылке, raw sing-box JSON — отдельным outbound'ом или **конфигом целиком**, из которого приезжают узлы, группы автовыбора и цепочки detour (§368) — или через **Import from file…** (локальный `.txt`/`.json`; файл более чем с одной нодой становится файловой подпиской, §129). Умный диалог вставки определяет формат автоматически и показывает превью. Включение/отключение подписок без удаления. Офлайн-rehydrate — ноды восстанавливаются из кеша тела при старте приложения.
 
-- **13 протоколов**: VLESS (вкл. постквантовое шифрование ML-KEM-768, §335), VMess, Trojan, Shadowsocks, Hysteria2, **TUIC v5**, **NaïveProxy**, **AnyTLS** (§269), SSH, SOCKS, WireGuard (вкл. **AmneziaWG / AWG 2.0** — `awg://` URI, AmneziaWG `.conf`, **Amnezia `vpn://`-ссылки**, JSON), **MASQUE** (Cloudflare WARP — `masque://`, QUIC/HTTP-3), **Tailscale** (endpoint sing-box, который сам входит в ваш tailnet; узел носит с собой DNS-сервер, правило `.ts.net` и маршрут `100.64.0.0/10` — §435)
+- **13 протоколов**: VLESS (вкл. постквантовое шифрование ML-KEM-768, §335), VMess, Trojan, Shadowsocks, Hysteria2, **TUIC v5**, **NaïveProxy**, **AnyTLS** (§269), SSH, SOCKS, WireGuard (вкл. **AmneziaWG / AWG 2.0** — `awg://` URI, AmneziaWG `.conf`, **Amnezia `vpn://`-ссылки**, JSON), **MASQUE** (Cloudflare WARP — `masque://`, QUIC/HTTP-3), **Tailscale** (endpoint sing-box, который сам входит в ваш tailnet; пресет Tailscale даёт каждому узлу его MagicDNS-сервер и ведёт трафик tailnet к нему через `preferred_by`, без жёстких правил `.ts.net` и маршрутов `100.64.0.0/10` — §578)
 - Форматы: Base64, Xray JSON Array (вкл. цепочки dialerProxy и все протоколы массива, §321), plain text, sing-box JSON — outbound, массив, конфиг целиком или массив конфигов, с группами и цепочками `detour` (§368)
 - **Дедупликация узлов** (§321) — один сервер, перечисленный в подписке несколько раз, становится одним узлом
 - **Авто-узлы** (§322) — провайдерский пункт «Авто | Лучший сервер» приезжает одним узлом с пулом внутри: в строке виден режим и состав (`🔀 [15/7]` — балансировка, `🎯 [3]` — один быстрейший). Свой авто-узел можно собрать в папке: «Add auto node…» — членство по regex-правилу, списку галочками или «все серверы папки»
@@ -82,7 +142,7 @@ Android-клиент на ядре [sing-box-lx](https://github.com/Leadaxe/sing
 - **SCAN WARP** (§284) — кнопка **Make experiment** в визарде создаёт папку-эксперимент: генерирует пул WARP-вариантов (WireGuard / AWG / MASQUE h2/h3) по диапазонам адресов Cloudflare и прогоняет пингом; мёртвые узлы выключаются сами. Поиск рабочего эндпоинта на конкретной сети без ручного перебора.
 - **WARP+** (опционально): license key под *Advanced* привязывает WARP+ (Argo Smart Routing). Пусто = бесплатный WARP.
 - **Идемпотентность**: повторный тап переиспользует закешированный аккаунт; *Re-register* создаёт новый.
-- См. [спека 025](docs/spec/features/025%20warp%20integration/spec.md)
+- См. [спека 025](docs/spec/tasks/025F-warp-integration/spec.md)
 </details>
 
 <details>
@@ -106,7 +166,7 @@ Android-клиент на ядре [sing-box-lx](https://github.com/Leadaxe/sing
 - **Гейты**: `minRetryInterval=15min` (переживает рестарт через `lastUpdateAttempt`), `maxFailsPerSession=5`, `10s ± 2s` между подписками, dedup-флаги от параллельных прогонов и двойных кликов
 - Crash-safe init sweep: зависший `inProgress` на диске сбрасывается в `failed`
 - Пересборка конфига **никогда** не ходит в сеть — только локальная сборка из загруженных узлов
-- См. [спека 027](docs/spec/features/027%20subscription%20auto%20update/spec.md)
+- См. [спека 027](docs/spec/tasks/027F-subscription-auto-update/spec.md)
 </details>
 
 <details>
@@ -148,7 +208,7 @@ Android-клиент на ядре [sing-box-lx](https://github.com/Leadaxe/sing
 - **SRS только локально** — без авто-обновлений, ручное скачивание через ☁, правило заблокировано, пока нет кэша
 - Drag-reorder, long-press → Delete с подтверждением, dirty-aware save («Discard changes?»), вкладка View с готовым sing-box-фрагментом
 - Fallback для несматченного трафика (`route.final`)
-- См. [спека 030](docs/spec/features/030%20custom%20routing%20rules/spec.md), [спека 011](docs/spec/features/011%20local%20ruleset%20cache/spec.md)
+- См. [спека 030](docs/spec/tasks/030F-custom-routing-rules/spec.md), [спека 011](docs/spec/tasks/011F-local-ruleset-cache/spec.md)
 </details>
 
 <details>
@@ -175,7 +235,7 @@ Auto-группа Направления умеет не только выбир
 
 В редакторе — чипы **Add current** (текущая сеть), **Pick saved** (история посещённых), **Manual**; гейты разрешений Android учтены. История сетей пишется только при явном opt-in (App Settings → Diagnostics), сеть попадает в неё после ≥5 минут на ней, максимум 50 записей.
 
-- См. [спека 051](docs/spec/tasks/051-custom-rule-wifi-conditions.md), [обзор фичи](docs/features/wifi-aware-routing.md)
+- См. [спека 051](docs/spec/tasks/051-custom-rule-wifi-conditions.md), [обзор фичи](docs/spec/tasks/051-wifi-aware-routing-guide.md)
 </details>
 
 <details>
@@ -230,7 +290,7 @@ Auto-группа Направления умеет не только выбир
 - **TLS Record Fragment** — разбивает handshake на несколько TLS-записей
 - **Mixed-case SNI** — рандомизирует регистр `server_name` (`WwW.gOoGle.CoM`); обходит наивный exact-match DPI региональных провайдеров (по RFC 6066 поле case-insensitive, поведение сервера не меняется). Против фильтрации класса GFW неэффективен
 - Все приёмы применяются только к первому хопу (внутренние хопы идут внутри туннеля, локальный DPI их не видит)
-- См. [спека 020](docs/spec/features/020%20security%20and%20dpi%20bypass/spec.md), [спека 028](docs/spec/features/028%20antidpi%20sni%20obfuscation/spec.md)
+- См. [спека 020](docs/spec/tasks/020F-security-and-dpi-bypass/spec.md), [спека 028](docs/spec/tasks/028F-antidpi-sni-obfuscation/spec.md)
 </details>
 
 <details>
@@ -343,6 +403,8 @@ Auto-группа Направления умеет не только выбир
 ---
 
 ## Архитектура
+
+Спецификации лежат в [`docs/spec/`](docs/spec/README.ru.md): фичи как чёрные ящики в `features/`, история реализации в `tasks/`.
 
 L×Box построен вокруг **3-слойного parser/builder pipeline** (спека 026):
 

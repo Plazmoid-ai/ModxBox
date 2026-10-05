@@ -103,7 +103,7 @@ lxbox_settings.json                          # SettingsStorage (Dart), the main 
 │           ├─ mode              string        §208 — 'least_test' (default) | 'round_robin'
 │           └─ balancer          object{3 keys}  §208 — {pool, pool_tolerance, sticky_hash[]}
 ├─ directions_migrated           bool          §125/§393 — the guard for the one-shot directions migration
-├─ last_global_update            ISO-8601      the timestamp of the last auto-refresh
+├─ last_global_update            ISO-8601      LEGACY (§593) — neither written nor read; kept known for old files
 ├─ presets_migrated              bool          §159 — the "default presets have been seeded" guard (fresh-install seed)
 ├─ late_presets_seeded           List<String>  §578 — late default presets already seeded once (e.g. tailscale)
 ├─ interrupt_connections_on_switch  bool       §143 — tear down the switched group's connections when the node changes (default false, NOT config-significant)
@@ -205,7 +205,7 @@ Android SharedPreferences:
   "enabled_groups":     [ … ],     // §125 DEPRECATED (read only by the directions[] migration)
   "directions":         [ … ],     // §125 — routing directions (template→storage)
   "directions_migrated": true,     // §125/§393 — the guard for the one-shot directions migration
-  "last_global_update": "ISO-8601",// the last auto-refresh of subscriptions
+  "last_global_update": "ISO-8601",// LEGACY (§593) — present only in old files
   "presets_migrated":   true,      // §159 — the "defaults seeded" guard (fresh-install seed)
   "late_presets_seeded": [ "tailscale" ], // §578 — late default presets seeded once
   "interrupt_connections_on_switch": false, // §143 — tear down the group's conns on a node switch (NOT config-significant)
@@ -439,7 +439,7 @@ A flat `Map<String, String>` (values are stringified on read). It serves both **
 
 > The authoritative list of app flags in code is `SettingsStorage._appFeatureFlagVars`; keep this table in sync with it.
 
-A full replace (`replaceRaw` with `merge=false`: backup restore in Replace mode, `POST /backup/import`) keeps some device keys from the current storage when the incoming `vars` lack them: `debug_enabled` / `debug_token` / `debug_port` (§413, `SettingsStorage.debugApiVarKeys`) and the one-shot startup prompt flags `wizard_battery_v1`, `wizard_addtile_v1`, `wizard_update_check_v1`, `notif_perm_prompted_v1` (§447, `SettingsStorage.startupPromptVarKeys`). The `wizard_*` keys are not in the import allowlist, so a file never brings them.
+A full replace (`replaceRaw` with `merge=false`: backup restore in Replace mode, `POST /backup/import`) keeps some device keys from the current storage when the incoming `vars` lack them: `debug_enabled` / `debug_token` / `debug_port` (§413, `SettingsStorage.debugApiVarKeys`) and the one-shot startup prompt flags `wizard_battery_v1`, `wizard_addtile_v1`, `wizard_update_check_v1`, `notif_perm_prompted_v1` (§447, `SettingsStorage.startupPromptVarKeys`). None of the four startup prompt flags is in the import allowlist, so a file never brings them; import (both modes) skips them silently instead of reporting them as unknown keys (§600), while export still writes them.
 
 `removeVar(k)` is not the same as `setVar(k, '')` — an empty string can be a legitimate value, while an absent key falls back to the default.
 
@@ -1108,12 +1108,12 @@ The tag lives **only** at the record level; the builder synthesizes `body.tag` b
 both saved the result. Two build fixes came with the move to models: a user rule without
 an `enabled` key is emitted, and an srs DNS rule reaches the config.
 
-⚠ §257: on a `kind: preset` rule record the `enabled` field is **dead**: the toggle for a
-preset's DNS block moved to the magic var `dns_enable`
+§257/§593: on a `kind: preset` rule record `enabled` is always written as `true` and never
+read. The toggle for a preset's DNS block is the magic var `dns_enable`
 (`rules[].vars` of the preset rule, see “Magic variables” in TEMPLATE.md). The entry
-remains only as a **positional anchor** for the mirror group (§117) — it decides
-where the preset's DNS rules sit inside `dns.rules`. Neither the builder nor the UI
-reads its `enabled`; auto-discovery keeps writing `enabled: true`, harmlessly.
+is only a **positional anchor** for the mirror group (§117) — it decides where the
+preset's DNS rules sit inside `dns.rules`. The field stays in the record because it is
+part of the contract's record shape; an old file carrying `false` is read as a plain anchor.
 
 ### Migration history
 
@@ -1292,7 +1292,7 @@ The cached registered Cloudflare WARP account (the “Get WARP” button). The p
 
 **`reserved`.** The `client_id` (base64, 3 bytes) is carried to the sing-box endpoint as a per-peer `reserved: [b0,b1,b2]`. Without it WARP drops the traffic.
 
-CRUD: `getWarpAccount()` / `setWarpAccount(account?)` (null clears it). See [features/025](spec/features/025%20warp%20integration/spec.md).
+CRUD: `getWarpAccount()` / `setWarpAccount(account?)` (null clears it). See [features/025](spec/tasks/025F-warp-integration/spec.md).
 
 ---
 
@@ -1530,7 +1530,7 @@ After the migration the set of directions lives in `directions[]` and is edited 
   node of a container and is never a direction (D-112), so healing leaves it alone. A backup restore does not
   re-run healing (the degradations are accepted — the builder collapses danglers at build
   time). Legacy `✨auto` references fall under the same rule. Details:
-  [`spec/features/248 detour-channels/`](spec/features/248%20detour-channels/).
+  [`spec/tasks/248F-detour-channels/`](spec/tasks/248F-detour-channels/).
 - CRUD: `getDirections` / `setDirections` / `addDirection` / `updateDirection` /
   `deleteDirection` (throws for vpn-1) / `migrateDirectionsIfNeeded`.
 - ⚠ **Mutate through `services/direction_mutations.dart`**, never directly (§275):
@@ -1541,8 +1541,8 @@ After the migration the set of directions lives in `directions[]` and is edited 
   service is an analyze error. `setDirections` is a raw bulk overwrite with no healing
   (for persisting the whole list).
 
-Specs: [`docs/spec/features/125 configurable-channels/`](spec/features/125%20configurable-channels/),
-[`docs/spec/features/248 detour-channels/`](spec/features/248%20detour-channels/)
+Specs: [`docs/spec/tasks/125F-configurable-channels/`](spec/tasks/125F-configurable-channels/),
+[`docs/spec/tasks/248F-detour-channels/`](spec/tasks/248F-detour-channels/)
 (the detour layer).
 
 ---
@@ -1648,7 +1648,7 @@ with a warning. A legacy 0.12 file carries a root `chains[]` section (contract 0
 | `route_final` | `String` | An override of `route.final` on top of the template (the chosen default outbound). `''` means the template default. A dangling reference (a deleted direction, or the legacy ✨auto) becomes `vpn-1` at build time (§125). |
 | `route_idle_suspend` | `String` | §215/§128 — the idle-suspend threshold (`lx.wg.idle_suspend`, kernel SPEC 020; the key lived at `route.lx_idle_suspend` until the `v1.14.2-lx.1` pin — §535). A duration string (`'30s'` / `'5m'`), **default `'30s'`** (enabled since v2.8.2); `''` means off (the `lx` block is not emitted at all). **Config-significant** (`markConfigDirty`). CRUD: `getIdleSuspend` / `saveIdleSuspend`. |
 | `enabled_groups` | `List<String>` | §125, **DEPRECATED** — replaced by `directions[]`. Read only by the one-shot migration; on disk it is harmless debris. |
-| `last_global_update` | `String` (ISO-8601) | The timestamp of the last successful auto-refresh of all subscriptions. |
+| `last_global_update` | `String` (ISO-8601) | **LEGACY** (§593) — once the timestamp of the last global subscription refresh (§010F). The app neither writes nor reads it any more; it stays in the import allowlist so that an old storage file or backup carrying it is accepted without an “unknown keys” warning. |
 | `presets_migrated` | `bool` | §159 — the “default presets have been seeded” guard (the fresh-install seed). The key's name is historical (it used to drive a legacy migration) and was reused so that users who had already migrated would not be seeded twice. `RoutingScreen._seedDefaultPresets` sets it to true. |
 | `late_presets_seeded` | `List<String>` | §578 — the ids from `kLateDefaultPresetIds` (today `tailscale`) for which the one-time step `SettingsStorage.seedLateDefaultPresets` has run. The step adds a preset the template declares `default: true` to an install that already had its defaults seeded (`presets_migrated`), enabled and with the template's `num`, then records the id here: a preset the user deleted does not come back. A fresh install marks every late id as done in its first seed. The step runs before the build reads the rules and on the Routing screen. |
 | `interrupt_connections_on_switch` | `bool` | §143 — tear down the switched group's active connections when the node changes (default `false`, NOT config-significant). See `getInterruptOnSwitch` / `setInterruptOnSwitch`. |
@@ -1766,30 +1766,30 @@ The scrubber only handles the `vars` and `sources` keys; everything else (`meta.
 
 ---
 
-[§011]: ./spec/features/011%20local%20ruleset%20cache/spec.md
-[§027]: ./spec/features/027%20subscription%20auto%20update/spec.md
+[§011]: ./spec/tasks/011F-local-ruleset-cache/spec.md
+[§027]: ./spec/tasks/027F-subscription-auto-update/spec.md
 [§414]: ./spec/tasks/414-config-dirty-check-files-dir.md
-[§029]: ./spec/features/029%20haptic%20feedback/spec.md
-[§030]: ./spec/features/030%20custom%20routing%20rules/spec.md
-[§031]: ./spec/features/031%20debug%20api/spec.md
-[§033]: ./spec/features/033%20preset%20bundles/spec.md
-[§036]: ./spec/features/036%20update%20check/spec.md
+[§029]: ./spec/tasks/029F-haptic-feedback/spec.md
+[§030]: ./spec/tasks/030F-custom-routing-rules/spec.md
+[§031]: ./spec/tasks/031F-debug-api/spec.md
+[§033]: ./spec/tasks/033F-preset-bundles/spec.md
+[§036]: ./spec/tasks/036F-update-check/spec.md
 [§037]: ./spec/tasks/037-debug-api-write-config-and-lock-rebuild.md
-[§038]: ./spec/features/038%20crash%20diagnostics/spec.md
+[§038]: ./spec/tasks/038F-crash-diagnostics/spec.md
 [§040]: ./spec/tasks/040-per-group-ping-test-settings.md
 [§408]: ./spec/tasks/408-ping-options-groups-heal.md
 [§061]: ./spec/tasks/061-dns-rules-refactor/spec.md
 [§044]: ./spec/tasks/044-dns-servers-clean-schema.md
-[§046]: ./spec/features/046%20tunnel%20apps%20split-tunneling/spec.md
-[§117]: ./spec/features/117%20dns-rework/spec.md
+[§046]: ./spec/tasks/046F-tunnel-apps-split-tunneling/spec.md
+[§117]: ./spec/tasks/117F-dns-rework/spec.md
 [§189]: ./spec/tasks/189-native-prefs-mirror-in-json.md
 [§192]: ./spec/tasks/192-proxy-mode-prepare-revokes-foreign-vpn.md
-[§279]: ./spec/features/279%20localization/spec.md
+[§279]: ./spec/tasks/279F-localization/spec.md
 [§220]: ./spec/tasks/220-allow-rotation-setting.md
-[043-applog]: ./spec/features/043%20applog%20per-source%20quotas/spec.md
+[043-applog]: ./spec/tasks/043F-applog-per-source-quotas/spec.md
 [043-dns]: ./spec/tasks/043-dns-servers-refs-by-kind.md
 [§438]: ./spec/tasks/438-lx-backup-1-0-read-write.md
-[§439]: ./spec/features/439%20storage-contract-1-0/spec.md
+[§439]: ./spec/tasks/439F-storage-contract-1-0/spec.md
 [§370]: ./spec/tasks/370-rule-order-num-axis.md
 [§434]: ./spec/tasks/434-srs-rule-multiple-rule-sets.md
 [§435]: ./spec/tasks/435-node-sections-tailscale.md

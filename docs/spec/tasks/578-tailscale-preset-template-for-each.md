@@ -2,12 +2,12 @@
 
 | Поле | Значение |
 |------|----------|
-| Статус | Spec. Реализация запущена |
+| Статус | Implemented — `for_each`/`@node`/`#tpl` в `if_engine.dart`, пресет `tailscale` в шаблоне; тесты `test/contract/template_for_each_corpus_test.dart`, `test/services/builder/preset_for_each_test.dart`, `test/builder/tailscale_preset_build_test.dart`; выпущено в v2.25.8 |
 | Дата старта | 2026-09-27 |
 | Дата завершения | — |
 | Коммиты | — |
 | Контракт | 1.1.86 (995a0e3b) — три возможности языка шаблона, пресет `tailscale`, поле записи `skip_presets`, D-120 подтверждён |
-| Связанные spec'ы | [§575](575-remove-node-sections.md) (выходит в одном релизе), [§435](435-node-sections-tailscale.md), [§437](437-tailscale-bundle-import.md), [features/120](../features/120%20template-engine-typed-vars-and-if/spec.md) (движок `#if`) |
+| Связанные spec'ы | [§575](575-remove-node-sections.md) (выходит в одном релизе), [§435](435-node-sections-tailscale.md), [§437](437-tailscale-bundle-import.md), [features/120](../tasks/120F-template-engine-typed-vars-and-if/spec.md) (движок `#if`) |
 
 ## Проблема
 

@@ -34,13 +34,17 @@ milliseconds. `startTailscaleSSHSession` is not used.
 | Called from | `scripts/build-local-apk.sh` and CI (`ci.yml` → the android job → “Fetch sing-box-lx core”) |
 | The AAR in git | NO (~110 MB as of lx.25; `app/android/app/libs/` is in `.gitignore`); `build.gradle.kts` → `implementation(files("libs/libbox.aar"))` |
 
-**The current pin: `v1.14.2-lx.8`** (see `app/android/libbox.version`) — lx.1
+**The current pin: `v1.14.2-lx.11`** (see `app/android/libbox.version`) — lx.1
 plus XHTTP HTTP-version parity (**SPEC 104**, lx.2), Vision on top of VLESS
 Encryption (**SPEC 105**, lx.3), the runtime WG/AWG endpoint toggle
 (**SPEC 106**, lx.4: `CommandClient.setEndpointEnabled`, `endpointState =
 "disabled"`, bound since §557), a working `sing-box schema` (lx.5) and the XHTTP
 default without `xmux` moved to `max_connections 3` (lx.6), three MASQUE hangs fixed
-(**SPEC 108**, lx.7) and the sync with sing-box `stable` (lx.8). The `lx.1` layers: **SPEC 097**, **SPEC 098**,
+(**SPEC 108**, lx.7), the sync with sing-box `stable` (lx.8), the Tailscale
+control channel on port 443 from the first connection (**SPEC 111**, lx.9),
+the headroom Tailscale needs on a direct UDP path restored in the AWG
+wireguard-go (**SPEC 112**, lx.10) and one more `stable` sync (lx.11). The Java
+surface of lx.11 is identical to lx.8 (`javap` over both `classes.jar`). The `lx.1` layers: **SPEC 097**, **SPEC 098**,
 **SPEC 101** and the upstream sync to sing-box **1.14.2** (**SPEC 102**).
 
 **SPEC 098** moves every global knob of the fork into a root **`lx`** block,
@@ -93,8 +97,9 @@ service.
 
 `lx.masque.idle_timeout` is a new global default for masque outbounds without
 their own `idle_timeout`; a node's own key wins, including an explicit `"0"`.
-MASQUE idle stays **off** by default, and LxBox does not write the global key —
-its WARP MASQUE nodes carry their own `idle_timeout` (5m).
+MASQUE idle stays **off** by default, and LxBox does not write the global key;
+a WARP MASQUE node carries `idle_timeout` only when the wizard's field is filled
+(empty = the key is omitted = never suspended).
 
 Every `lx.wg` key acts **only** in builds with `with_lx_idle_suspend` (the mobile
 AAR) — see gotcha 1.
@@ -275,8 +280,9 @@ unchanged from lx.36 (javap-diff of `PlatformInterface`, `CommandClient`,
 `CommandClientHandler`, `BoxService`, `Libbox` — identical). The upstream
 base is lx.37's: `upstream/stable` b7eb49bb8 (v1.14.0 + 33), submodules
 wireguard-go v0.0.6 / sing-tun v0.9.3. LxBox gates a Tailscale node on this
-version (`kTailscaleMinCoreVersion`, `core_chain_capability.dart`): on an
-older core the node is skipped at build with `tailscale_core_unsupported`.
+version through the build-tag mirror (`with_tailscale` in `kCoreBuildTags`,
+`core_chain_capability.dart`; the registry node gate, contract §56): on an older core the node is skipped at
+build with `tailscale_core_unsupported`.
 
 **`v1.14.0-lx.36`** — two hotfixes on the same upstream base as lx.34 (sing-box
 1.14.0 + 16 post-release commits); nothing in the configuration or on the wire
@@ -895,9 +901,11 @@ re-check the list and move `kCoreBuildTagsPin`; `node_core_gate_test` fails
 until the pin matches `app/android/libbox.version`.
 
 `with_clash_api` is deliberately absent (§122 — CommandClient instead of Clash
-HTTP); `with_usbip` and `with_openvpn` / `with_openconnect` are deliberately
-omitted too (server-side or outside the client's scope — see the comments in
-`build_libbox`).
+HTTP), and so is `with_usbip` (server-side). `with_openvpn` / `with_openconnect`
+are **in** since the SPEC 051 upstream merge (owner's decision 2026-08-05): each
+tag gates one package holding client and server behind the same tag, and the
+server half is accepted as the price of the client — see the `lx:begin openvpn`
+comment in `build_libbox`.
 
 ## ⚠️ Gotchas when bumping the version
 

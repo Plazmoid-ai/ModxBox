@@ -1,7 +1,6 @@
 /// Full wizard template loaded from asset.
 class WizardTemplate {
   WizardTemplate({
-    required this.parserConfig,
     required this.groupTemplates,
     required this.vars,
     required this.varSections,
@@ -20,7 +19,6 @@ class WizardTemplate {
         speedTestOptionsModel = speedTestOptionsModel ??
             SpeedTestOptionsModel.fromJson(speedTestOptions);
 
-  final ParserConfigBlock parserConfig;
   final GroupTemplates groupTemplates; // §267 (было: List<PresetGroup> presetGroups)
   final List<WizardVar> vars;
   final Map<String, dynamic> config;
@@ -63,7 +61,7 @@ class WizardTemplate {
   }
 
   factory WizardTemplate.fromJson(Map<String, dynamic> json) {
-    final pcJson = json['parser_config'] as Map<String, dynamic>? ?? {};
+    // §593 — секция `parser_config` шаблона приложением не читается.
     final rulesJson = json['selectable_rules'] as List<dynamic>? ?? [];
     // §267 — group_templates + top-level default_directions (было preset_groups).
     final groupTemplatesJson =
@@ -94,7 +92,6 @@ class WizardTemplate {
     }
 
     return WizardTemplate(
-      parserConfig: ParserConfigBlock.fromJson(pcJson),
       groupTemplates:
           GroupTemplates.fromJson(groupTemplatesJson, defaultDirectionsJson),
       vars: allVars,
@@ -106,25 +103,6 @@ class WizardTemplate {
       dnsOptions: json['dns_options'] as Map<String, dynamic>? ?? {},
       pingOptions: json['ping_options'] as Map<String, dynamic>? ?? {},
       speedTestOptions: json['speed_test_options'] as Map<String, dynamic>? ?? {},
-    );
-  }
-}
-
-/// The `parser_config` block from wizard template.
-class ParserConfigBlock {
-  ParserConfigBlock({
-    this.version = 5,
-    this.reload = '12h',
-  });
-
-  final int version;
-  final String reload;
-
-  factory ParserConfigBlock.fromJson(Map<String, dynamic> json) {
-    final parser = json['parser'] as Map<String, dynamic>? ?? {};
-    return ParserConfigBlock(
-      version: json['version'] as int? ?? 5,
-      reload: parser['reload'] as String? ?? '12h',
     );
   }
 }
@@ -533,8 +511,9 @@ class WizardVar {
   final String section;
   final String chapter;
 
-  /// Optional-флаг (spec §033). `true` (default) — значение обязательно,
-  /// null запрещён. `false` — в UI появляется пункт "—", юзер может не
+  /// Optional-флаг (spec §033). `true` — значение обязательно, null
+  /// запрещён. В JSON без ключа — `false` (§588, паритет с лаунчером);
+  /// дефолт конструктора остаётся `true` для программных объявлений. `false` — в UI появляется пункт "—", юзер может не
   /// выбирать, фрагменты с unresolved `@name` выкидываются целиком.
   final bool required;
 
@@ -625,7 +604,9 @@ class WizardVar {
       tooltip: json['tooltip'] as String? ?? '',
       section: section,
       chapter: chapter,
-      required: json['required'] as bool? ?? true,
+      // §588 — нет ключа `required` = false (паритет с лаунчером, решение
+      // владельца 29.09.2026); обязательность объявляется явно.
+      required: json['required'] as bool? ?? false,
       // SPEC 107: канон — помеченный `#on_change`; легаси `on_change`
       // читается бессрочно.
       onChange: (json['#on_change'] ?? json['on_change']) as Map<String, dynamic>?,

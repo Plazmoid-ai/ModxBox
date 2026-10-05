@@ -264,9 +264,13 @@ class _PresetVarWidget extends StatelessWidget {
     final cs = theme.colorScheme;
     final preset = c.preset!;
     final label = v.title.isNotEmpty ? v.title : v.name;
-    final subtitle = v.required
+    // У переключателя пустого значения не бывает — пометка «(optional)»
+    // ему ни к чему (§588: `required` без ключа = false).
+    final subtitle = (v.required || v.type == 'bool')
         ? v.tooltip
-        : (v.tooltip.isEmpty ? '(optional)' : '${v.tooltip} · (optional)');
+        : (v.tooltip.isEmpty
+            ? getLocalText.s("(optional)")
+            : getLocalText.s("%s · (optional)", v.tooltip));
 
     // §555 — значение и запись для типов без собственной семантики хранения
     // (text / int / text_list / enum с `options_open`): ref-var — глобальный
