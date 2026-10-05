@@ -938,8 +938,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-            slivers: [
-              SliverAppBar(
+                  SliverAppBar(
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1006,8 +1005,14 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     ),
                   ],
                 ),
-              ],
-            ),
+                  ],
+                  bottom: PreferredSize(
+                    preferredSize: const Size.fromHeight(68),
+                    child: _buildInputBar(ctrl),
+                  ),
+                  floating: true,
+                  snap: true,
+                ),
 
                   if (ctrl.lastError != null)
                     SliverToBoxAdapter(
