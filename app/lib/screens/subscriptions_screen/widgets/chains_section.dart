@@ -16,14 +16,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/source_chain.dart';
-import '../../../widgets/reorder_grab_strip.dart';
 import '../../../services/l10n/locale_controller.dart';
 
 class ChainEntryTile extends StatelessWidget {
   const ChainEntryTile({
     super.key,
     required this.chain,
-    required this.dragIndex,
     required this.onTap,
     required this.onToggle,
     this.compact = false,
@@ -33,8 +31,6 @@ class ChainEntryTile extends StatelessWidget {
   final SourceChain chain;
 
   /// Индекс в `ReorderableListView` для drag-старта (§098).
-  final int dragIndex;
-
   final VoidCallback onTap;
   final VoidCallback onToggle;
   final bool compact;
@@ -164,21 +160,11 @@ class ChainEntryTile extends StatelessWidget {
       onTap: onTap,
     );
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ReorderGrabStrip(index: dragIndex),
-          Expanded(
-            child: Column(
-              children: [
-                tile,
-                const Divider(height: 1),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        tile,
+        const Divider(height: 1),
+      ],
     );
   }
 }
