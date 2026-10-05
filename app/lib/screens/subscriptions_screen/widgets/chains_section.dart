@@ -169,8 +169,7 @@ class ChainEntryTile extends StatelessWidget {
     );
   }
 }
-/// Контурная иконка цепочки хопов по образцу: извилистая линия с двумя
-/// круглыми окончаниями и светлой/тёмной каймой, повторяющей её форму.
+/// Иконка «Цепочка хопов».
 class _ChainGlyphPainter extends CustomPainter {
   const _ChainGlyphPainter({
     required this.fill,
@@ -188,26 +187,52 @@ class _ChainGlyphPainter extends CustomPainter {
     final glyphScale = compact ? 0.85 : 1.0;
 
     canvas.save();
+
     canvas.translate(
       size.width * (1 - glyphScale) / 2,
       size.height * (1 - glyphScale) / 2,
     );
+
     canvas.scale(
       size.width / base * glyphScale,
       size.height / base * glyphScale,
     );
 
+    const haloWidth = 8.0;
+    const lineWidth = 4.5;
+    const haloDotRadius = 4.8;
+    const dotRadius = 2.6;
+
+    final route = Path()
+      ..moveTo(8.5, 7.5)
+      ..lineTo(8.5, 15.5)
+      ..cubicTo(
+        8.5, 19.5,
+        11.0, 21.5,
+        14.5, 21.5,
+      )
+      ..lineTo(14.5, 8.5)
+      ..cubicTo(
+        14.5, 5.5,
+        20.5, 5.5,
+        20.5, 11.5,
+      )
+      ..lineTo(20.5, 21.5);
+
+    const leftDot = Offset(8.5, 5.5);
+    const rightDot = Offset(20.5, 21.5);
+
     final haloPaint = Paint()
       ..color = detail
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8.2
+      ..strokeWidth = haloWidth
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round;
 
-    final routePaint = Paint()
+    final linePaint = Paint()
       ..color = fill
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.6
+      ..strokeWidth = lineWidth
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round;
 
@@ -219,25 +244,13 @@ class _ChainGlyphPainter extends CustomPainter {
       ..color = fill
       ..style = PaintingStyle.fill;
 
-    // Та же форма, что на образце: слева вниз, плавная U-образная дуга,
-    // затем вверх и снова вниз справа. Круги являются окончаниями маршрута.
-    final route = Path()
-      ..moveTo(7.0, 8.8)
-      ..lineTo(7.0, 14.6)
-      ..cubicTo(7.0, 19.2, 9.3, 21.7, 13.1, 21.7)
-      ..cubicTo(16.9, 21.7, 19.2, 19.2, 19.2, 14.6)
-      ..lineTo(19.2, 8.8);
-
-    const leftDot = Offset(7.0, 6.4);
-    const rightDot = Offset(19.2, 21.1);
-
     canvas.drawPath(route, haloPaint);
-    canvas.drawCircle(leftDot, 4.9, haloDotPaint);
-    canvas.drawCircle(rightDot, 4.9, haloDotPaint);
+    canvas.drawCircle(leftDot, haloDotRadius, haloDotPaint);
+    canvas.drawCircle(rightDot, haloDotRadius, haloDotPaint);
 
-    canvas.drawPath(route, routePaint);
-    canvas.drawCircle(leftDot, 2.65, dotPaint);
-    canvas.drawCircle(rightDot, 2.65, dotPaint);
+    canvas.drawPath(route, linePaint);
+    canvas.drawCircle(leftDot, dotRadius, dotPaint);
+    canvas.drawCircle(rightDot, dotRadius, dotPaint);
 
     canvas.restore();
   }
