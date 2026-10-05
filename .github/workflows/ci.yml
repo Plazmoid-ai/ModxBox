@@ -462,6 +462,12 @@ jobs:
           sparse-checkout: RELEASE_NOTES.md
           sparse-checkout-cone-mode: false
 
+      - name: Download APK
+        uses: actions/download-artifact@v7
+        with:
+          name: android-apk-arm64-v8a
+          path: release-artifacts
+
       - name: Prepare APKs
         # Renames per-ABI / universal files to LxBox-vX.Y.Z-<variant>.apk
         # для консистентности с прошлыми релизами (UpdateChecker парсит имя).
