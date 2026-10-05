@@ -54,6 +54,7 @@ class SubscriptionEntryTile extends StatelessWidget {
       return _folderIndicator(
         context,
         onTap: () => onCompactChanged?.call(false),
+        onLongPress: onToggle,
         compact: true,
       );
     }
@@ -61,6 +62,7 @@ class SubscriptionEntryTile extends StatelessWidget {
       return _subscriptionIndicator(
         context,
         onTap: () => onCompactChanged?.call(false),
+        onLongPress: onToggle,
         compact: true,
       );
     }
@@ -68,6 +70,7 @@ class SubscriptionEntryTile extends StatelessWidget {
       return _serverIndicator(
         context,
         onTap: () => onCompactChanged?.call(false),
+        onLongPress: onToggle,
         compact: true,
       );
     }
@@ -100,6 +103,7 @@ class SubscriptionEntryTile extends StatelessWidget {
   Widget _folderIndicator(
     BuildContext context, {
     required VoidCallback onTap,
+    required VoidCallback onLongPress,
     bool compact = false,
   }) {
     final cs = Theme.of(context).colorScheme;
@@ -119,6 +123,7 @@ class SubscriptionEntryTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Center(
             child: Container(
               // В компактном виде равные отступы со всех сторон папки.
@@ -167,6 +172,7 @@ class SubscriptionEntryTile extends StatelessWidget {
   Widget _subscriptionIndicator(
     BuildContext context, {
     required VoidCallback onTap,
+    required VoidCallback onLongPress,
     bool compact = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -181,6 +187,7 @@ class SubscriptionEntryTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Center(
             child: Container(
               width: compact ? 24 : 43,
@@ -208,6 +215,7 @@ class SubscriptionEntryTile extends StatelessWidget {
   Widget _serverIndicator(
     BuildContext context, {
     required VoidCallback onTap,
+    required VoidCallback onLongPress,
     bool compact = false,
   }) {
     final cs = Theme.of(context).colorScheme;
@@ -222,6 +230,7 @@ class SubscriptionEntryTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Center(
             child: Container(
               width: compact ? 24 : 43,
@@ -299,17 +308,25 @@ class SubscriptionEntryTile extends StatelessWidget {
 
     final tile = ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onLongPress: () => onCompactChanged?.call(true),
-        child: entry.list is FolderServers
-            ? _folderIndicator(context, onTap: onToggle)
-            : entry.list is SubscriptionServers
-                ? _subscriptionIndicator(context, onTap: onToggle)
-                : entry.url.isEmpty && entry.connections.isNotEmpty
-                    ? _serverIndicator(context, onTap: onToggle)
-                    : Switch(value: enabled, onChanged: (_) => onToggle()),
-      ),
+      leading: entry.list is FolderServers
+          ? _folderIndicator(
+              context,
+              onTap: () => onCompactChanged?.call(true),
+              onLongPress: onToggle,
+            )
+          : entry.list is SubscriptionServers
+              ? _subscriptionIndicator(
+                  context,
+                  onTap: () => onCompactChanged?.call(true),
+                  onLongPress: onToggle,
+                )
+              : entry.url.isEmpty && entry.connections.isNotEmpty
+                  ? _serverIndicator(
+                      context,
+                      onTap: () => onCompactChanged?.call(true),
+                      onLongPress: onToggle,
+                    )
+                  : Switch(value: enabled, onChanged: (_) => onToggle()),
       title: Row(
         children: [
           Flexible(
