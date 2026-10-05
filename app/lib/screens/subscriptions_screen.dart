@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -91,6 +92,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   // пишется): focusEntryId (detour-cycle) или свежедобавленная запись.
   final _scrollController = ScrollController();
   final _tileKeys = <String, GlobalKey>{};
+
+  /// ID отдельных карточек, свёрнутых в разделе «Серверы».
+  final Set<String> _compactEntryIds = <String>{};
+  static const _compactEntriesStorageKey = 'servers_compact_entry_ids';
   String? _highlightedEntryId;
   _HighlightMode _highlightMode = _HighlightMode.none;
   double _highlightOpacity = 0;
@@ -126,6 +131,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(_loadCompactEntries());
     unawaited(_loadAutoUpdateFlag());
     unawaited(_loadCameraAvailability());
     unawaited(_loadSourceOrder());
@@ -285,6 +291,27 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       return _scrollToEntry(id, attempt: attempt + 1);
     }
   }
+
+  Future<void> _loadCompactEntries() async {
+    final raw = await SettingsStorage.getVar(_compactEntriesStorageKey, '[]');
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        final ids = decoded.whereType<String>().toSet();
+        if (!mounted) return;
+        setState(() => _compactEntryIds
+          ..clear()
+          ..addAll(ids));
+      }
+    } catch (_) {
+      // Повреждённое значение не должно мешать открытию раздела.
+    }
+  }
+
+  Future<void> _saveCompactEntries() => SettingsStorage.setVar(
+        _compactEntriesStorageKey,
+        jsonEncode(_compactEntryIds.toList()),
+      );
 
   Future<void> _loadAutoUpdateFlag() async {
     final v = await SettingsStorage.getAutoUpdateSubs();
@@ -1147,6 +1174,18 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             child: ChainEntryTile(
               dragIndex: i,
               chain: chain,
+              compact: _compactEntryIds.contains('chain:${chain.tag}'),
+              onCompactChanged: (compact) {
+                final key = 'chain:${chain.tag}';
+                setState(() {
+                  if (compact) {
+                    _compactEntryIds.add(key);
+                  } else {
+                    _compactEntryIds.remove(key);
+                  }
+                });
+                unawaited(_saveCompactEntries());
+              },
               onTap: () => unawaited(_editChain(chain)),
               onToggle: () => unawaited(_toggleChain(chain)),
             ),
