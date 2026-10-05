@@ -50,6 +50,7 @@ class ChainEntryTile extends StatelessWidget {
       width: compact ? 48 : 56,
       height: compact ? 36 : 40,
       child: Material(
+        key: ValueKey('chain-toggle-${chain.tag}'),
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
