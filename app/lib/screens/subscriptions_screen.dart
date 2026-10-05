@@ -1147,12 +1147,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       );
     }
     final rows = _rows(ctrl);
-    return ReorderableListView.builder(
-      // §098 — drag-reorder источников (grab-strip слева, как routing rules).
-      // AlwaysScrollable — pull-to-refresh на коротких списках. Divider теперь
-      // внутри самой строки (у ReorderableListView нет separatorBuilder).
-      scrollController: _scrollController,
-      physics: const AlwaysScrollableScrollPhysics(),
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+          12, 0, 12,
+          MediaQuery.of(context).padding.bottom + 24 + _snackBarClearance),
+      sliver: SliverList.builder(
       // Bottom safe-area: последняя подписка не должна прятаться за системной
       // навигацией Android (жесты/кнопки). Паттерн проекта — padding.bottom + 24.
       padding: EdgeInsets.fromLTRB(
@@ -1172,7 +1171,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           return KeyedSubtree(
             key: ValueKey('chain:${chain.tag}'),
             child: ChainEntryTile(
-              dragIndex: i,
               chain: chain,
               compact: _compactEntryIds.contains('chain:${chain.tag}'),
               onCompactChanged: (compact) {
@@ -1221,8 +1219,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             child: Material(
               type: MaterialType.transparency,
               child: SubscriptionEntryTile(
-                dragIndex: i,
-                entry: entry,
+                  entry: entry,
                 subController: widget.subController,
                 showNewBadge: showNewBadge,
                 onToggle: () {
@@ -1230,6 +1227,17 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   unawaited(widget.subController.toggleAt(at));
                 },
                 onLaunchUrl: _launchUrl,
+                compact: _compactEntryIds.contains(entry.id),
+                onCompactChanged: (compact) {
+                  setState(() {
+                    if (compact) {
+                      _compactEntryIds.add(entry.id);
+                    } else {
+                      _compactEntryIds.remove(entry.id);
+                    }
+                  });
+                  unawaited(_saveCompactEntries());
+                },
                 onLongPress: (context) => _showContextMenu(context, at, entry),
                 onTap: (context) {
                   _onUserInteractionDismissHighlight();
@@ -1269,8 +1277,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
 
   /// §524 — перестановка в общем списке источников: ОДНА запись на жест.
   ///
