@@ -304,6 +304,11 @@ class SettingsStorage {
   /// `setX(..., flush: false)`, а на диск — одним атомарным `_save()` на
   /// dispose/paused. No-op если `_cache` ещё не загружен (нечего флашить).
   static Future<void> flushToDisk() async {
+    // Wait for an already running atomic save before starting another one.
+    // This is especially important for tests/teardown: fire-and-forget
+    // setters may still be writing when the caller asks for a final flush.
+    final pending = _pendingSave;
+    if (pending != null) await pending;
     if (_cache == null) return;
     await _save();
   }
