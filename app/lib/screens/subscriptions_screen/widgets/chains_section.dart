@@ -38,6 +38,7 @@ class ChainEntryTile extends StatelessWidget {
   Widget _chainIndicator(
     BuildContext context, {
     required VoidCallback onTap,
+    required VoidCallback onLongPress,
     bool compact = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -54,6 +55,7 @@ class ChainEntryTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Center(
             child: Container(
               width: compact ? 24 : 43,
@@ -98,6 +100,7 @@ class ChainEntryTile extends StatelessWidget {
                   _chainIndicator(
                     context,
                     onTap: () => onCompactChanged?.call(false),
+                    onLongPress: onToggle,
                     compact: true,
                   ),
                   const SizedBox(width: 4),
@@ -134,13 +137,10 @@ class ChainEntryTile extends StatelessWidget {
 
     final tile = ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onLongPress: () => onCompactChanged?.call(true),
-        child: _chainIndicator(
-          context,
-          onTap: onToggle,
-        ),
+      leading: _chainIndicator(
+        context,
+        onTap: () => onCompactChanged?.call(true),
+        onLongPress: onToggle,
       ),
       title: Text(
         chain.displayLabel,
