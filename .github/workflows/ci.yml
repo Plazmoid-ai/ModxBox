@@ -434,7 +434,8 @@ jobs:
           set -euo pipefail
           OUT=build/app/outputs/flutter-apk
           CODE=$(../scripts/version-code.sh "$CODE_VERSION" arm64-v8a)
-          LXBOX_ABI_FILTER=arm64-v8a             flutter build apk --release \
+          LXBOX_ABI_FILTER=arm64-v8a \
+            flutter build apk --release \
               --target-platform android-arm64 \
               --build-name "$VERSION_NAME" --build-number "$CODE"
           mv "$OUT/app-release.apk" "$OUT/app-arm64-v8a-release.apk"
@@ -469,8 +470,7 @@ jobs:
           path: release-artifacts
 
       - name: Prepare APKs
-        # Renames per-ABI / universal files to LxBox-vX.Y.Z-<variant>.apk
-        # для консистентности с прошлыми релизами (UpdateChecker парсит имя).
+        # Публикуем единственный APK arm64-v8a под именем, которое понимает UpdateChecker.
         run: |
           set -euo pipefail
           VERSION="${{ needs.meta.outputs.version }}"
