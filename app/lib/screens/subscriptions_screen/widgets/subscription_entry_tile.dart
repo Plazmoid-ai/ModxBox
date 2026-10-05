@@ -66,6 +66,249 @@ class SubscriptionEntryTile extends StatelessWidget {
     );
   }
 
+  Widget _indicator(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (entry.list is FolderServers) {
+      return _folderIndicator(
+        context,
+        onTap: () => onCompactChanged?.call(false),
+        onLongPress: onToggle,
+        compact: true,
+      );
+    }
+    if (entry.list is SubscriptionServers) {
+      return _subscriptionIndicator(
+        context,
+        onTap: () => onCompactChanged?.call(false),
+        onLongPress: onToggle,
+        compact: true,
+      );
+    }
+    if (entry.url.isEmpty && entry.connections.isNotEmpty) {
+      return _serverIndicator(
+        context,
+        onTap: () => onCompactChanged?.call(false),
+        onLongPress: onToggle,
+        compact: true,
+      );
+    }
+    return SizedBox(
+      width: 48,
+      height: 36,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onCompactChanged?.call(false),
+          child: Center(
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: entry.enabled ? cs.primary : cs.surface,
+                border: Border.all(
+                  color: entry.enabled ? cs.primary : cs.outline,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _folderIndicator(
+    BuildContext context, {
+    required VoidCallback onTap,
+    required VoidCallback onLongPress,
+    bool compact = false,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final active = entry.enabled;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Контрастная заливка одинаково читается в Light и Dark.
+    // Заданный светлый цвет активного состояния одинаков для обеих тем.
+    const activeFillColor = Color(0xFFBAC3FF);
+    final backgroundColor =
+        active ? activeFillColor : cs.surfaceContainerHighest;
+    return SizedBox(
+      // Размер близок к штатному Switch; ширина немного увеличена,
+      // чтобы контурная папка не выглядела сжатой.
+      width: compact ? 48 : 56,
+      height: compact ? 36 : 40,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Center(
+            child: Container(
+              // В компактном виде равные отступы со всех сторон папки.
+              width: compact ? 24 : 43.2,
+              height: compact ? 24 : 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Внутренность папки совпадает с фоном карточки;
+                  // цвет состояния остаётся только снаружи контура.
+                  // Увеличиваем высоту рисунка папки, чтобы её видимый
+                  // размер совпадал с двухсекционным значком узла.
+                  Transform.scale(
+                    scaleX: 1.0,
+                    scaleY: compact ? 1.1 : 1.1,
+                    child: Icon(
+                      Icons.folder,
+                      size: compact ? 17 : 29,
+                      color: cs.surface,
+                    ),
+                  ),
+                  Transform.scale(
+                    scaleX: 1.0,
+                    scaleY: 1.1,
+                    child: CustomPaint(
+                      size: Size.square(compact ? 17 : 29),
+                      painter: _FolderOutlinePainter(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _subscriptionIndicator(
+    BuildContext context, {
+    required VoidCallback onTap,
+    required VoidCallback onLongPress,
+    bool compact = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const activeFillColor = Color(0xFFBAC3FF);
+    final backgroundColor = entry.enabled
+        ? activeFillColor
+        : Theme.of(context).colorScheme.surfaceContainerHighest;
+    return SizedBox(
+      width: compact ? 48 : 56,
+      height: compact ? 36 : 40,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Center(
+            child: Container(
+              width: compact ? 24 : 43,
+              height: compact ? 24 : 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: CustomPaint(
+                size: Size.square(compact ? 20 : 29),
+                painter: _SubscriptionGlyphPainter(
+                  fill: isDark ? Colors.black : Colors.white,
+                  detail: isDark ? Colors.white : Colors.black,
+                  compact: compact,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _serverIndicator(
+    BuildContext context, {
+    required VoidCallback onTap,
+    required VoidCallback onLongPress,
+    bool compact = false,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const activeFillColor = Color(0xFFBAC3FF);
+    final backgroundColor =
+        entry.enabled ? activeFillColor : cs.surfaceContainerHighest;
+    return SizedBox(
+      width: compact ? 48 : 56,
+      height: compact ? 36 : 40,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Center(
+            child: Container(
+              width: compact ? 24 : 43,
+              height: compact ? 24 : 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                // Те же форма и размеры заливки, что у индикатора папки.
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: CustomPaint(
+                size: Size.square(compact ? 20 : 29),
+                painter: _ServerGlyphPainter(
+                  fill: isDark ? Colors.black : Colors.white,
+                  detail: isDark ? Colors.white : Colors.black,
+                  compact: compact,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _compactTile(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 36,
+      child: Row(
+        children: [
+          _indicator(context),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onTap(context),
+              onLongPress: () => onLongPress(context),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  entry.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: entry.enabled ? null : cs.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final enabled = entry.enabled;
