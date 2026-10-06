@@ -21,7 +21,6 @@ Widget _host(List<SourceChain> chains,
             for (var i = 0; i < chains.length; i++)
               ChainEntryTile(
                 chain: chains[i],
-                dragIndex: i,
                 onTap: () => onTap?.call(chains[i]),
                 onToggle: () => onToggle?.call(chains[i]),
               ),
