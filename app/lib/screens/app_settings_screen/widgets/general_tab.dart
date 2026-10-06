@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../services/l10n/locale_controller.dart';
 import 'update_status_row.dart';
@@ -86,6 +89,7 @@ class GeneralTab extends StatelessWidget {
         Text(getLocalText.s("Behavior"),
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
+        const KeepUiOnBackTile(),
         SwitchListTile(
           title: Text(getLocalText.s("Auto-start on boot")),
           subtitle: Text(getLocalText.s("Start VPN when device turns on")),
@@ -186,5 +190,380 @@ class GeneralTab extends StatelessWidget {
           : getLocalText.s("Auto · %s", detected.toUpperCase());
     }
     return region.toUpperCase();
+  }
+}
+
+class KeepUiOnBackTile extends StatefulWidget {
+  const KeepUiOnBackTile({super.key});
+
+  @override
+  State<KeepUiOnBackTile> createState() => _KeepUiOnBackTileState();
+}
+
+class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
+  static const _prefsKey = 'keep_ui_on_back';
+
+  static const _timerPrefsKey =
+      'keep_ui_on_back_close_after_minutes';
+
+  static const _minimizeTimerPrefsKey =
+      'keep_ui_on_back_close_on_minimize';
+
+  bool _enabled = false;
+  bool _startTimerOnMinimize = false;
+  int _minutes = 0;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    setState(() {
+      _enabled = prefs.getBool(_prefsKey) ?? false;
+      _startTimerOnMinimize =
+          prefs.getBool(_minimizeTimerPrefsKey) ?? false;
+      _minutes = prefs.getInt(_timerPrefsKey) ?? 0;
+      _loaded = true;
+    });
+  }
+
+  Future<void> _setEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefsKey, value);
+    if (!mounted) return;
+
+    setState(() {
+      _enabled = value;
+    });
+  }
+
+  Future<void> _editTimer() async {
+    final hoursController = TextEditingController(
+      text: _minutes <= 0
+          ? '0'
+          : (_minutes ~/ 60).toString(),
+    );
+
+    final minutesController = TextEditingController(
+      text: _minutes <= 0
+          ? '0'
+          : (_minutes % 60).toString().padLeft(2, '0'),
+    );
+
+    String? error;
+
+    try {
+      final result = await showDialog<int>(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                scrollable: false,
+                title: Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Закрытие интерфейса'),
+                    ),
+                    IconButton(
+                      tooltip: 'Справка',
+                      onPressed: () => showDialog<void>(
+                        context: dialogContext,
+                        builder: (helpContext) => AlertDialog(
+                          title: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 22,
+                                color: Theme.of(helpContext)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text('Как работает таймер'),
+                              ),
+                            ],
+                          ),
+                          content: const Text(
+                            '• Таймер отсчитывается после выхода из приложения кнопкой или жестом «Назад».\n'
+                            '• При включённой настройке «Таймер при сворачивании» отсчёт также начинается, когда приложение уходит в фон.\n'
+                            '• Если вернуться в приложение до окончания отсчёта, таймер отменяется.\n'
+                            '• По окончании таймера приложение закрывается полностью.',
+                          ),
+                          actions: [
+                            FilledButton(
+                              onPressed: () => Navigator.pop(helpContext),
+                              child: const Text('Понятно'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      icon: Icon(
+                        Icons.error_outline,
+                        color: Theme.of(dialogContext)
+                            .colorScheme
+                            .onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: hoursController,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            maxLength: 2,
+                            onTap: () {
+                              hoursController.selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset: hoursController.text.length,
+                              );
+                            },
+                            onChanged: (text) {
+                              if (text.isEmpty) {
+                                hoursController.value =
+                                    const TextEditingValue(
+                                  text: '0',
+                                  selection: TextSelection.collapsed(offset: 1),
+                                );
+                              } else if (
+                                  text.length > 1 &&
+                                  text.startsWith('0')) {
+                                final normalized =
+                                    text.replaceFirst(RegExp(r'^0+'), '');
+
+                                hoursController.value = TextEditingValue(
+                                  text: normalized,
+                                  selection: TextSelection.collapsed(
+                                    offset: normalized.length,
+                                  ),
+                                );
+                              }
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Часы',
+                              hintText: '0',
+                              counterText: '',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: minutesController,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            maxLength: 2,
+                            onTap: () {
+                              minutesController.selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset:
+                                    minutesController.text.length,
+                              );
+                            },
+                            onChanged: (text) {
+                              if (text.isEmpty) {
+                                minutesController.value =
+                                    const TextEditingValue(
+                                  text: '0',
+                                  selection: TextSelection.collapsed(offset: 1),
+                                );
+                              } else if (
+                                  text.length > 1 &&
+                                  text.startsWith('0')) {
+                                final normalized =
+                                    text.replaceFirst(RegExp(r'^0+'), '');
+
+                                minutesController.value = TextEditingValue(
+                                  text: normalized,
+                                  selection: TextSelection.collapsed(
+                                    offset: normalized.length,
+                                  ),
+                                );
+                              }
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Минуты',
+                              hintText: '0',
+                              counterText: '',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                      value: _startTimerOnMinimize,
+                      onChanged: (value) async {
+                        final enabled = value ?? false;
+
+                        setDialogState(
+                          () => _startTimerOnMinimize = enabled,
+                        );
+
+                        final prefs =
+                            await SharedPreferences.getInstance();
+
+                        await prefs.setBool(
+                          _minimizeTimerPrefsKey,
+                          enabled,
+                        );
+                      },
+                      title: const Text('Таймер при сворачивании'),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                    if (error != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        error!,
+                        style: TextStyle(
+                          color:
+                              Theme.of(dialogContext).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(dialogContext, 0),
+                      child: const Text('Без таймера'),
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: () {
+                        final hours =
+                            int.tryParse(hoursController.text.trim());
+
+                        final minutes =
+                            int.tryParse(minutesController.text.trim());
+
+                        if (hours == null ||
+                            hours < 0 ||
+                            hours > 99) {
+                          setDialogState(
+                            () => error = 'Введите часы от 0 до 99.',
+                          );
+                          return;
+                        }
+
+                        if (minutes == null ||
+                            minutes < 0 ||
+                            minutes > 59) {
+                          setDialogState(
+                            () => error = 'Минуты должны быть от 0 до 59.',
+                          );
+                          return;
+                        }
+
+                        if (hours == 0 && minutes == 0) {
+                          setDialogState(
+                            () => error = 'Укажите время больше 00:00.',
+                          );
+                          return;
+                        }
+
+                        Navigator.pop(
+                          dialogContext,
+                          hours * 60 + minutes,
+                        );
+                      },
+                      child: const Text('Применить'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
+
+      if (result == null) return;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_timerPrefsKey, result);
+
+      if (!mounted) return;
+
+      setState(() {
+        _minutes = result;
+      });
+    } finally {
+      hoursController.dispose();
+      minutesController.dispose();
+    }
+  }
+
+  String get _timerDisplay {
+    final h = _minutes ~/ 60;
+    final m = _minutes % 60;
+
+    return '\${h.toString().padLeft(2, '0')}:'
+        '\${m.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.exit_to_app),
+      title: const Text('Сохранять интерфейс при выходе'),
+      subtitle: const Text(
+        'Кнопка/жест «Назад» сворачивает приложение вместо закрытия интерфейса.',
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_minutes > 0)
+            SizedBox(
+              width: 64,
+              height: 40,
+              child: TextButton(
+                onPressed: _loaded && _enabled ? _editTimer : null,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  _timerDisplay,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(
+                    fontFeatures: const [
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              tooltip: 'Таймер',
+              onPressed: _loaded && _enabled ? _editTimer : null,
+              icon: const Icon(Icons.schedule),
+            ),
+          Switch(
+            value: _enabled,
+            onChanged: _loaded ? _setEnabled : null,
+          ),
+        ],
+      ),
+      isThreeLine: _minutes > 0,
+    );
   }
 }

@@ -7,6 +7,8 @@ import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.Environment
 import android.provider.MediaStore
 import android.telephony.TelephonyManager
@@ -53,6 +55,9 @@ class MainActivity : FlutterActivity() {
     /// пик уже идёт: второй запрос отклоняем, чтобы не потерять первый result
     /// (Flutter падает на повторном ответе в один и тот же Result).
     private var pendingPickResult: MethodChannel.Result? = null
+
+    private val backUiCloseHandler = Handler(Looper.getMainLooper())
+    private var backUiCloseRunnable: Runnable? = null
 
     /// §131 — Impeller crash на старых GPU (Adreno 3xx, Android 10).
     ///
@@ -102,6 +107,41 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.leadaxe.lxbox/utils")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "scheduleBackUiClose" -> {
+                        val delayMs =
+                            (call.argument<Number>("delayMs")?.toLong() ?: 0L)
+                                .coerceAtLeast(0L)
+
+                        backUiCloseRunnable?.let(
+                            backUiCloseHandler::removeCallbacks,
+                        )
+
+                        val runnable = Runnable {
+                            if (!isFinishing) {
+                                finishAndRemoveTask()
+                            }
+                        }
+
+                        backUiCloseRunnable = runnable
+                        backUiCloseHandler.postDelayed(
+                            runnable,
+                            delayMs,
+                        )
+                        result.success(null)
+                    }
+
+                    "cancelBackUiClose" -> {
+                        backUiCloseRunnable?.let(
+                            backUiCloseHandler::removeCallbacks,
+                        )
+                        backUiCloseRunnable = null
+                        result.success(null)
+                    }
+
+                    "moveTaskToBack" -> {
+                        result.success(moveTaskToBack(true))
+                    }
+
                     "openUrl" -> {
                         val url = call.argument<String>("url")
                         if (url != null) {
@@ -674,4 +714,12 @@ class MainActivity : FlutterActivity() {
             if (finishAfterConsent) finish()
         }
     }
+    override fun onDestroy() {
+        backUiCloseRunnable?.let(
+            backUiCloseHandler::removeCallbacks,
+        )
+        backUiCloseRunnable = null
+        super.onDestroy()
+    }
+
 }

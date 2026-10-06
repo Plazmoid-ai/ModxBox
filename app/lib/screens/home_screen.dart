@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/home_controller.dart';
 import '../controllers/subscription_controller.dart';
@@ -54,7 +56,6 @@ import '../services/update_checker.dart';
 import '../vpn/box_vpn_client.dart';
 import '../services/l10n/locale_controller.dart';
 import 'home/widgets/template_warnings_snack.dart';
-import '../widgets/double_back_to_exit.dart';
 import '../services/probe/probe_lifecycle.dart';
 import '../services/workspaces/workspace_controller.dart';
 import 'home/widgets/workspace_menu.dart';
@@ -67,6 +68,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
+  static const _keepUiOnBackPrefsKey = 'keep_ui_on_back';
+
+  static const _backUiTimerPrefsKey =
+      'keep_ui_on_back_close_after_minutes';
+
+  static const _backUiMinimizePrefsKey =
+      'keep_ui_on_back_close_on_minimize';
+
+  bool _backgroundTimerScheduled = false;
+  bool _drawerOpen = false;
+  bool _backHandling = false;
+
   late final HomeController _controller;
   late final SubscriptionController _subController;
   late final AutoUpdater _autoUpdater;
@@ -571,6 +584,119 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   // §216 — когда app ушёл в настоящий фон (для замера длительности сна).
+
+  Future<void> _scheduleBackUiCloseTimer() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final minutes =
+        prefs.getInt(
+              _backUiTimerPrefsKey,
+            ) ??
+            0;
+
+    if (minutes <= 0) {
+      return;
+    }
+
+    final delayMs =
+        minutes * 60 * 1000;
+
+    try {
+      await const MethodChannel(
+        'com.leadaxe.lxbox/utils',
+      ).invokeMethod<void>(
+        'scheduleBackUiClose',
+        {
+          'delayMs': delayMs,
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _scheduleBackUiCloseTimerIfMinimized() async {
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (_lifecycle != AppLifecycleState.paused &&
+        _lifecycle != AppLifecycleState.hidden) {
+      return;
+    }
+
+    final enabled =
+        prefs.getBool(
+              _backUiMinimizePrefsKey,
+            ) ??
+            false;
+
+    if (!enabled) {
+      return;
+    }
+
+    await _scheduleBackUiCloseTimer();
+  }
+
+  Future<void> _cancelBackUiCloseTimer() async {
+    try {
+      await const MethodChannel(
+        'com.leadaxe.lxbox/utils',
+      ).invokeMethod<void>(
+        'cancelBackUiClose',
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _handleBack() async {
+    if (_backHandling) {
+      return;
+    }
+
+    _backHandling = true;
+
+    try {
+      final prefs =
+          await SharedPreferences.getInstance();
+
+      final keepUi =
+          prefs.getBool(
+                _keepUiOnBackPrefsKey,
+              ) ??
+              false;
+
+      if (!keepUi) {
+        await SystemNavigator.pop();
+        return;
+      }
+
+      try {
+        await _scheduleBackUiCloseTimer();
+
+        _backgroundTimerScheduled =
+            true;
+
+        final moved =
+            await const MethodChannel(
+              'com.leadaxe.lxbox/utils',
+            ).invokeMethod<bool>(
+          'moveTaskToBack',
+        );
+
+        if (moved == false) {
+          await SystemNavigator.pop();
+        }
+      } on PlatformException {
+        await SystemNavigator.pop();
+      } catch (_) {
+        await SystemNavigator.pop();
+      }
+    } finally {
+      _backHandling = false;
+    }
+  }
+
   DateTime? _pausedAt;
   static const _bgSnackThreshold = Duration(seconds: 30);
 
@@ -578,6 +704,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _lifecycle = state;
     if (state == AppLifecycleState.resumed) {
+      _backgroundTimerScheduled = false;
+
+      unawaited(
+        _cancelBackUiCloseTimer(),
+      );
+
       _controller.onAppResumed();
       _ruleSetAutoUpdater.onAppResumed(); // §366
       // §291 — досмотреть подписки на возврате из фона: periodic-таймер спит
@@ -594,6 +726,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // переходы (шторка, звонок, app-switcher preview), не настоящий фон.
       _pausedAt = DateTime.now(); // §216
       _controller.onAppPaused();
+
+      if (!_backgroundTimerScheduled) {
+        _backgroundTimerScheduled = true;
+
+        unawaited(
+          _scheduleBackUiCloseTimerIfMinimized(),
+        );
+      }
+
       // §366 — в фоне rule-set'ы не качаем: отменяем запланированную проверку.
       _ruleSetAutoUpdater.onAppPaused();
     }
@@ -808,9 +949,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           anyServerNodes: _subController.entries
               .any((e) => e.nodeCount > 0 || e.list.nodes.isNotEmpty),
         );
-        // Задача 583 — выход по двойному «назад».
-        return DoubleBackToExit(
-          builder: (_, onDrawerChanged) => Scaffold(
+        return PopScope<Object?>(
+          canPop: _drawerOpen,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop || _drawerOpen) return;
+            unawaited(_handleBack());
+          },
+          child: Scaffold(
               appBar: AppBar(
                 // l10n-exempt: brand name, идентичен во всех локалях
                 title: const Text('L×Box'),
@@ -820,7 +965,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                   const SizedBox(width: 4),
                 ],
               ),
-              onDrawerChanged: onDrawerChanged,
+              onDrawerChanged: (open) {
+                if (_drawerOpen == open || !mounted) return;
+                setState(() => _drawerOpen = open);
+              },
               drawer: HomeDrawer(
                 controller: _controller,
                 subController: _subController,
@@ -907,6 +1055,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 ],
               ),
             ),
+          ),
         );
       },
     );
