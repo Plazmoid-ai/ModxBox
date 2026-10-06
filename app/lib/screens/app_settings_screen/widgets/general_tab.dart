@@ -512,8 +512,8 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
     final h = _minutes ~/ 60;
     final m = _minutes % 60;
 
-    return '\${h.toString().padLeft(2, '0')}:'
-        '\${m.toString().padLeft(2, '0')}';
+    return '${h.toString().padLeft(2, '0')}: '
+        '${m.toString().padLeft(2, '0')}';
   }
 
   @override
