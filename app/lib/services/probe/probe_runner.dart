@@ -168,7 +168,7 @@ class ProbeRunner {
   static bool _looksLikeVpnRunning(String err) =>
       err.toLowerCase().contains('vpn is running');
 
-  /// §xxx — live-режим: не создаём второй CommandServer. Используем уже
+  /// Experiment — live-режим: не создаём второй CommandServer. Используем уже
   /// работающий pingClient боевого ядра; его transport sockets идут через
   /// PlatformInterface.autoDetectInterfaceControl -> VpnService.protect().
   Future<String> _runLive(
