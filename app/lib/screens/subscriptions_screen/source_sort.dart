@@ -317,8 +317,7 @@ Future<void> showSourceSortOptions(
                     physics: const NeverScrollableScrollPhysics(),
                     buildDefaultDragHandles: true,
                     itemCount: local.groupOrder.length,
-                    onReorder: (oldIndex, newIndex) {
-                      if (newIndex > oldIndex) newIndex--;
+                    onReorderItem: (oldIndex, newIndex) {
                       final next = [...local.groupOrder];
                       final moved = next.removeAt(oldIndex);
                       next.insert(newIndex, moved);
