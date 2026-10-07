@@ -512,9 +512,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   bool _sameSourceEntry(SourceEntry a, SourceEntry b) {
     return switch ((a, b)) {
-      (ContainerEntry(:final list: x), ContainerEntry(:final list: y)) =>
+      (ContainerEntry(list: final x), ContainerEntry(list: final y)) =>
         x == y,
-      (ChainEntry(:final chain: x), ChainEntry(:final chain: y)) => x == y,
+      (ChainEntry(chain: final x), ChainEntry(chain: final y)) => x == y,
       _ => true,
     };
   }
