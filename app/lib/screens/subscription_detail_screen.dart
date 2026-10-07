@@ -273,7 +273,7 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
       return;
     }
     if (widget.entry.list.nodes.isEmpty) return;
-    // §xxx — при активном VPN ProbeRunner использует pingClient боевого ядра.
+    // Experiment — при активном VPN ProbeRunner использует pingClient боевого ядра.
     // Ручная остановка VPN больше не требуется.
     await _runProbe();
   }
@@ -310,7 +310,7 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
     ];
     final runner = ProbeRunner();
     _probeRunner = runner;
-    // §xxx — VPN-off сохраняет прежнюю headless probe-сессию. VPN-on
+    // Experiment — VPN-off сохраняет прежнюю headless probe-сессию. VPN-on
     // использует уже работающий pingClient и не трогает активный туннель.
     final err = await runner.run(
       nodes,
