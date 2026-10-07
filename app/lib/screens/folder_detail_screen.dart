@@ -277,13 +277,14 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
       return;
     }
     if (_folder.members.isEmpty) return;
-    // Experiment — при активном VPN ProbeRunner сам переключается на pingClient
-    // боевого ядра. Поэтому ручная остановка VPN больше не требуется.
+    // Experiment — активные ноды тестируются через боевое ядро без остановки VPN.
+    // Если есть ноды вне активного конфига, ProbeRunner временно остановит VPN
+    // и после полного теста автоматически восстановит его.
     await _runProbe();
   }
 
-  /// §236 — сам прогон пробы (VPN уже выключен). Вынесен из [_toggleTest],
-  /// чтобы гейт-попап мог перезапустить его после Stop VPN.
+  /// §236 — сам прогон пробы. В зависимости от состава нод ProbeRunner
+  /// использует боевое ядро или временно останавливает VPN для headless-теста.
   Future<void> _runProbe() async {
     if (_folder.members.isEmpty) return;
     // §284 — опции теста самой папки (ping_url/ping_timeout_ms в объекте папки)
