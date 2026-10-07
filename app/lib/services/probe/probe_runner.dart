@@ -226,7 +226,6 @@ class ProbeRunner {
     required int timeoutMs,
     required void Function(int index, ProbeResult result) onResult,
   }) async {
-    var wasStopped = false;
     var result = '';
     var restoreError = '';
 
@@ -254,11 +253,12 @@ class ProbeRunner {
         result = 'VPN did not stop completely for server test';
       } else {
         result = await _runHeadless(
-        nodes,
-        url: url,
-        timeoutMs: timeoutMs,
-        onResult: onResult,
-      );
+          nodes,
+          url: url,
+          timeoutMs: timeoutMs,
+          onResult: onResult,
+        );
+      }
     } finally {
       // Восстанавливаем VPN даже после отмены теста или ошибки probe-сессии.
       final startOk = await vpn.startVPN();
@@ -289,7 +289,6 @@ class ProbeRunner {
     }
     return result;
   }
-
   static bool _looksLikeVpnRunning(String err) =>
       err.toLowerCase().contains('vpn is running');
 
