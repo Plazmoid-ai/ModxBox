@@ -10,7 +10,7 @@ class _Item {
   final DateTime? modifiedAt;
 }
 
-List<_Item> apply(
+List<_Item> _apply(
   List<_Item> items,
   SourceSortSettings settings,
 ) =>
@@ -56,29 +56,31 @@ void main() {
 
     test('sorts names in both directions', () {
       expect(
-        apply(items, const SourceSortSettings(mode: SourceSortMode.nameAsc))
-            .map((e) => e.name)
-            .toList(),
+        _apply(
+          items,
+          const SourceSortSettings(mode: SourceSortMode.nameAsc),
+        ).map((e) => e.name).toList(),
         ['Alpha', 'Beta', 'Gamma', 'Zulu'],
       );
       expect(
-        apply(items, const SourceSortSettings(mode: SourceSortMode.nameDesc))
-            .map((e) => e.name)
-            .toList(),
+        _apply(
+          items,
+          const SourceSortSettings(mode: SourceSortMode.nameDesc),
+        ).map((e) => e.name).toList(),
         ['Zulu', 'Gamma', 'Beta', 'Alpha'],
       );
     });
 
     test('sorts modified dates newest and oldest, unknown dates last', () {
       expect(
-        apply(
+        _apply(
           items,
           const SourceSortSettings(mode: SourceSortMode.modifiedNewest),
         ).map((e) => e.name).toList(),
         ['Alpha', 'Zulu', 'Beta', 'Gamma'],
       );
       expect(
-        apply(
+        _apply(
           items,
           const SourceSortSettings(mode: SourceSortMode.modifiedOldest),
         ).map((e) => e.name).toList(),
@@ -93,8 +95,8 @@ void main() {
         groupOrder: const ['chain', 'server', 'folder', 'subscription'],
       );
       expect(
-        apply(items, settings)
-            .map((e) => e.kind + ':' + e.name)
+        _apply(items, settings)
+            .map((e) => '${e.kind}:${e.name}')
             .toList(),
         [
           'chain:Gamma',
@@ -111,8 +113,8 @@ void main() {
         groupOrder: const ['folder', 'server', 'chain', 'subscription'],
       );
       expect(
-        apply(items, settings)
-            .map((e) => e.kind + ':' + e.name)
+        _apply(items, settings)
+            .map((e) => '${e.kind}:${e.name}')
             .toList(),
         [
           'folder:Alpha',
