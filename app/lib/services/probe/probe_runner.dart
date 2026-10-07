@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import '../../models/node_spec.dart';
+import '../../models/tunnel_status.dart';
+import '../../vpn/box_vpn_client.dart';
 import '../../vpn/cc_channel.dart';
 import '../app_log.dart';
 import 'probe_config.dart';
@@ -44,12 +46,12 @@ class ProbeResult {
 /// §236/§296 — прогон теста по списку нод (общий для всей подсистемы
 /// ServerList: папки/подписки/серверы).
 ///
-/// Тест возможен только при выключенном VPN: probe-сессия — временный
-/// CommandServer без tun (два CommandServer на процесс невозможны). При живом
-/// туннеле `probeStart` вернёт «VPN is running…» → возвращаем [kProbeVpnRunning],
-/// UI показывает гейт-попап (Stop VPN). Через боевое ядро НЕ тестируем: замер
-/// шёл бы поверх активного детура/цепочки, а не по чистой ноде, и выключенные
-/// ноды выпадали бы из конфига — вводило в заблуждение (§236 UI-rework).
+/// В обычном режиме (VPN выключен) используется отдельная headless probe-сессия.
+/// Если VPN уже работает и вызывающий передал [liveTags], тест идёт через
+/// уже запущенный pingClient боевого ядра: Android-слой защищает исходящие
+/// сокеты этого ядра от собственного TUN, поэтому VPN пользователю не мешает.
+/// Это сохраняет тестирование активных нод без остановки туннеля. Ноды, которых
+/// нет в текущем конфиге (например, отключённые), в live-режиме не тестируются.
 class ProbeRunner {
   ProbeRunner({CcChannel? cc}) : _cc = cc ?? CcChannel.instance;
 
@@ -60,7 +62,12 @@ class ProbeRunner {
   /// (SPEC 014), мультиплекс на одном клиенте — как mass-ping §209.
   static const _concurrency = 6;
 
-  void cancel() => _cancelled = true;
+  void cancel() {
+    _cancelled = true;
+    // §175 — в live-режиме это рвёт in-flight urlTestOutbound через отдельный
+    // pingClient, не затрагивая status/screen/profiler-клиенты.
+    unawaited(_cc.cancelPing());
+  }
 
   /// Прогоняет тест по всем [nodes] (null-слот → вердикт 'broken', индекс
   /// сохраняется). Результаты отдаются по мере готовности в [onResult]
@@ -74,6 +81,9 @@ class ProbeRunner {
     required String url,
     required int timeoutMs,
     required void Function(int index, ProbeResult result) onResult,
+    /// Итоговый tag ноды в ЖИВОМ конфиге. Если список передан, а VPN включён,
+    /// runner использует именно боевое ядро вместо ProbeSession.
+    List<String?>? liveTags,
   }) async {
     _cancelled = false;
     // §286 — регистрируем отмену в общем реестре: stop VPN / смерть туннеля /
@@ -81,6 +91,20 @@ class ProbeRunner {
     // прекратится, даже если экран деталей папки не в фокусе. Снимаем в finally.
     final canceller = ProbeLifecycle.I.register(cancel);
     try {
+      if (liveTags != null) {
+        final vpnUp = (await BoxVpnClient().getVpnStatus()) !=
+            TunnelStatus.disconnected;
+        if (vpnUp) {
+          return await _runLive(
+            nodes,
+            liveTags: liveTags,
+            url: url,
+            timeoutMs: timeoutMs,
+            onResult: onResult,
+          );
+        }
+      }
+
       // §518 — конфигов может быть несколько: naive-узлы гейтятся по
       // kProbeMaxNaivePerConfig (каждый поднимает Chromium-движок, десяток в
       // одном конфиге = OOM всего процесса). Батчи прогоняются
@@ -143,6 +167,79 @@ class ProbeRunner {
 
   static bool _looksLikeVpnRunning(String err) =>
       err.toLowerCase().contains('vpn is running');
+
+  /// §xxx — live-режим: не создаём второй CommandServer. Используем уже
+  /// работающий pingClient боевого ядра; его transport sockets идут через
+  /// PlatformInterface.autoDetectInterfaceControl -> VpnService.protect().
+  Future<String> _runLive(
+    List<NodeSpec?> nodes, {
+    required List<String?> liveTags,
+    required String url,
+    required int timeoutMs,
+    required void Function(int index, ProbeResult result) onResult,
+  }) async {
+    if (liveTags.length != nodes.length) {
+      return 'live ping: tag map size mismatch';
+    }
+
+    final tags = <int, String>{};
+    for (var i = 0; i < nodes.length; i++) {
+      final node = nodes[i];
+      if (node == null) {
+        onResult(i, const ProbeResult(ProbeStatus.broken, message: 'broken'));
+        continue;
+      }
+      if (node is AutoSelectSpec) {
+        onResult(i, const ProbeResult(ProbeStatus.group, message: 'group'));
+        continue;
+      }
+      final tag = liveTags[i];
+      if (tag == null || tag.isEmpty) {
+        // Нода есть на экране, но в текущий live-конфиг не попала (например,
+        // отключена). Не выдаём ей ложный timeout — отдельный нейтральный
+        // статус отсутствия live-tag здесь не предусмотрен контрактом,
+        // поэтому считаем её failed с явной причиной.
+        onResult(
+          i,
+          const ProbeResult(
+            ProbeStatus.failed,
+            message: 'not in active config',
+          ),
+        );
+        continue;
+      }
+      tags[i] = tag;
+    }
+
+    if (tags.isEmpty) return '';
+    await _runPool(
+      tags,
+      test: (tag) => _cc.urlTestOutbound(
+        tag,
+        link: url,
+        timeoutMs: timeoutMs,
+      ),
+      onResult: onResult,
+    );
+    return '';
+  }
+
+  /// Находит итоговый display-tag текущей сборки для конкретного объекта ноды.
+  /// [liveTagMap] — controller.lastEmittedTagMap: единственный источник истины
+  /// для реального тега в рабочем конфиге.
+  static String? liveTagForNode(
+    NodeSpec? node, {
+    required Map<String, NodeSpec> liveTagMap,
+    required String fallbackTag,
+  }) {
+    if (node == null) return null;
+    for (final entry in liveTagMap.entries) {
+      if (identical(entry.value, node)) return entry.key;
+    }
+    final mapped = liveTagMap[fallbackTag];
+    if (mapped != null && identical(mapped, node)) return fallbackTag;
+    return null;
+  }
 
   Future<void> _runPool(
     Map<int, String> tags, {
