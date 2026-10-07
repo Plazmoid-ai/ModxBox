@@ -15,7 +15,8 @@ import '../services/node_hash.dart';
 import '../services/parser/body_decoder.dart';
 import '../services/probe/probe_controller.dart';
 import '../services/probe/probe_runner.dart';
-import '../services/settings_storage.dart';
+import '../services/tag_resolver.dart';
+import '../services/settings_storage.dart;
 import '../services/subscription/sources.dart';
 import '../services/subscription/subscription_identity.dart'; // §289 — generateUuidV4
 import '../widgets/detour_target_picker.dart';
@@ -272,10 +273,9 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
       return;
     }
     if (widget.entry.list.nodes.isEmpty) return;
-    // §296-гейт: probe-сессия не поднимается поверх живого туннеля.
-    if (await ensureVpnStoppedForProbe()) {
-      await _runProbe();
-    }
+    // §xxx — при активном VPN ProbeRunner использует pingClient боевого ядра.
+    // Ручная остановка VPN больше не требуется.
+    await _runProbe();
   }
 
   Future<void> _runProbe() async {
@@ -297,12 +297,26 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
             MapEntry(k, const ProbeResult(ProbeStatus.pending)),
         ]);
     });
+    final liveTagMap = widget.controller.lastEmittedTagMap;
+    final liveTags = [
+      for (final node in nodes)
+        ProbeRunner.liveTagForNode(
+          node,
+          liveTagMap: liveTagMap,
+          fallbackTag: node == null
+              ? ''
+              : TagResolver.displayTag(widget.entry.list.tagPrefix, node.tag),
+        ),
+    ];
     final runner = ProbeRunner();
     _probeRunner = runner;
+    // §xxx — VPN-off сохраняет прежнюю headless probe-сессию. VPN-on
+    // использует уже работающий pingClient и не трогает активный туннель.
     final err = await runner.run(
       nodes,
       url: url,
       timeoutMs: timeoutMs,
+      liveTags: liveTags,
       onResult: (i, r) {
         if (!mounted) return;
         if (i < probeKeys.length) _probe[probeKeys[i]] = r;
