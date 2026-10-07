@@ -273,8 +273,9 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
       return;
     }
     if (widget.entry.list.nodes.isEmpty) return;
-    // Experiment — при активном VPN ProbeRunner использует pingClient боевого ядра.
-    // Ручная остановка VPN больше не требуется.
+    // Experiment — активные ноды тестируются через боевое ядро без остановки VPN.
+    // Если есть ноды вне активного конфига, ProbeRunner временно остановит VPN
+    // и после полного теста автоматически восстановит его.
     await _runProbe();
   }
 
@@ -303,9 +304,7 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
         ProbeRunner.liveTagForNode(
           node,
           liveTagMap: liveTagMap,
-          fallbackTag: node == null
-              ? ''
-              : TagResolver.displayTag(widget.entry.list.tagPrefix, node.tag),
+
         ),
     ];
     final runner = ProbeRunner();
