@@ -2298,6 +2298,9 @@
   "Folder is empty": {
     "value": "Папка пуста"
   },
+  "Folder": {
+    "value": "Папка"
+  },
   "Folder name": {
     "value": "Имя папки"
   },
@@ -2382,8 +2385,17 @@
   "Group": {
     "value": "Группа"
   },
+  "Group by type": {
+    "value": "Группировать по типу"
+  },
+  "Group order": {
+    "value": "Порядок групп"
+  },
   "Grouping": {
     "value": "Группировка"
+  },
+  "Hop chain": {
+    "value": "Цепочка хопов"
   },
   "HTTP": {
     "value": "HTTP"
@@ -4397,6 +4409,24 @@
   },
   "Sort options": {
     "value": "Параметры сортировки"
+  },
+  "Name A–Z": {
+    "value": "Имя А–Я"
+  },
+  "Name Z–A": {
+    "value": "Имя Я–А"
+  },
+  "Modified — newest": {
+    "value": "Изменено — сначала новые"
+  },
+  "Modified — oldest": {
+    "value": "Изменено — сначала старые"
+  },
+  "Created — newest": {
+    "value": "Создано — сначала новые"
+  },
+  "Created — oldest": {
+    "value": "Создано — сначала старые"
   },
   "Source": {
     "value": "Источник"
