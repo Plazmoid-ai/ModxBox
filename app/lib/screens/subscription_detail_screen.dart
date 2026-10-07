@@ -304,13 +304,13 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen>
         ProbeRunner.liveTagForNode(
           node,
           liveTagMap: liveTagMap,
-
         ),
     ];
     final runner = ProbeRunner();
     _probeRunner = runner;
-    // Experiment — VPN-off сохраняет прежнюю headless probe-сессию. VPN-on
-    // использует уже работающий pingClient и не трогает активный туннель.
+    // Experiment — при VPN-on активные ноды идут через живое ядро;
+    // при наличии неактивных нод runner сам временно остановит VPN и
+    // выполнит полный headless-тест с последующим восстановлением.
     final err = await runner.run(
       nodes,
       url: url,
