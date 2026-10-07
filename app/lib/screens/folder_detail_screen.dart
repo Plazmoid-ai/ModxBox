@@ -277,7 +277,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
       return;
     }
     if (_folder.members.isEmpty) return;
-    // §xxx — при активном VPN ProbeRunner сам переключается на pingClient
+    // Experiment — при активном VPN ProbeRunner сам переключается на pingClient
     // боевого ядра. Поэтому ручная остановка VPN больше не требуется.
     await _runProbe();
   }
