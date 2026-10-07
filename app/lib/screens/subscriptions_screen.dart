@@ -1468,7 +1468,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           final displayRow = displayRows[i];
           if (displayRow.isHeader) {
             return KeyedSubtree(
-              key: ValueKey('source-group:' + displayRow.groupKind!),
+              key: ValueKey('source-group:${displayRow.groupKind!}'),
               child: _buildSourceGroupHeader(displayRow.groupKind!),
             );
           }
