@@ -353,11 +353,11 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                                 );
                               }
                             },
-                            decoration: const InputDecoration(
-                              labelText: getLocalText.s("Hours"),
-                              hintText: '0',
-                              counterText: '',
-                            ),
+                            decoration: InputDecoration(
+                             labelText: getLocalText.s("Hours"),
+                             hintText: '0',
+                             counterText: '',
+                           ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -395,10 +395,10 @@ class _KeepUiOnBackTileState extends State<KeepUiOnBackTile> {
                                 );
                               }
                             },
-                            decoration: const InputDecoration(
-                              labelText: getLocalText.s("Minutes"),
-                              hintText: '0',
-                              counterText: '',
+                            decoration: InputDecoration(
+                             labelText: getLocalText.s("Minutes"),
+                             hintText: '0',
+                             counterText: '',
                             ),
                           ),
                         ),
