@@ -35,6 +35,7 @@ import 'subscriptions_screen/widgets/parse_input_error_banner.dart';
 import 'subscriptions_screen/widgets/chains_section.dart';
 import 'subscriptions_screen/widgets/subscription_entry_tile.dart';
 import 'subscriptions_screen/widgets/subscriptions_empty_state.dart';
+import 'subscriptions_screen/source_sort.dart';
 import '../services/l10n/locale_controller.dart';
 import '../services/file_import.dart';
 
@@ -77,6 +78,15 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   /// Наполняется [SubscriptionController.sourceEntries]; пусто до первой
   /// загрузки — [_rows] тогда рисует записи контроллера в их порядке.
   List<SourceEntry> _sources = const [];
+
+  /// Локальная настройка представления списка. Она не меняет нормативный
+  /// порядок `sources[]`: сортировка и группировка являются только способом
+  /// отображения.
+  SourceSortSettings _sortSettings = const SourceSortSettings();
+  final Map<String, SourceSortTimestamps> _sortMetadata = {};
+  static const _sortSettingsStorageKey = 'server_list_sorting';
+  static const _sortMetadataStorageKey = 'server_list_sort_meta';
+  bool _sortStateReady = false;
 
   /// Цепочки общего списка — срез [_sources]. Нужен диалогам (редактор
   /// цепочки хочет соседей, чтобы показать законные позиции) и гейту тега.
@@ -134,7 +144,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     unawaited(_loadCompactEntries());
     unawaited(_loadAutoUpdateFlag());
     unawaited(_loadCameraAvailability());
-    unawaited(_loadSourceOrder());
+    unawaited(_loadSortState());
     widget.subController.addListener(_onControllerForSourceOrder);
     // §357 — prefill поля ввода из lxbox-кнопки `add:<uri>` support-ленты.
     final prefill = widget.initialInput;
@@ -331,13 +341,186 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   // ── §393 C7/D1 — источники-цепочки ─────────────────────────────────────
 
   /// §524 — перечитать общий список источников одним чтением.
+  Future<void> _loadSortState() async {
+    final values = await Future.wait<String>([
+      SettingsStorage.getVar(_sortSettingsStorageKey, ''),
+      SettingsStorage.getVar(_sortMetadataStorageKey, '{}'),
+    ]);
+    final settings = SourceSortSettings.fromJson(values[0]);
+
+    final metadata = <String, SourceSortTimestamps>{};
+    try {
+      final decoded = jsonDecode(values[1]);
+      if (decoded is Map) {
+        for (final entry in decoded.entries) {
+          final key = entry.key?.toString();
+          final value = entry.value;
+          if (key == null || value is! Map) continue;
+          final created =
+              DateTime.tryParse(value['created_at']?.toString() ?? '');
+          final modified =
+              DateTime.tryParse(value['modified_at']?.toString() ?? '');
+          if (created != null || modified != null) {
+            metadata[key] = SourceSortTimestamps(
+              createdAt: created?.toUtc(),
+              modifiedAt: modified?.toUtc(),
+            );
+          }
+        }
+      }
+    } catch (_) {
+      // Broken optional metadata must never prevent the list from opening.
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _sortSettings = settings;
+      _sortMetadata
+        ..clear()
+        ..addAll(metadata);
+      _sortStateReady = true;
+    });
+    await _loadSourceOrder();
+  }
+
+  Future<void> _saveSortSettings() => SettingsStorage.setVar(
+        _sortSettingsStorageKey,
+        jsonEncode(_sortSettings.toJson()),
+      );
+
+  Future<void> _saveSortMetadata() {
+    final encoded = <String, dynamic>{
+      for (final entry in _sortMetadata.entries)
+        entry.key: {
+          if (entry.value.createdAt != null)
+            'created_at': entry.value.createdAt!.toUtc().toIso8601String(),
+          if (entry.value.modifiedAt != null)
+            'modified_at': entry.value.modifiedAt!.toUtc().toIso8601String(),
+        },
+    };
+    return SettingsStorage.setVar(
+      _sortMetadataStorageKey,
+      jsonEncode(encoded),
+    );
+  }
+
+  void _updateSortSettings(SourceSortSettings next) {
+    if (!mounted) return;
+    setState(() => _sortSettings = next);
+    unawaited(_saveSortSettings());
+  }
+
+  void _cycleSourceSort() {
+    _updateSortSettings(
+      _sortSettings.copyWith(mode: _sortSettings.mode.next),
+    );
+  }
+
+  void _openSourceSortOptions() {
+    unawaited(
+      showSourceSortOptions(
+        context,
+        settings: _sortSettings,
+        onChanged: _updateSortSettings,
+      ),
+    );
+  }
+
   Future<void> _loadSourceOrder() async {
     final sources = await widget.subController.sourceEntries();
     if (!mounted) return;
+
+    final metadataChanged = _refreshSortMetadata(sources);
     setState(() => _sources = sources);
+    if (metadataChanged) unawaited(_saveSortMetadata());
+  }
+
+  bool _refreshSortMetadata(List<SourceEntry> sources) {
+    final oldByKey = <String, SourceEntry>{
+      for (final entry in _sources) entry.sourceKey: entry,
+    };
+    final now = DateTime.now().toUtc();
+    var changed = false;
+
+    final liveKeys = <String>{for (final entry in sources) entry.sourceKey};
+    final staleKeys =
+        _sortMetadata.keys.where((key) => !liveKeys.contains(key)).toList();
+    if (staleKeys.isNotEmpty) {
+      for (final key in staleKeys) {
+        _sortMetadata.remove(key);
+      }
+      changed = true;
+    }
+
+    for (final entry in sources) {
+      final key = entry.sourceKey;
+      final current = _sortMetadata[key];
+      if (current == null) {
+        final created = _initialSourceCreatedAt(entry, now);
+        _sortMetadata[key] = SourceSortTimestamps(
+          createdAt: created,
+          modifiedAt: _initialSourceModifiedAt(entry, created),
+        );
+        changed = true;
+        continue;
+      }
+
+      final previous = oldByKey[key];
+      if (previous != null && !_sameSourceEntry(previous, entry)) {
+        _sortMetadata[key] = current.copyWith(modifiedAt: now);
+        changed = true;
+      } else if (current.modifiedAt == null) {
+        _sortMetadata[key] = current.copyWith(
+          modifiedAt: _initialSourceModifiedAt(entry, current.createdAt),
+        );
+        changed = true;
+      }
+    }
+
+    return changed;
+  }
+
+  DateTime _initialSourceCreatedAt(SourceEntry entry, DateTime now) {
+    return switch (entry) {
+      ContainerEntry(:final list) => switch (list) {
+          FolderServers(:final createdAt) => createdAt.toUtc(),
+          SubscriptionServers(:final lastUpdated) =>
+            (lastUpdated ?? now).toUtc(),
+          UserServer() => now,
+        },
+      ChainEntry() => now,
+      OpaqueEntry() => now,
+    };
+  }
+
+  DateTime? _initialSourceModifiedAt(
+      SourceEntry entry, DateTime? createdAt) {
+    return switch (entry) {
+      ContainerEntry(:final list) => switch (list) {
+          FolderServers() => createdAt,
+          SubscriptionServers(
+            :final lastUpdateAttempt,
+            :final lastUpdated,
+          ) =>
+            (lastUpdateAttempt ?? lastUpdated ?? createdAt)?.toUtc(),
+          UserServer() => createdAt,
+        },
+      ChainEntry() => createdAt,
+      OpaqueEntry() => createdAt,
+    };
+  }
+
+  bool _sameSourceEntry(SourceEntry a, SourceEntry b) {
+    return switch ((a, b)) {
+      (ContainerEntry(:final list: x), ContainerEntry(:final list: y)) =>
+        x == y,
+      (ChainEntry(:final chain: x), ChainEntry(:final chain: y)) => x == y,
+      _ => true,
+    };
   }
 
   void _onControllerForSourceOrder() {
+    if (!_sortStateReady) return;
     _forgetGoneEntries();
     unawaited(_loadSourceOrder());
   }
@@ -1007,7 +1190,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 ),
                   ],
                   bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(68),
+                    preferredSize: const Size.fromHeight(104),
                     child: _buildInputBar(ctrl),
                   ),
                   floating: true,
@@ -1049,38 +1232,96 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   Widget _buildInputBar(SubscriptionController ctrl) {
+    final hasSources = _sources.isNotEmpty || ctrl.entries.isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      child: Column(
         children: [
-          Expanded(
-            child: TextField(
-              controller: _inputController,
-              onChanged: (_) => _onInputForHighlightDismiss(),
-              decoration: InputDecoration(
-                hintText: getLocalText.s("Subscription URL or proxy link"),
-                border: const OutlineInputBorder(),
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _inputController,
+                  onChanged: (_) => _onInputForHighlightDismiss(),
+                  decoration: InputDecoration(
+                    hintText: getLocalText.s("Subscription URL or proxy link"),
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                ),
               ),
-              style: const TextStyle(fontSize: 13),
-            ),
+              const SizedBox(width: 8),
+              // §074: tap = paste-from-clipboard / parse text input (existing).
+              // long-press = full-screen Add server wizard (SOCKS5 form / Paste
+              // URI / Paste JSON tabs).
+              //
+              // НЕ IconButton — у того встроенный Tooltip widget (даже без
+              // tooltip:, Material InkWell внутри его перехватывает long-press
+              // первым в gesture arena). Используем raw InkWell + Material
+              // styled под IconButton.filled (primary container + circle).
+              AddIconButton(
+                busy: ctrl.busy,
+                onTap: () => unawaited(_add()),
+                onLongPress: _openAddServerWizard,
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          // §074: tap = paste-from-clipboard / parse text input (existing).
-          // long-press = full-screen Add server wizard (SOCKS5 form / Paste
-          // URI / Paste JSON tabs).
-          //
-          // НЕ IconButton — у того встроенный Tooltip widget (даже без
-          // tooltip:, Material InkWell внутри его перехватывает long-press
-          // первым в gesture arena). Используем raw InkWell + Material
-          // styled под IconButton.filled (primary container + circle).
-          // Pattern уже applied для §070 sort button.
-          AddIconButton(
-            busy: ctrl.busy,
-            onTap: () => unawaited(_add()),
-            onLongPress: _openAddServerWizard,
+          Align(
+            alignment: Alignment.centerRight,
+            child: Tooltip(
+              message: _sortSettings.mode.label(),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Semantics(
+                    button: true,
+                    label: _sortSettings.mode.label(),
+                    child: Material(
+                      color: Colors.transparent,
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: hasSources ? _cycleSourceSort : null,
+                        onLongPress:
+                            hasSources ? _openSourceSortOptions : null,
+                        borderRadius: BorderRadius.circular(18),
+                        child: SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Center(
+                            child: Icon(
+                              _sortSettings.mode.icon,
+                              size: 20,
+                              color: hasSources
+                                  ? null
+                                  : Theme.of(context).disabledColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (isSourceSortNonDefault(_sortSettings))
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: IgnorePointer(
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.amber,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -1147,9 +1388,62 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     return rows;
   }
 
+  List<_SourceDisplayRow> _displayRows(SubscriptionController ctrl) {
+    final rows = sortSourceItems(
+      _rows(ctrl),
+      _sortSettings,
+      nameOf: (row) => row.displayLabel,
+      kindOf: (row) => row.kind,
+      modifiedOf: (row) => _sortMetadata[row.sourceKey]?.modifiedAt,
+      createdOf: (row) => _sortMetadata[row.sourceKey]?.createdAt,
+    );
+
+    if (!_sortSettings.groupByType) {
+      return [for (final row in rows) _SourceDisplayRow.item(row)];
+    }
+
+    final out = <_SourceDisplayRow>[];
+    String? previousKind;
+    for (final row in rows) {
+      if (row.kind != previousKind) {
+        out.add(_SourceDisplayRow.header(row.kind));
+        previousKind = row.kind;
+      }
+      out.add(_SourceDisplayRow.item(row));
+    }
+    return out;
+  }
+
+  Widget _buildSourceGroupHeader(String kind) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 12, 6, 6),
+      child: Row(
+        children: [
+          Icon(sourceTypeIcon(kind), size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(
+            sourceTypeLabel(kind),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Divider(
+              height: 1,
+              color: color.withValues(alpha: 0.22),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildList(SubscriptionController ctrl) {
-    final rows = _rows(ctrl);
-    if (rows.isEmpty) {
+    final displayRows = _displayRows(ctrl);
+    if (displayRows.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
         child: SubscriptionsEmptyState(
@@ -1169,9 +1463,17 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         MediaQuery.of(context).padding.bottom + 24 + _snackBarClearance,
       ),
       sliver: SliverList.builder(
-        itemCount: rows.length,
+        itemCount: displayRows.length,
         itemBuilder: (context, i) {
-          final row = rows[i];
+          final displayRow = displayRows[i];
+          if (displayRow.isHeader) {
+            return KeyedSubtree(
+              key: ValueKey('source-group:' + displayRow.groupKind!),
+              child: _buildSourceGroupHeader(displayRow.groupKind!),
+            );
+          }
+
+          final row = displayRow.row!;
           final chain = row.chain;
           if (chain != null) {
             return KeyedSubtree(
@@ -1350,4 +1652,29 @@ class _SourceRow {
   /// общего списка. Мутации подписок адресуются им.
   final int entryIndex;
   final SourceChain? chain;
+
+  String get sourceKey => chain != null
+      ? sourceKeyForChainOf(chain!.tag)
+      : sourceKeyForIdOf(entry!.id);
+
+  String get kind {
+    if (chain != null) return kSourceKindChainKey;
+    return switch (entry!.list) {
+      SubscriptionServers() => 'subscription',
+      UserServer() => 'server',
+      FolderServers() => 'folder',
+    };
+  }
+
+  String get displayLabel => chain != null ? chain!.tag : entry!.list.name;
+}
+
+class _SourceDisplayRow {
+  const _SourceDisplayRow.item(this.row) : groupKind = null;
+  const _SourceDisplayRow.header(this.groupKind) : row = null;
+
+  final _SourceRow? row;
+  final String? groupKind;
+
+  bool get isHeader => groupKind != null;
 }
