@@ -110,6 +110,7 @@ class ProbeRunner {
             return await _runWithTemporaryVpnStop(
               vpn,
               nodes,
+              canceller: canceller,
               url: url,
               timeoutMs: timeoutMs,
               onResult: onResult,
@@ -222,23 +223,31 @@ class ProbeRunner {
   Future<String> _runWithTemporaryVpnStop(
     BoxVpnClient vpn,
     List<NodeSpec?> nodes, {
+    required void Function() canceller,
     required String url,
     required int timeoutMs,
     required void Function(int index, ProbeResult result) onResult,
   }) async {
     var result = '';
     var restoreError = '';
+    var stopSucceeded = false;
+    var lifecycleReRegistered = false;
 
-    final stopOk = await vpn.stopVPN();
-    if (!stopOk) {
-      AppLog.I.warning('Probe: could not temporarily stop VPN');
-      return 'Could not temporarily stop VPN for full server test';
-    }
+    // Intentional VPN stop would normally trigger HomeController.haltAllProbing().
+    // Temporarily detach this runner; user cancellation still calls [cancel()]
+    // directly through the screen, and we re-register before the actual probe.
+    ProbeLifecycle.I.deregister(canceller);
 
-    // После успешного stopVPN() обязательно восстанавливаем VPN в finally.
-    // Даже если дополнительная проверка состояния не успеет увидеть Stopped,
-    // мы не должны оставлять пользователя без туннеля.
     try {
+      final stopOk = await vpn.stopVPN();
+      if (!stopOk) {
+        AppLog.I.warning('Probe: could not temporarily stop VPN');
+        return 'Could not temporarily stop VPN for full server test';
+      }
+      stopSucceeded = true;
+
+      // stopVPN() по контракту блокируется до Stopped. Всё же проверяем
+      // фактическое состояние перед запуском второго CommandServer.
       var disconnected = false;
       for (var attempt = 0; attempt < 20; attempt++) {
         if ((await vpn.getVpnStatus()) == TunnelStatus.disconnected) {
@@ -251,33 +260,47 @@ class ProbeRunner {
       if (!disconnected) {
         AppLog.I.warning('Probe: VPN did not reach disconnected state');
         result = 'VPN did not stop completely for server test';
-      } else {
-        result = await _runHeadless(
-          nodes,
-          url: url,
-          timeoutMs: timeoutMs,
-          onResult: onResult,
-        );
+        return result;
       }
+
+      // Теперь туннель действительно остановлен: обычная lifecycle-отмена снова
+      // должна работать во время длительного headless-теста.
+      ProbeLifecycle.I.register(canceller);
+      lifecycleReRegistered = true;
+
+      result = await _runHeadless(
+        nodes,
+        url: url,
+        timeoutMs: timeoutMs,
+        onResult: onResult,
+      );
+      return result;
     } finally {
-      // Восстанавливаем VPN даже после отмены теста или ошибки probe-сессии.
-      final startOk = await vpn.startVPN();
-      if (!startOk) {
-        restoreError = 'VPN could not be restored after server test';
-      } else {
-        for (var attempt = 0; attempt < 60; attempt++) {
-          final status = await vpn.getVpnStatus();
-          if (status == TunnelStatus.connected) break;
-          if (status == TunnelStatus.error ||
-              status == TunnelStatus.revoked) {
-            restoreError = 'VPN failed to start after server test';
-            break;
+      if (!lifecycleReRegistered) {
+        // stop failed / VPN did not reach Stopped — вернуть runner в реестр.
+        ProbeLifecycle.I.register(canceller);
+      }
+
+      if (stopSucceeded) {
+        // Восстанавливаем VPN даже после отмены теста или ошибки probe-сессии.
+        final startOk = await vpn.startVPN();
+        if (!startOk) {
+          restoreError = 'VPN could not be restored after server test';
+        } else {
+          for (var attempt = 0; attempt < 60; attempt++) {
+            final status = await vpn.getVpnStatus();
+            if (status == TunnelStatus.connected) break;
+            if (status == TunnelStatus.error ||
+                status == TunnelStatus.revoked) {
+              restoreError = 'VPN failed to start after server test';
+              break;
+            }
+            await Future<void>.delayed(const Duration(milliseconds: 250));
           }
-          await Future<void>.delayed(const Duration(milliseconds: 250));
-        }
-        if (restoreError.isEmpty &&
-            (await vpn.getVpnStatus()) != TunnelStatus.connected) {
-          restoreError = 'VPN did not become active after server test';
+          if (restoreError.isEmpty &&
+              (await vpn.getVpnStatus()) != TunnelStatus.connected) {
+            restoreError = 'VPN did not become active after server test';
+          }
         }
       }
     }
