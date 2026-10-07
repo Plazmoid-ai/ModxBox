@@ -16,6 +16,7 @@ import '../services/error_format.dart';
 import '../services/node_link_address.dart';
 import '../services/probe/probe_controller.dart';
 import '../services/probe/probe_runner.dart';
+import '../services/tag_resolver.dart';
 import 'probe_gate_mixin.dart';
 import '../services/settings_storage.dart';
 import '../services/subscription/input_helpers.dart';
@@ -276,12 +277,9 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
       return;
     }
     if (_folder.members.isEmpty) return;
-    // §236/§296 — probe-сессия (временный CommandServer без tun) не поднимается
-    // поверх живого туннеля. Общий гейт: при VPN-on показывает попап Stop VPN;
-    // true = можно тестировать (VPN off или успешно остановлен).
-    if (await ensureVpnStoppedForProbe()) {
-      await _runProbe();
-    }
+    // §xxx — при активном VPN ProbeRunner сам переключается на pingClient
+    // боевого ядра. Поэтому ручная остановка VPN больше не требуется.
+    await _runProbe();
   }
 
   /// §236 — сам прогон пробы (VPN уже выключен). Вынесен из [_toggleTest],
@@ -295,10 +293,20 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
       overrideTimeoutMs: _folder.pingTimeoutMs,
     );
     if (!mounted) return;
-    // §326 — снимок ключей на старте прогона: onResult отдаёт позицию (runner
-    // работает над плоским списком нод и о папках не знает, §296), переводим
-    // её в ключ по этому снимку.
+    // Снимок сохраняем один раз: он нужен и для UI-ключей, и для live-tag map.
+    final nodes = [for (final m in _folder.members) m.node];
     final probeKeys = _memberProbeKeys();
+    final liveTagMap = widget.controller.lastEmittedTagMap;
+    final liveTags = [
+      for (final node in nodes)
+        ProbeRunner.liveTagForNode(
+          node,
+          liveTagMap: liveTagMap,
+          fallbackTag: node == null
+              ? ''
+              : TagResolver.displayTag(_folder.tagPrefix, node.tag),
+        ),
+    ];
     setState(() {
       _testing = true;
       _probe
@@ -310,13 +318,13 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
     });
     final runner = ProbeRunner();
     _runner = runner;
-    // §296 — probe над списком нод: члены папки (nullable, unfiltered, чтобы
-    // выключенные/битые сохранили индекс и вердикт — НЕ _folder.nodes, тот
-    // отфильтрован до enabled+parsed).
+    // §296 — в VPN-off режиме сохраняется прежняя probe-сессия. При VPN-on
+    // runner использует уже работающее ядро и его защищённые ping-сокеты.
     final err = await runner.run(
-      [for (final m in _folder.members) m.node],
+      nodes,
       url: url,
       timeoutMs: timeoutMs,
+      liveTags: liveTags,
       onResult: (i, r) {
         if (!mounted) return;
         // §286 — накапливаем без setState-на-члена; throttle сольёт в один
