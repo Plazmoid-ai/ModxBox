@@ -303,9 +303,6 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
         ProbeRunner.liveTagForNode(
           node,
           liveTagMap: liveTagMap,
-          fallbackTag: node == null
-              ? ''
-              : TagResolver.displayTag(_folder.tagPrefix, node.tag),
         ),
     ];
     setState(() {
@@ -319,8 +316,9 @@ class _FolderDetailScreenState extends State<FolderDetailScreen>
     });
     final runner = ProbeRunner();
     _runner = runner;
-    // §296 — в VPN-off режиме сохраняется прежняя probe-сессия. При VPN-on
-    // runner использует уже работающее ядро и его защищённые ping-сокеты.
+    // Experiment — при VPN-on активные ноды идут через живое ядро;
+    // при наличии неактивных нод runner сам временно остановит VPN и
+    // выполнит полный headless-тест с последующим восстановлением.
     final err = await runner.run(
       nodes,
       url: url,
