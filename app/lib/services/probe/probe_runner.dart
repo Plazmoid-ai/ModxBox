@@ -238,7 +238,10 @@ class ProbeRunner {
     }
     final mapped = liveTagMap[fallbackTag];
     if (mapped != null && identical(mapped, node)) return fallbackTag;
-    return null;
+    // Обычно этого достаточно: builder использует тот же displayTag. Возвращаем
+    // fallback даже без карты, чтобы короткое окно до очередной сборки не
+    // превращало все активные ноды в «не найдено в live-конфиге».
+    return fallbackTag.isEmpty ? null : fallbackTag;
   }
 
   Future<void> _runPool(
