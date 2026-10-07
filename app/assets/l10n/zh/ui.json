@@ -2064,6 +2064,9 @@
   "Folder is empty": {
     "value": "文件夹为空"
   },
+  "Folder": {
+    "value": "文件夹"
+  },
   "Folder name": {
     "value": "文件夹名称"
   },
@@ -2148,8 +2151,17 @@
   "Group": {
     "value": "分组"
   },
+  "Group by type": {
+    "value": "按类型分组"
+  },
+  "Group order": {
+    "value": "分组顺序"
+  },
   "Grouping": {
     "value": "分组方式"
+  },
+  "Hop chain": {
+    "value": "跳转链"
   },
   "HTTP": {
     "value": "HTTP"
@@ -4130,6 +4142,24 @@
   },
   "Sort options": {
     "value": "排序选项"
+  },
+  "Name A–Z": {
+    "value": "名称 A–Z"
+  },
+  "Name Z–A": {
+    "value": "名称 Z–A"
+  },
+  "Modified — newest": {
+    "value": "修改时间 — 最新"
+  },
+  "Modified — oldest": {
+    "value": "修改时间 — 最旧"
+  },
+  "Created — newest": {
+    "value": "创建时间 — 最新"
+  },
+  "Created — oldest": {
+    "value": "创建时间 — 最旧"
   },
   "Source": {
     "value": "来源"
