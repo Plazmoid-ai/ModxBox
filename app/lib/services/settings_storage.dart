@@ -201,6 +201,9 @@ class SettingsStorage {
     'interrupt_connections_on_switch',
     'node_sort_mode',
     'node_manual_order',
+    // Servers screen sorting/grouping and its per-source timestamps.
+    'server_list_sorting',
+    'server_list_sort_meta',
     'profiler_retention_sec', // §044/new-profiler — окно хранения Live-журнала
   };
 
