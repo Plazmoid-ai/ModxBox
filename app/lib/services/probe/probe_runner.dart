@@ -47,11 +47,12 @@ class ProbeResult {
 /// ServerList: папки/подписки/серверы).
 ///
 /// В обычном режиме (VPN выключен) используется отдельная headless probe-сессия.
-/// Если VPN уже работает и вызывающий передал [liveTags], тест идёт через
-/// уже запущенный pingClient боевого ядра: Android-слой защищает исходящие
-/// сокеты этого ядра от собственного TUN, поэтому VPN пользователю не мешает.
-/// Это сохраняет тестирование активных нод без остановки туннеля. Ноды, которых
-/// нет в текущем конфиге (например, отключённые), в live-режиме не тестируются.
+/// Если VPN уже работает и все тестируемые ноды присутствуют в действующем
+/// конфиге, тест идёт через уже запущенный pingClient боевого ядра: Android-слой
+/// защищает исходящие сокеты этого ядра от собственного TUN, поэтому VPN
+/// пользователю не мешает. Если часть нод отсутствует в текущем конфиге
+/// (например, выключенная подписка), runner временно останавливает VPN и
+/// выполняет полный headless probe, затем восстанавливает VPN.
 class ProbeRunner {
   ProbeRunner({CcChannel? cc}) : _cc = cc ?? CcChannel.instance;
 
@@ -81,20 +82,39 @@ class ProbeRunner {
     required String url,
     required int timeoutMs,
     required void Function(int index, ProbeResult result) onResult,
-    /// Итоговый tag ноды в ЖИВОМ конфиге. Если список передан, а VPN включён,
-    /// runner использует именно боевое ядро вместо ProbeSession.
+    /// Итоговый tag ноды в ЖИВОМ конфиге.
+    ///
+    /// При активном VPN:
+    /// - если все реальные ноды имеют live-tag → тест идёт через боевое ядро;
+    /// - если хотя бы одна реальная нода отсутствует в активном конфиге →
+    ///   VPN временно останавливается, выполняется полный headless probe,
+    ///   затем VPN автоматически восстанавливается.
     List<String?>? liveTags,
   }) async {
     _cancelled = false;
     // §286 — регистрируем отмену в общем реестре: stop VPN / смерть туннеля /
-    // сворадивание дёрнут ProbeLifecycle.haltAll() → cancel() здесь, и sweep
+    // сворачивание дёрнут ProbeLifecycle.haltAll() → cancel() здесь, и sweep
     // прекратится, даже если экран деталей папки не в фокусе. Снимаем в finally.
     final canceller = ProbeLifecycle.I.register(cancel);
     try {
       if (liveTags != null) {
-        final vpnUp = (await BoxVpnClient().getVpnStatus()) !=
-            TunnelStatus.disconnected;
+        final vpn = BoxVpnClient();
+        final status = await vpn.getVpnStatus();
+        final vpnUp = status != TunnelStatus.disconnected &&
+            status != TunnelStatus.error &&
+            status != TunnelStatus.revoked &&
+            status != TunnelStatus.unknown;
+
         if (vpnUp) {
+          if (_requiresTemporaryVpnStop(nodes, liveTags)) {
+            return await _runWithTemporaryVpnStop(
+              vpn,
+              nodes,
+              url: url,
+              timeoutMs: timeoutMs,
+              onResult: onResult,
+            );
+          }
           return await _runLive(
             nodes,
             liveTags: liveTags,
@@ -105,65 +125,172 @@ class ProbeRunner {
         }
       }
 
-      // §518 — конфигов может быть несколько: naive-узлы гейтятся по
-      // kProbeMaxNaivePerConfig (каждый поднимает Chromium-движок, десяток в
-      // одном конфиге = OOM всего процесса). Батчи прогоняются
-      // ПОСЛЕДОВАТЕЛЬНО, каждый своей probe-сессией: `ProbeSession.start`
-      // поверх живой сессии — рестарт, так что движки предыдущего батча
-      // освобождаются до старта следующего. Без naive батч один, и прогон
-      // дословно как до §518.
-      final batches = buildProbeBatches(nodes);
-
-      // Битые/несобираемые/группы — вердикт сразу, без ядра. Вердикты лежат
-      // в первом батче (§518 `_assemble`), покрывают весь список целиком.
-      final broken = batches.isEmpty
-          ? buildProbeConfig(nodes).brokenByIndex
-          : batches.first.brokenByIndex;
-      broken.forEach((i, why) {
-        onResult(
-            i,
-            ProbeResult(
-              switch (why) {
-                'broken' => ProbeStatus.broken,
-                'group' => ProbeStatus.group, // §336
-                _ => ProbeStatus.invalid,
-              },
-              message: why,
-            ));
-      });
-      if (batches.isEmpty) return '';
-
-      for (final cfg in batches) {
-        if (_cancelled) return '';
-        if (cfg.configJson == null) continue;
-        final err = await _cc.probeStart(cfg.configJson!);
-        if (err.isNotEmpty) {
-          // VPN активен → probe-сессию не поднять. UI гейтит тест ещё до run()
-          // (getVpnStatus), но между проверкой и probeStart VPN мог стартовать —
-          // ловим здесь маркером, не боевой веткой.
-          if (_looksLikeVpnRunning(err)) return kProbeVpnRunning;
-          AppLog.I.warning('Probe session failed to start: $err');
-          return err;
-        }
-        try {
-          await _runPool(
-            cfg.tagByIndex,
-            test: (tag) =>
-                _cc.probeUrlTest(tag, link: url, timeoutMs: timeoutMs),
-            onResult: onResult,
-          );
-        } finally {
-          // Сессию гасим ПОСЛЕ каждого батча, а не в конце прогона: иначе
-          // движки naive-узлов предыдущего батча жили бы до конца sweep'а и
-          // гейт не давал бы ничего.
-          await _cc.probeStop();
-        }
-      }
-      return '';
+      return await _runHeadless(
+        nodes,
+        url: url,
+        timeoutMs: timeoutMs,
+        onResult: onResult,
+      );
     } finally {
       ProbeLifecycle.I.deregister(canceller);
     }
   }
+
+  /// При активном VPN проверяем, есть ли среди реальных нод те, которых нет
+  /// в действующем конфиге. Группы и уже сломанные null-слоты самостоятельного
+  /// подключения не требуют.
+  static bool _requiresTemporaryVpnStop(
+    List<NodeSpec?> nodes,
+    List<String?> liveTags,
+  ) {
+    if (liveTags.length != nodes.length) return false;
+    for (var i = 0; i < nodes.length; i++) {
+      final node = nodes[i];
+      if (node == null || node is AutoSelectSpec) continue;
+      final tag = liveTags[i];
+      if (tag == null || tag.isEmpty) return true;
+    }
+    return false;
+  }
+
+  /// Тест полного списка через обычную headless probe-сессию.
+  Future<String> _runHeadless(
+    List<NodeSpec?> nodes, {
+    required String url,
+    required int timeoutMs,
+    required void Function(int index, ProbeResult result) onResult,
+  }) async {
+    // §518 — конфигов может быть несколько: naive-узлы гейтятся по
+    // kProbeMaxNaivePerConfig (каждый поднимает Chromium-движок, десяток в
+    // одном конфиге = OOM всего процесса). Батчи прогоняются
+    // ПОСЛЕДОВАТЕЛЬНО, каждый своей probe-сессией: ProbeSession.start
+    // поверх живой сессии — рестарт, так что движки предыдущего батча
+    // освобождаются до старта следующего. Без naive батч один, и прогон
+    // дословно как до §518.
+    final batches = buildProbeBatches(nodes);
+
+    // Битые/несобираемые/группы — вердикт сразу, без ядра. Вердикты лежат
+    // в первом батче (§518 _assemble), покрывают весь список целиком.
+    final broken = batches.isEmpty
+        ? buildProbeConfig(nodes).brokenByIndex
+        : batches.first.brokenByIndex;
+    broken.forEach((i, why) {
+      onResult(
+          i,
+          ProbeResult(
+            switch (why) {
+              'broken' => ProbeStatus.broken,
+              'group' => ProbeStatus.group, // §336
+              _ => ProbeStatus.invalid,
+            },
+            message: why,
+          ));
+    });
+    if (batches.isEmpty) return '';
+
+    for (final cfg in batches) {
+      if (_cancelled) return '';
+      if (cfg.configJson == null) continue;
+      final err = await _cc.probeStart(cfg.configJson!);
+      if (err.isNotEmpty) {
+        // VPN активен → probe-сессию не поднять. В штатном гибридном режиме
+        // это означает, что VPN успел подняться во время временной остановки.
+        if (_looksLikeVpnRunning(err)) return kProbeVpnRunning;
+        AppLog.I.warning('Probe session failed to start: $err');
+        return err;
+      }
+      try {
+        await _runPool(
+          cfg.tagByIndex,
+          test: (tag) =>
+              _cc.probeUrlTest(tag, link: url, timeoutMs: timeoutMs),
+          onResult: onResult,
+        );
+      } finally {
+        // Сессию гасим ПОСЛЕ каждого батча, чтобы naive-движки предыдущего
+        // батча не жили до конца sweep'а.
+        await _cc.probeStop();
+      }
+    }
+    return '';
+  }
+
+  /// Активный VPN нужен пользователю для обычной работы, но часть тестируемых
+  /// нод отсутствует в его конфиге. В этом случае временно останавливаем
+  /// собственный VPN, запускаем тот же полный probe, а затем восстанавливаем
+  /// VPN в исходное состояние.
+  Future<String> _runWithTemporaryVpnStop(
+    BoxVpnClient vpn,
+    List<NodeSpec?> nodes, {
+    required String url,
+    required int timeoutMs,
+    required void Function(int index, ProbeResult result) onResult,
+  }) async {
+    var wasStopped = false;
+    var result = '';
+    var restoreError = '';
+
+    final stopOk = await vpn.stopVPN();
+    if (!stopOk) {
+      AppLog.I.warning('Probe: could not temporarily stop VPN');
+      return 'Could not temporarily stop VPN for full server test';
+    }
+
+    // stopVPN() по контракту блокируется до Stopped. Всё же проверяем
+    // фактическое состояние перед запуском второго CommandServer.
+    for (var attempt = 0; attempt < 20; attempt++) {
+      if ((await vpn.getVpnStatus()) == TunnelStatus.disconnected) {
+        wasStopped = true;
+        break;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+
+    if (!wasStopped) {
+      AppLog.I.warning('Probe: VPN did not reach disconnected state');
+      return 'VPN did not stop completely for server test';
+    }
+
+    try {
+      result = await _runHeadless(
+        nodes,
+        url: url,
+        timeoutMs: timeoutMs,
+        onResult: onResult,
+      );
+    } finally {
+      // Восстанавливаем VPN даже после отмены теста или ошибки probe-сессии.
+      final startOk = await vpn.startVPN();
+      if (!startOk) {
+        restoreError = 'VPN could not be restored after server test';
+      } else {
+        for (var attempt = 0; attempt < 60; attempt++) {
+          final status = await vpn.getVpnStatus();
+          if (status == TunnelStatus.connected) break;
+          if (status == TunnelStatus.error ||
+              status == TunnelStatus.revoked) {
+            restoreError = 'VPN failed to start after server test';
+            break;
+          }
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
+        if (restoreError.isEmpty &&
+            (await vpn.getVpnStatus()) != TunnelStatus.connected) {
+          restoreError = 'VPN did not become active after server test';
+        }
+      }
+    }
+
+    if (restoreError.isNotEmpty) {
+      AppLog.I.warning('Probe: $restoreError');
+      if (result.isEmpty) return restoreError;
+      return '$result\n$restoreError';
+    }
+    return result;
+  }
+
+  static bool _looksLikeVpnRunning(String err) =>
+      err.toLowerCase().contains('vpn is running');
 
   static bool _looksLikeVpnRunning(String err) =>
       err.toLowerCase().contains('vpn is running');
@@ -195,10 +322,8 @@ class ProbeRunner {
       }
       final tag = liveTags[i];
       if (tag == null || tag.isEmpty) {
-        // Нода есть на экране, но в текущий live-конфиг не попала (например,
-        // отключена). Не выдаём ей ложный timeout — отдельный нейтральный
-        // статус отсутствия live-tag здесь не предусмотрен контрактом,
-        // поэтому считаем её failed с явной причиной.
+        // При активном VPN такие ноды не доходят сюда: run() заранее переводит
+        // весь прогон во временный VPN-off headless-режим.
         onResult(
           i,
           const ProbeResult(
@@ -234,14 +359,12 @@ class ProbeRunner {
   }) {
     if (node == null) return null;
     for (final entry in liveTagMap.entries) {
-      if (identical(entry.value, node)) return entry.key;
+      if (entry.value == node) return entry.key;
     }
-    final mapped = liveTagMap[fallbackTag];
-    if (mapped != null && identical(mapped, node)) return fallbackTag;
-    // Обычно этого достаточно: builder использует тот же displayTag. Возвращаем
-    // fallback даже без карты, чтобы короткое окно до очередной сборки не
-    // превращало все активные ноды в «не найдено в live-конфиге».
-    return fallbackTag.isEmpty ? null : fallbackTag;
+    // Нет соответствия — значит узел не присутствует в последней реально
+    // собранной конфигурации. Не подставляем предположительный tag: это могло
+    // превратить отсутствующий outbound в мгновенный ложный ERR.
+    return null;
   }
 
   Future<void> _runPool(
