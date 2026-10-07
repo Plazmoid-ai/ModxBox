@@ -236,23 +236,24 @@ class ProbeRunner {
       return 'Could not temporarily stop VPN for full server test';
     }
 
-    // stopVPN() по контракту блокируется до Stopped. Всё же проверяем
-    // фактическое состояние перед запуском второго CommandServer.
-    for (var attempt = 0; attempt < 20; attempt++) {
-      if ((await vpn.getVpnStatus()) == TunnelStatus.disconnected) {
-        wasStopped = true;
-        break;
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-
-    if (!wasStopped) {
-      AppLog.I.warning('Probe: VPN did not reach disconnected state');
-      return 'VPN did not stop completely for server test';
-    }
-
+    // После успешного stopVPN() обязательно восстанавливаем VPN в finally.
+    // Даже если дополнительная проверка состояния не успеет увидеть Stopped,
+    // мы не должны оставлять пользователя без туннеля.
     try {
-      result = await _runHeadless(
+      var disconnected = false;
+      for (var attempt = 0; attempt < 20; attempt++) {
+        if ((await vpn.getVpnStatus()) == TunnelStatus.disconnected) {
+          disconnected = true;
+          break;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+
+      if (!disconnected) {
+        AppLog.I.warning('Probe: VPN did not reach disconnected state');
+        result = 'VPN did not stop completely for server test';
+      } else {
+        result = await _runHeadless(
         nodes,
         url: url,
         timeoutMs: timeoutMs,
@@ -288,9 +289,6 @@ class ProbeRunner {
     }
     return result;
   }
-
-  static bool _looksLikeVpnRunning(String err) =>
-      err.toLowerCase().contains('vpn is running');
 
   static bool _looksLikeVpnRunning(String err) =>
       err.toLowerCase().contains('vpn is running');
@@ -355,7 +353,6 @@ class ProbeRunner {
   static String? liveTagForNode(
     NodeSpec? node, {
     required Map<String, NodeSpec> liveTagMap,
-    required String fallbackTag,
   }) {
     if (node == null) return null;
     for (final entry in liveTagMap.entries) {
