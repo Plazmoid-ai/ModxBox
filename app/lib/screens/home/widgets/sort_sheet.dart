@@ -227,9 +227,10 @@ class _SortChip extends StatelessWidget {
                 child: AnimatedOpacity(
                   duration: _anim,
                   opacity: showArrow ? 1 : 0,
-                  child: const Icon(
+                  child: Icon(
                     Icons.arrow_upward,
                     size: _arrowH,
+                    color: fg,
                   ),
                 ),
               ),
