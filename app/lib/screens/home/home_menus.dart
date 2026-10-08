@@ -8,87 +8,24 @@ import '../../services/l10n/locale_controller.dart';
 import '../../widgets/app_bottom_sheet.dart';
 
 /// §070 — modal bottom sheet опций сортировки нод (long-press по sort-кнопке
-/// в [NodesHeader]). Sheet остаётся открытым — можно тоггнуть несколько опций
-/// подряд; `StatefulBuilder` перерисовывает чекбоксы локально. Изменения сразу
-/// пишутся в [controller] (его `state` читается свежим на каждый rebuild —
-/// между нашими `setSheetState` контроллер мог emit'нуть).
+/// в [NodesHeader]). Внутри используется единый LxBox [SortSheet]:
+/// реальные режимы Default / Ping / A–Z / Custom + существующие pin/re-sort
+/// настройки. Состояние сортировки по-прежнему принадлежит HomeState.
+///
+/// Визуальная подача чипов содержит два режима (calm/lively); сейчас для
+/// экспериментальной проверки включён lively. Само состояние сортировки от
+/// этого не меняется.
 Future<void> showSortOptionsMenu(
   BuildContext context,
   HomeController controller,
 ) async {
   await showAppBottomSheet<void>(
     context: context,
-    builder: (sheetCtx) => StatefulBuilder(
-      builder: (sheetCtx, setSheetState) {
-        final s = controller.state;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(getLocalText.s("Sort options"),
-                    style: Theme.of(sheetCtx).textTheme.titleMedium),
-                const SizedBox(height: 12),
-                // §100 — выбор режима сортировки (incl. Custom = ручная,
-                // включает видимые drag-полоски §098). Раньше manual входился
-                // только через drag; теперь — явный выбор.
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final m in NodeSortMode.values)
-                      ChoiceChip(
-                        avatar: Icon(m.icon, size: 16),
-                        label: Text(m.label()),
-                        selected: s.sortMode == m,
-                        onSelected: (_) {
-                          controller.setSortMode(m);
-                          setSheetState(() {});
-                        },
-                      ),
-                  ],
-                ),
-                const Divider(height: 24),
-                CheckboxListTile(
-                  value: s.pinDirect,
-                  onChanged: (v) {
-                    controller.setPinDirect(v ?? false);
-                    setSheetState(() {});
-                  },
-                  title: Text(getLocalText.s("Pin DIRECT to top")),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-                CheckboxListTile(
-                  value: s.pinAuto,
-                  onChanged: (v) {
-                    controller.setPinAuto(v ?? false);
-                    setSheetState(() {});
-                  },
-                  title: Text(getLocalText.s("Pin AUTO to top")),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-                CheckboxListTile(
-                  value: s.resortOnManualPing,
-                  onChanged: (v) {
-                    controller.setResortOnManualPing(v ?? false);
-                    setSheetState(() {});
-                  },
-                  title: Text(getLocalText.s("Re-sort on manual ping")),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    builder: (_) => SafeArea(
+      child: SortSheet(
+        controller: controller,
+        style: SortChipStyle.lively,
+      ),
     ),
   );
 }
