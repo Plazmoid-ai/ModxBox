@@ -252,6 +252,178 @@ List<T> sortSourceItems<T>(
   ];
 }
 
+
+enum SortField { byDefault, name, modified, created }
+
+enum SortDir { up, down }
+
+enum SortChipStyle { calm, lively }
+
+@immutable
+class SortState {
+  const SortState(this.field, this.dir);
+
+  final SortField field;
+  final SortDir dir;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SortState && other.field == field && other.dir == dir;
+
+  @override
+  int get hashCode => Object.hash(field, dir);
+}
+
+SortState _sortStateFromMode(SourceSortMode mode) => switch (mode) {
+      SourceSortMode.defaultOrder =>
+        const SortState(SortField.byDefault, SortDir.up),
+      SourceSortMode.nameAsc => const SortState(SortField.name, SortDir.up),
+      SourceSortMode.nameDesc => const SortState(SortField.name, SortDir.down),
+      SourceSortMode.modifiedNewest =>
+        const SortState(SortField.modified, SortDir.down),
+      SourceSortMode.modifiedOldest =>
+        const SortState(SortField.modified, SortDir.up),
+      SourceSortMode.createdNewest =>
+        const SortState(SortField.created, SortDir.down),
+      SourceSortMode.createdOldest =>
+        const SortState(SortField.created, SortDir.up),
+    };
+
+SourceSortMode _sourceSortModeFromState(SortState state) => switch (state.field) {
+      SortField.byDefault => SourceSortMode.defaultOrder,
+      SortField.name =>
+        state.dir == SortDir.up
+            ? SourceSortMode.nameAsc
+            : SourceSortMode.nameDesc,
+      SortField.modified =>
+        state.dir == SortDir.up
+            ? SourceSortMode.modifiedOldest
+            : SourceSortMode.modifiedNewest,
+      SortField.created =>
+        state.dir == SortDir.up
+            ? SourceSortMode.createdOldest
+            : SourceSortMode.createdNewest,
+    };
+
+String _sortCaption(SortState state) => switch (state.field) {
+      SortField.byDefault => getLocalText.s("Default"),
+      SortField.name =>
+        state.dir == SortDir.up ? "Имя А–Я" : "Имя Я–А",
+      SortField.modified =>
+        state.dir == SortDir.up
+            ? "Изменено — сначала старые"
+            : "Изменено — сначала новые",
+      SortField.created =>
+        state.dir == SortDir.up
+            ? "Создано — сначала старые"
+            : "Создано — сначала новые",
+    };
+
+class _SortChip extends StatelessWidget {
+  const _SortChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.showArrow,
+    required this.dir,
+    required this.style,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final bool showArrow;
+  final SortDir dir;
+  final SortChipStyle style;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final foreground =
+        selected ? colorScheme.onSecondaryContainer : colorScheme.onSurface;
+    final background =
+        selected ? colorScheme.secondaryContainer : colorScheme.surface;
+    final borderColor =
+        selected ? colorScheme.secondary : colorScheme.outlineVariant;
+
+    final chipLabel = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: foreground,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+      ),
+    );
+
+    Widget content;
+    if (style == SortChipStyle.calm) {
+      final arrow = Icon(
+        dir == SortDir.up ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+        size: 16,
+        color: colorScheme.primary,
+      );
+
+      content = Stack(
+        alignment: Alignment.center,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              top: showArrow && dir == SortDir.down ? 2 : 0,
+              bottom: showArrow && dir == SortDir.up ? 2 : 0,
+            ),
+            child: chipLabel,
+          ),
+          if (showArrow)
+            Positioned(
+              top: dir == SortDir.up ? 1 : null,
+              bottom: dir == SortDir.down ? 1 : null,
+              child: arrow,
+            ),
+        ],
+      );
+    } else {
+      content = Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(child: chipLabel),
+          if (showArrow) ...[
+            const SizedBox(width: 4),
+            Icon(
+              dir == SortDir.up
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
+              size: 18,
+              color: colorScheme.primary,
+            ),
+          ],
+        ],
+      );
+    }
+
+    return Material(
+      color: background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: borderColor),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 48,
+          child: Center(child: content),
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> showSourceSortOptions(
   BuildContext context, {
   required SourceSortSettings settings,
@@ -280,20 +452,110 @@ Future<void> showSourceSortOptions(
                   getLocalText.s("Sort options"),
                   style: Theme.of(sheetCtx).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final mode in SourceSortMode.values)
-                      ChoiceChip(
-                        avatar: Icon(mode.icon, size: 16),
-                        label: Text(mode.label()),
-                        selected: local.mode == mode,
-                        onSelected: (_) =>
-                            apply(local.copyWith(mode: mode)),
-                      ),
-                  ],
+                const SizedBox(height: 4),
+                Builder(
+                  builder: (context) {
+                    var sortState = _sortStateFromMode(local.mode);
+
+                    void onSortChanged(SortState next) {
+                      sortState = next;
+                      apply(
+                        local.copyWith(
+                          mode: _sourceSortModeFromState(next),
+                        ),
+                      );
+                    }
+
+                    void onChipTap(SortField field) {
+                      if (field == sortState.field &&
+                          field != SortField.byDefault) {
+                        onSortChanged(
+                          SortState(
+                            field,
+                            sortState.dir == SortDir.up
+                                ? SortDir.down
+                                : SortDir.up,
+                          ),
+                        );
+                      } else {
+                        onSortChanged(
+                          SortState(
+                            field,
+                            field == SortField.name
+                                ? SortDir.up
+                                : SortDir.down,
+                          ),
+                        );
+                      }
+                    }
+
+                    Widget chip(
+                      SortField field,
+                      IconData icon,
+                      String label,
+                    ) =>
+                        Expanded(
+                          child: _SortChip(
+                            icon: icon,
+                            label: label,
+                            selected: sortState.field == field,
+                            showArrow: sortState.field == field &&
+                                field != SortField.byDefault,
+                            dir: sortState.dir,
+                            style: SortChipStyle.calm,
+                            onTap: () => onChipTap(field),
+                          ),
+                        );
+
+                    return Column(
+                      children: [
+                        Text(
+                          _sortCaption(sortState),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            chip(
+                              SortField.byDefault,
+                              Icons.swap_vert,
+                              getLocalText.s("Default"),
+                            ),
+                            const SizedBox(width: 8),
+                            chip(
+                              SortField.name,
+                              Icons.sort_by_alpha,
+                              "Имя",
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            chip(
+                              SortField.modified,
+                              Icons.history,
+                              "Изменено",
+                            ),
+                            const SizedBox(width: 8),
+                            chip(
+                              SortField.created,
+                              Icons.calendar_month,
+                              "Создано",
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const Divider(height: 24),
                 CheckboxListTile(
