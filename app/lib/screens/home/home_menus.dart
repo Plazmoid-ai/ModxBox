@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/home_controller.dart';
-import '../../models/home_state.dart';
 import '../../services/settings_storage.dart';
 import '../../services/template_loader.dart';
 import '../../services/l10n/locale_controller.dart';
