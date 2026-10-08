@@ -19,12 +19,10 @@ enum SortChipStyle { calm, lively }
 class SortSheet extends StatelessWidget {
   const SortSheet({
     super.key,
-    required this.state,
     required this.controller,
     this.style = SortChipStyle.calm,
   });
 
-  final HomeState state;
   final HomeController controller;
   final SortChipStyle style;
 
@@ -32,7 +30,7 @@ class SortSheet extends StatelessWidget {
     controller.setSortMode(mode);
   }
 
-  Widget _chip(NodeSortMode mode) {
+  Widget _chip(NodeSortMode mode, HomeState state) {
     final selected = state.sortMode == mode;
 
     // В LxBox нет отдельного down-направления у sortMode:
@@ -57,6 +55,16 @@ class SortSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final state = controller.state;
+        return _buildSheet(context, state);
+      },
+    );
+  }
+
+  Widget _buildSheet(BuildContext context, HomeState state) {
     final theme = Theme.of(context);
 
     return Padding(
@@ -91,17 +99,17 @@ class SortSheet extends StatelessWidget {
           // Фиксированная сетка 2×2: геометрия строк не зависит от выбора.
           Row(
             children: [
-              _chip(NodeSortMode.defaultOrder),
+              _chip(NodeSortMode.defaultOrder, state),
               const SizedBox(width: 8),
-              _chip(NodeSortMode.latencyAsc),
+              _chip(NodeSortMode.latencyAsc, state),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              _chip(NodeSortMode.nameAsc),
+              _chip(NodeSortMode.nameAsc, state),
               const SizedBox(width: 8),
-              _chip(NodeSortMode.manual),
+              _chip(NodeSortMode.manual, state),
             ],
           ),
 
