@@ -376,8 +376,18 @@ class _SortChip extends StatelessWidget {
             padding: EdgeInsets.only(
               top: showArrow && dir == SortDir.down ? 2 : 0,
               bottom: showArrow && dir == SortDir.up ? 2 : 0,
+              left: 28,
+              right: 28,
             ),
             child: chipLabel,
+          ),
+          Positioned(
+            left: 10,
+            child: Icon(
+              icon,
+              size: 18,
+              color: foreground,
+            ),
           ),
           if (showArrow)
             Positioned(
@@ -391,6 +401,12 @@ class _SortChip extends StatelessWidget {
       content = Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Icon(
+            icon,
+            size: 18,
+            color: foreground,
+          ),
+          const SizedBox(width: 6),
           Flexible(child: chipLabel),
           if (showArrow) ...[
             const SizedBox(width: 4),
