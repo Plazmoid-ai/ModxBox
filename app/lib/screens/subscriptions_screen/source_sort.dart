@@ -54,6 +54,7 @@ class SourceSortSettings {
     this.groupByActive = false,
     this.groupOrder = defaultSourceGroupOrder,
     this.chipStyle = SortChipStyle.calm,
+    this.activeFilter = ActiveFilter.all,
   });
 
   final SourceSortMode mode;
@@ -61,6 +62,7 @@ class SourceSortSettings {
   final bool groupByActive;
   final List<String> groupOrder;
   final SortChipStyle chipStyle;
+  final ActiveFilter activeFilter;
 
   SourceSortSettings copyWith({
     SourceSortMode? mode,
@@ -68,6 +70,7 @@ class SourceSortSettings {
     bool? groupByActive,
     List<String>? groupOrder,
     SortChipStyle? chipStyle,
+    ActiveFilter? activeFilter,
   }) =>
       SourceSortSettings(
         mode: mode ?? this.mode,
@@ -75,6 +78,7 @@ class SourceSortSettings {
         groupByActive: groupByActive ?? this.groupByActive,
         groupOrder: groupOrder ?? this.groupOrder,
         chipStyle: chipStyle ?? this.chipStyle,
+        activeFilter: activeFilter ?? this.activeFilter,
       );
 
   Map<String, dynamic> toJson() => {
@@ -83,6 +87,7 @@ class SourceSortSettings {
         'group_by_active': groupByActive,
         'group_order': groupOrder,
         'chip_style': chipStyle.name,
+        'active_filter': activeFilter.name,
       };
 
   static SourceSortSettings fromJson(String raw) {
@@ -98,6 +103,10 @@ class SourceSortSettings {
       final chipStyle = SortChipStyle.values.firstWhere(
         (s) => s.name == decoded['chip_style'],
         orElse: () => SortChipStyle.calm,
+      );
+      final activeFilter = ActiveFilter.values.firstWhere(
+        (f) => f.name == decoded['active_filter'],
+        orElse: () => ActiveFilter.all,
       );
 
       final order = <String>[];
@@ -123,6 +132,7 @@ class SourceSortSettings {
         groupByActive: decoded['group_by_active'] == true,
         groupOrder: List<String>.unmodifiable(order),
         chipStyle: chipStyle,
+        activeFilter: activeFilter,
       );
     } catch (_) {
       return const SourceSortSettings();
@@ -152,6 +162,7 @@ class SourceSortTimestamps {
 bool isSourceSortNonDefault(SourceSortSettings settings) =>
     settings.mode != SourceSortMode.defaultOrder ||
     settings.groupByType ||
+    settings.activeFilter != ActiveFilter.all ||
     !listEquals(settings.groupOrder, defaultSourceGroupOrder);
 
 String sourceTypeLabel(String kind) => switch (kind) {
@@ -279,11 +290,42 @@ List<T> sortSourceItems<T>(
 }
 
 
+extension SourceSortModeX on SourceSortMode {
+  IconData get directionIcon => switch (this) {
+        SourceSortMode.defaultOrder => Icons.swap_vert,
+        SourceSortMode.nameAsc ||
+        SourceSortMode.modifiedNewest ||
+        SourceSortMode.createdNewest => Icons.arrow_downward,
+        SourceSortMode.nameDesc ||
+        SourceSortMode.modifiedOldest ||
+        SourceSortMode.createdOldest => Icons.arrow_upward,
+      };
+}
+
 enum SortField { byDefault, name, modified, created }
 
 enum SortDir { up, down }
 
 enum SortChipStyle { calm, lively }
+
+enum ActiveFilter { all, active, inactive }
+
+extension ActiveFilterX on ActiveFilter {
+  ActiveFilter get next =>
+      ActiveFilter.values[(index + 1) % ActiveFilter.values.length];
+
+  String label() => switch (this) {
+        ActiveFilter.all => getLocalText.s("Show all sources"),
+        ActiveFilter.active => getLocalText.s("Show only active sources"),
+        ActiveFilter.inactive => getLocalText.s("Show only inactive sources"),
+      };
+
+  bool accepts(bool isActive) => switch (this) {
+        ActiveFilter.all => true,
+        ActiveFilter.active => isActive,
+        ActiveFilter.inactive => !isActive,
+      };
+}
 
 @immutable
 class SortState {
@@ -487,6 +529,80 @@ class _SortChip extends StatelessWidget {
   }
 }
 
+class ActiveFilterButton extends StatelessWidget {
+  const ActiveFilterButton({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final ActiveFilter value;
+  final ValueChanged<ActiveFilter> onChanged;
+  final bool enabled;
+
+  static const _duration = Duration(milliseconds: 220);
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isAll = value == ActiveFilter.all;
+    final isActive = value == ActiveFilter.active;
+    final gray = colors.surfaceContainerHighest;
+    final blue = colors.primaryContainer;
+    final inner = colors.onSurfaceVariant;
+
+    return Tooltip(
+      message: value.label(),
+      child: Semantics(
+        button: true,
+        label: value.label(),
+        child: InkResponse(
+          onTap: enabled ? () => onChanged(value.next) : null,
+          radius: 24,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Center(
+              child: AnimatedContainer(
+                duration: _duration,
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: isActive ? blue : gray,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isAll ? colors.outline : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: AnimatedOpacity(
+                    duration: _duration,
+                    opacity: isAll ? 0 : 1,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: inner,
+                        borderRadius: BorderRadius.circular(4.5),
+                        border: Border.all(
+                          color: colors.onInverseSurface,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> showSourceSortOptions(
   BuildContext context, {
   required SourceSortSettings settings,
@@ -496,6 +612,7 @@ Future<void> showSourceSortOptions(
 
   await showAppBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     builder: (sheetCtx) => StatefulBuilder(
       builder: (sheetCtx, setSheetState) {
         void apply(SourceSortSettings next) {
@@ -505,12 +622,17 @@ Future<void> showSourceSortOptions(
         }
 
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetCtx).height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                 Row(
                   children: [
                     Expanded(
@@ -721,8 +843,9 @@ Future<void> showSourceSortOptions(
                           ],
                         )
                       : const SizedBox(width: double.infinity),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
