@@ -46,6 +46,45 @@ void main() {
     });
   });
 
+  group('SortState', () {
+    test('first name tap selects A–Z and the next tap reverses it', () {
+      const initial = SortState(SortField.byDefault, SortDir.down);
+      final ascending = sortAfterTap(initial, SortField.name);
+
+      expect(ascending, const SortState(SortField.name, SortDir.up));
+      expect(
+        sortAfterTap(ascending, SortField.name),
+        const SortState(SortField.name, SortDir.down),
+      );
+    });
+
+    test('date sorting defaults to newest and repeats to oldest', () {
+      const initial = SortState(SortField.byDefault, SortDir.down);
+      final newest = sortAfterTap(initial, SortField.modified);
+
+      expect(newest, const SortState(SortField.modified, SortDir.down));
+      expect(
+        sortAfterTap(newest, SortField.modified),
+        const SortState(SortField.modified, SortDir.up),
+      );
+    });
+
+    test('stored modes map to their intended directions', () {
+      expect(
+        sortStateFromMode(SourceSortMode.nameAsc),
+        const SortState(SortField.name, SortDir.up),
+      );
+      expect(
+        sortStateFromMode(SourceSortMode.nameDesc),
+        const SortState(SortField.name, SortDir.down),
+      );
+      expect(
+        sortStateFromMode(SourceSortMode.modifiedNewest),
+        const SortState(SortField.modified, SortDir.down),
+      );
+    });
+  });
+
   group('sortSourceItems', () {
     final createdOld = DateTime.utc(2025, 1, 1);
     final createdNew = DateTime.utc(2026, 1, 1);
@@ -176,25 +215,25 @@ void main() {
   });
 
   group('SourceSortSettings', () {
-    test('persists selected sort chip animation style', () {
+    test('persists sorting options and active filter', () {
       final source = SourceSortSettings(
         mode: SourceSortMode.createdNewest,
-        chipStyle: SortChipStyle.lively,
         groupByActive: true,
         activeFilter: ActiveFilter.inactive,
       );
       final restored = SourceSortSettings.fromJson(jsonEncode(source.toJson()));
 
       expect(restored.mode, SourceSortMode.createdNewest);
-      expect(restored.chipStyle, SortChipStyle.lively);
       expect(restored.groupByActive, isTrue);
       expect(restored.activeFilter, ActiveFilter.inactive);
     });
 
-    test('older settings default to calm chip animation', () {
-      final restored = SourceSortSettings.fromJson('{"mode":"nameAsc"}');
+    test('older settings ignore obsolete chip animation and default options', () {
+      final restored = SourceSortSettings.fromJson(
+        '{"mode":"nameAsc","chip_style":"lively"}',
+      );
 
-      expect(restored.chipStyle, SortChipStyle.calm);
+      expect(restored.mode, SourceSortMode.nameAsc);
       expect(restored.groupByActive, isFalse);
       expect(restored.activeFilter, ActiveFilter.all);
     });
