@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lxbox/screens/subscriptions_screen/source_sort.dart';
 
@@ -127,6 +128,23 @@ void main() {
   });
 
   group('SourceSortSettings', () {
+    test('persists selected sort chip animation style', () {
+      final source = SourceSortSettings(
+        mode: SourceSortMode.createdNewest,
+        chipStyle: SortChipStyle.lively,
+      );
+      final restored = SourceSortSettings.fromJson(jsonEncode(source.toJson()));
+
+      expect(restored.mode, SourceSortMode.createdNewest);
+      expect(restored.chipStyle, SortChipStyle.lively);
+    });
+
+    test('older settings default to calm chip animation', () {
+      final restored = SourceSortSettings.fromJson('{"mode":"nameAsc"}');
+
+      expect(restored.chipStyle, SortChipStyle.calm);
+    });
+
     test('repairs an incomplete group order while decoding', () {
       final settings = SourceSortSettings.fromJson(
         '{"mode":"createdNewest","group_by_type":true,'
