@@ -158,18 +158,37 @@ void main() {
     });
   });
 
+  group('ActiveFilter', () {
+    test('cycles all -> active -> inactive -> all', () {
+      expect(ActiveFilter.all.next, ActiveFilter.active);
+      expect(ActiveFilter.active.next, ActiveFilter.inactive);
+      expect(ActiveFilter.inactive.next, ActiveFilter.all);
+    });
+
+    test('accepts sources according to selected filter', () {
+      expect(ActiveFilter.all.accepts(true), isTrue);
+      expect(ActiveFilter.all.accepts(false), isTrue);
+      expect(ActiveFilter.active.accepts(true), isTrue);
+      expect(ActiveFilter.active.accepts(false), isFalse);
+      expect(ActiveFilter.inactive.accepts(true), isFalse);
+      expect(ActiveFilter.inactive.accepts(false), isTrue);
+    });
+  });
+
   group('SourceSortSettings', () {
     test('persists selected sort chip animation style', () {
       final source = SourceSortSettings(
         mode: SourceSortMode.createdNewest,
         chipStyle: SortChipStyle.lively,
         groupByActive: true,
+        activeFilter: ActiveFilter.inactive,
       );
       final restored = SourceSortSettings.fromJson(jsonEncode(source.toJson()));
 
       expect(restored.mode, SourceSortMode.createdNewest);
       expect(restored.chipStyle, SortChipStyle.lively);
       expect(restored.groupByActive, isTrue);
+      expect(restored.activeFilter, ActiveFilter.inactive);
     });
 
     test('older settings default to calm chip animation', () {
@@ -177,6 +196,7 @@ void main() {
 
       expect(restored.chipStyle, SortChipStyle.calm);
       expect(restored.groupByActive, isFalse);
+      expect(restored.activeFilter, ActiveFilter.all);
     });
 
     test('repairs an incomplete group order while decoding', () {
