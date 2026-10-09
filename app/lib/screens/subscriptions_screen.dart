@@ -90,6 +90,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   Timer? _sortTooltipTimer;
   String? _sortTooltipMessage;
   bool _showSortTooltip = false;
+  Timer? _filterTooltipTimer;
+  String? _filterTooltipMessage;
+  bool _showFilterTooltip = false;
 
   /// Цепочки общего списка — срез [_sources]. Нужен диалогам (редактор
   /// цепочки хочет соседей, чтобы показать законные позиции) и гейту тега.
@@ -421,13 +424,29 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   void _showSortModeHint(String label) {
     _sortTooltipTimer?.cancel();
+    _filterTooltipTimer?.cancel();
     setState(() {
+      _showFilterTooltip = false;
       _sortTooltipMessage = label;
       _showSortTooltip = true;
     });
     _sortTooltipTimer = Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
       setState(() => _showSortTooltip = false);
+    });
+  }
+
+  void _showFilterModeHint(String label) {
+    _filterTooltipTimer?.cancel();
+    _sortTooltipTimer?.cancel();
+    setState(() {
+      _showSortTooltip = false;
+      _filterTooltipMessage = label;
+      _showFilterTooltip = true;
+    });
+    _filterTooltipTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      setState(() => _showFilterTooltip = false);
     });
   }
 
@@ -726,6 +745,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     _inputController.dispose();
     _scrollController.dispose();
     _sortTooltipTimer?.cancel();
+    _filterTooltipTimer?.cancel();
     _highlightTimer?.cancel();
     _highlightFadeTimer?.cancel();
     super.dispose();
@@ -1290,72 +1310,108 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ActiveFilterButton(
-                  value: _sortSettings.activeFilter,
-                  enabled: hasSources,
-                  onChanged: (value) => _updateSortSettings(
-                    _sortSettings.copyWith(activeFilter: value),
-                  ),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ActiveFilterButton(
+                      value: _sortSettings.activeFilter,
+                      enabled: hasSources,
+                      onChanged: (value) {
+                        _updateSortSettings(
+                          _sortSettings.copyWith(activeFilter: value),
+                        );
+                        _showFilterModeHint(value.label());
+                      },
+                    ),
+                    if (_showFilterTooltip && _filterTooltipMessage != null)
+                      Positioned(
+                        right: 48,
+                        child: IgnorePointer(
+                          child: AnimatedOpacity(
+                            opacity: _showFilterTooltip ? 1 : 0,
+                            duration: const Duration(milliseconds: 120),
+                            child: Material(
+                              elevation: 4,
+                              color: Theme.of(context).colorScheme.inverseSurface,
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                child: Text(
+                                  _filterTooltipMessage!,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onInverseSurface,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 2),
                 Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.center,
                   children: [
-                    Material(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: hasSources ? _cycleSourceSort : null,
-                        onLongPress:
-                            hasSources ? _openSourceSortOptions : null,
-                        borderRadius: BorderRadius.circular(8),
-                        child: SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: Center(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _sortSettings.mode.directionIcon,
-                                  size: 16,
-                                  color: hasSources
-                                      ? Theme.of(context).colorScheme.onSurfaceVariant
-                                      : Theme.of(context).disabledColor,
-                                ),
-                                const SizedBox(width: 1),
-                                Icon(
-                                  _sortSettings.mode.icon,
-                                  size: 18,
-                                  color: hasSources
-                                      ? Theme.of(context).colorScheme.onSurfaceVariant
-                                      : Theme.of(context).disabledColor,
-                                ),
-                              ],
+                    InkResponse(
+                      onTap: hasSources ? _cycleSourceSort : null,
+                      onLongPress:
+                          hasSources ? _openSourceSortOptions : null,
+                      radius: 22,
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Center(
+                          child: Ink(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: _sortSettings.mode == SourceSortMode.defaultOrder
+                                  ? Icon(
+                                      _sortSettings.mode.icon,
+                                      size: 23,
+                                      color: hasSources
+                                          ? Theme.of(context).colorScheme.onSurfaceVariant
+                                          : Theme.of(context).disabledColor,
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _sortSettings.mode.directionIcon,
+                                          size: 14,
+                                          color: hasSources
+                                              ? Theme.of(context).colorScheme.onSurfaceVariant
+                                              : Theme.of(context).disabledColor,
+                                        ),
+                                        const SizedBox(width: 1),
+                                        Icon(
+                                          _sortSettings.mode.icon,
+                                          size: 16,
+                                          color: hasSources
+                                              ? Theme.of(context).colorScheme.onSurfaceVariant
+                                              : Theme.of(context).disabledColor,
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                    if (isSourceSortNonDefault(_sortSettings))
-                      Positioned(
-                        right: 4,
-                        top: 4,
-                        child: IgnorePointer(
-                          child: Container(
-                            width: 7,
-                            height: 7,
-                            decoration: const BoxDecoration(
-                              color: Colors.amber,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      ),
                     if (_showSortTooltip && _sortTooltipMessage != null)
                       Positioned(
                         right: 48,
@@ -1390,7 +1446,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 ),
               ],
             ),
-          ),
+          )
         ],
       ),
     );
