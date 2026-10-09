@@ -87,9 +87,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   static const _sortSettingsStorageKey = 'server_list_sorting';
   static const _sortMetadataStorageKey = 'server_list_sort_meta';
   bool _sortStateReady = false;
-  Timer? _sortTooltipTimer;
-  String? _sortTooltipMessage;
-  bool _showSortTooltip = false;
   Timer? _filterTooltipTimer;
   String? _filterTooltipMessage;
   bool _showFilterTooltip = false;
@@ -416,31 +413,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     unawaited(_saveSortSettings());
   }
 
-  void _cycleSourceSort() {
-    final next = _sortSettings.mode.next;
-    _updateSortSettings(_sortSettings.copyWith(mode: next));
-    _showSortModeHint(next.label());
-  }
-
-  void _showSortModeHint(String label) {
-    _sortTooltipTimer?.cancel();
-    _filterTooltipTimer?.cancel();
-    setState(() {
-      _showFilterTooltip = false;
-      _sortTooltipMessage = label;
-      _showSortTooltip = true;
-    });
-    _sortTooltipTimer = Timer(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      setState(() => _showSortTooltip = false);
-    });
-  }
-
   void _showFilterModeHint(String label) {
     _filterTooltipTimer?.cancel();
-    _sortTooltipTimer?.cancel();
     setState(() {
-      _showSortTooltip = false;
       _filterTooltipMessage = label;
       _showFilterTooltip = true;
     });
@@ -744,7 +719,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     _scrollController.removeListener(_onScrollForHighlightDismiss);
     _inputController.dispose();
     _scrollController.dispose();
-    _sortTooltipTimer?.cancel();
     _filterTooltipTimer?.cancel();
     _highlightTimer?.cancel();
     _highlightFadeTimer?.cancel();
@@ -1356,94 +1330,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   ],
                 ),
                 const SizedBox(width: 2),
-                Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    InkResponse(
-                      onTap: hasSources ? _cycleSourceSort : null,
-                      onLongPress:
-                          hasSources ? _openSourceSortOptions : null,
-                      radius: 22,
-                      child: SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: Center(
-                          child: Ink(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: _sortSettings.mode == SourceSortMode.defaultOrder
-                                  ? Icon(
-                                      _sortSettings.mode.icon,
-                                      size: 23,
-                                      color: hasSources
-                                          ? Theme.of(context).colorScheme.onSurfaceVariant
-                                          : Theme.of(context).disabledColor,
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          _sortSettings.mode.directionIcon,
-                                          size: 14,
-                                          color: hasSources
-                                              ? Theme.of(context).colorScheme.onSurfaceVariant
-                                              : Theme.of(context).disabledColor,
-                                        ),
-                                        const SizedBox(width: 1),
-                                        Icon(
-                                          _sortSettings.mode.icon,
-                                          size: 16,
-                                          color: hasSources
-                                              ? Theme.of(context).colorScheme.onSurfaceVariant
-                                              : Theme.of(context).disabledColor,
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_showSortTooltip && _sortTooltipMessage != null)
-                      Positioned(
-                        right: 48,
-                        child: IgnorePointer(
-                          child: AnimatedOpacity(
-                            opacity: _showSortTooltip ? 1 : 0,
-                            duration: const Duration(milliseconds: 120),
-                            child: Material(
-                              elevation: 4,
-                              color: Theme.of(context).colorScheme.inverseSurface,
-                              borderRadius: BorderRadius.circular(8),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 7,
-                                ),
-                                child: Text(
-                                  _sortTooltipMessage!,
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onInverseSurface,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                SortToolbarButton(
+                  state: sortStateFromMode(_sortSettings.mode),
+                  enabled: hasSources,
+                  onTap: _openSourceSortOptions,
+                )
               ],
             ),
           ),
