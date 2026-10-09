@@ -5562,9 +5562,6 @@
   "Timer": {
     "value": "计时器"
   },
-  "Group by active state": {
-    "value": "按启用/停用状态分组"
-  },
   "Show all sources": {
     "value": "显示全部来源"
   },
@@ -5576,5 +5573,8 @@
   },
   "No sources match this filter": {
     "value": "没有符合此筛选条件的来源"
+  },
+  "Enabled first": {
+    "value": "已启用的置顶"
   }
 }
