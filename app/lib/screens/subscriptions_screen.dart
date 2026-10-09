@@ -189,7 +189,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   void _dismissHighlight({required bool animated}) {
-    _sortTooltipTimer?.cancel();
     _highlightTimer?.cancel();
     _highlightFadeTimer?.cancel();
     if (_highlightedEntryId == null) return;
@@ -726,6 +725,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     _scrollController.removeListener(_onScrollForHighlightDismiss);
     _inputController.dispose();
     _scrollController.dispose();
+    _sortTooltipTimer?.cancel();
     _highlightTimer?.cancel();
     _highlightFadeTimer?.cancel();
     super.dispose();
