@@ -154,6 +154,7 @@ class SourceSortTimestamps {
 bool isSourceSortNonDefault(SourceSortSettings settings) =>
     settings.mode != SourceSortMode.defaultOrder ||
     settings.groupByType ||
+    settings.enabledFirst ||
     settings.activeFilter != ActiveFilter.all ||
     !listEquals(settings.groupOrder, defaultSourceGroupOrder);
 
