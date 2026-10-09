@@ -51,28 +51,28 @@ class SourceSortSettings {
   const SourceSortSettings({
     this.mode = SourceSortMode.defaultOrder,
     this.groupByType = false,
-    this.groupByActive = false,
+    this.enabledFirst = false,
     this.groupOrder = defaultSourceGroupOrder,
     this.activeFilter = ActiveFilter.all,
   });
 
   final SourceSortMode mode;
   final bool groupByType;
-  final bool groupByActive;
+  final bool enabledFirst;
   final List<String> groupOrder;
   final ActiveFilter activeFilter;
 
   SourceSortSettings copyWith({
     SourceSortMode? mode,
     bool? groupByType,
-    bool? groupByActive,
+    bool? enabledFirst,
     List<String>? groupOrder,
     ActiveFilter? activeFilter,
   }) =>
       SourceSortSettings(
         mode: mode ?? this.mode,
         groupByType: groupByType ?? this.groupByType,
-        groupByActive: groupByActive ?? this.groupByActive,
+        enabledFirst: enabledFirst ?? this.enabledFirst,
         groupOrder: groupOrder ?? this.groupOrder,
         activeFilter: activeFilter ?? this.activeFilter,
       );
@@ -80,7 +80,7 @@ class SourceSortSettings {
   Map<String, dynamic> toJson() => {
         'mode': mode.name,
         'group_by_type': groupByType,
-        'group_by_active': groupByActive,
+        'enabled_first': enabledFirst,
         'group_order': groupOrder,
         'active_filter': activeFilter.name,
       };
@@ -120,7 +120,9 @@ class SourceSortSettings {
       return SourceSortSettings(
         mode: mode,
         groupByType: decoded['group_by_type'] == true,
-        groupByActive: decoded['group_by_active'] == true,
+        enabledFirst: decoded.containsKey('enabled_first')
+            ? decoded['enabled_first'] == true
+            : decoded['group_by_active'] == true,
         groupOrder: List<String>.unmodifiable(order),
         activeFilter: activeFilter,
       );
@@ -239,7 +241,7 @@ List<T> sortSourceItems<T>(
   ) {
     final copy = [...bucket];
     copy.sort(compareItems);
-    if (settings.groupByType && settings.groupByActive && enabledOf != null) {
+    if (settings.enabledFirst && enabledOf != null) {
       // Stable partition: enabled entries first, retaining each side's order.
       final enabled = <({T item, int index})>[];
       final disabled = <({T item, int index})>[];
@@ -388,14 +390,14 @@ String _sortCaption(SortState state) => switch (state.field) {
         ),
     };
 
-// Shared, fixed-geometry chevron for both the sort sheet and toolbar.
+// Shared 22×11 chevron. The sheet and toolbar use the same painted shape.
 class SortChevron extends StatelessWidget {
   const SortChevron({super.key, required this.color});
 
   final Color color;
 
-  static const double width = 24;
-  static const double height = 12;
+  static const double width = 22;
+  static const double height = 11;
 
   @override
   Widget build(BuildContext context) => CustomPaint(
@@ -446,8 +448,8 @@ class _ChevronPainter extends CustomPainter {
 
 const Duration _sortAnimationDuration = Duration(milliseconds: 180);
 
-// Every animated element moves inside a permanently 60 px high chip.
-// Only opacity, rotation and top offsets change; the grid geometry stays fixed.
+// The chip's outer height, label slot and chevron slot are fixed. Animations
+// change only opacity, rotation and position, never the grid's geometry.
 class SortChip extends StatelessWidget {
   const SortChip({
     super.key,
@@ -467,9 +469,10 @@ class SortChip extends StatelessWidget {
   final VoidCallback onTap;
 
   static const double _height = 60;
-  static const double _labelHeight = 20;
-  static const double _labelEdge = 6;
-  static const double _arrowEdge = 8;
+  static const double _labelHeight = 32;
+  static const double _labelEdge = 5;
+  static const double _arrowEdge = 5;
+  static const double _arrowGap = 4;
 
   @override
   Widget build(BuildContext context) {
@@ -481,10 +484,12 @@ class SortChip extends StatelessWidget {
 
     final labelTop = !showArrow
         ? (_height - _labelHeight) / 2
-        : (isUp ? _height - _labelEdge - _labelHeight : _labelEdge);
-    final arrowTop = (showArrow && !isUp)
-        ? _height - _arrowEdge - SortChevron.height
-        : _arrowEdge;
+        : (isUp
+            ? _arrowEdge + SortChevron.height + _arrowGap
+            : _labelEdge);
+    final arrowTop = showArrow && isUp
+        ? _arrowEdge
+        : _labelEdge + _labelHeight + _arrowGap;
 
     return AnimatedContainer(
       duration: _sortAnimationDuration,
@@ -531,26 +536,31 @@ class SortChip extends StatelessWidget {
                 height: _labelHeight,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, size: 18, color: foreground),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontSize: label == getLocalText.s("Default") ? 12 : 14,
-                            color: foreground,
-                            fontWeight:
-                                selected ? FontWeight.w600 : FontWeight.w500,
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(icon, size: 18, color: foreground),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            label,
+                            maxLines: 2,
+                            softWrap: true,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontSize: 14,
+                              height: 1.0,
+                              color: foreground,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -567,20 +577,24 @@ class SortToolbarButton extends StatelessWidget {
     super.key,
     required this.state,
     required this.onTap,
+    required this.onLongPress,
     this.enabled = true,
   });
 
   final SortState state;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
   final bool enabled;
 
-  static const double _size = 48;
-  static const double _glyph = 22;
-  static const double _gap = 4;
+  // 44px hit area, matching the filter control; visible tile is 32×32.
+  static const double _size = 44;
+  static const double _tileSize = 32;
+  static const double _glyph = 18;
+  static const double _gap = 1;
   static const double _edge =
-      (_size - SortChevron.height - _gap - _glyph) / 2;
+      (_tileSize - SortChevron.height - _gap - _glyph) / 2;
   static const BorderRadius _radius =
-      BorderRadius.all(Radius.circular(14));
+      BorderRadius.all(Radius.circular(8));
 
   @override
   Widget build(BuildContext context) {
@@ -588,70 +602,74 @@ class SortToolbarButton extends StatelessWidget {
     final colors = theme.colorScheme;
     final active = state.field != SortField.byDefault;
     final isUp = state.dir == SortDir.up;
-    final foreground = !enabled
-        ? theme.disabledColor
-        : active
-            ? colors.onSecondaryContainer
-            : colors.onSurfaceVariant;
+    final foreground = enabled ? colors.onSurfaceVariant : theme.disabledColor;
 
     final glyphTop = !active
-        ? (_size - _glyph) / 2
+        ? (_tileSize - _glyph) / 2
         : (isUp ? _edge + SortChevron.height + _gap : _edge);
     final arrowTop =
         (active && !isUp) ? _edge + _glyph + _gap : _edge;
 
-    return Tooltip(
-      message: _sortCaption(state),
-      child: AnimatedContainer(
-        duration: _sortAnimationDuration,
-        width: _size,
-        height: _size,
-        decoration: BoxDecoration(
-          color: active ? colors.secondaryContainer : Colors.transparent,
+    return Semantics(
+      button: true,
+      label: _sortCaption(state),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
           borderRadius: _radius,
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: _radius,
-            onTap: enabled ? onTap : null,
-            child: Stack(
-              children: [
-                AnimatedPositioned(
-                  duration: _sortAnimationDuration,
-                  curve: Curves.easeOut,
-                  left: 0,
-                  right: 0,
-                  top: arrowTop,
-                  height: SortChevron.height,
-                  child: Center(
-                    child: AnimatedOpacity(
+          onTap: enabled ? onTap : null,
+          onLongPress: enabled ? onLongPress : null,
+          child: SizedBox(
+            width: _size,
+            height: _size,
+            child: Center(
+              child: AnimatedContainer(
+                duration: _sortAnimationDuration,
+                width: _tileSize,
+                height: _tileSize,
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest,
+                  borderRadius: _radius,
+                ),
+                child: Stack(
+                  children: [
+                    AnimatedPositioned(
                       duration: _sortAnimationDuration,
-                      opacity: active ? 1 : 0,
-                      child: AnimatedRotation(
-                        duration: _sortAnimationDuration,
-                        turns: isUp ? 0.5 : 0,
-                        child: SortChevron(color: foreground),
+                      curve: Curves.easeOut,
+                      left: 0,
+                      right: 0,
+                      top: arrowTop,
+                      height: SortChevron.height,
+                      child: Center(
+                        child: AnimatedOpacity(
+                          duration: _sortAnimationDuration,
+                          opacity: active ? 1 : 0,
+                          child: AnimatedRotation(
+                            duration: _sortAnimationDuration,
+                            turns: isUp ? 0.5 : 0,
+                            child: SortChevron(color: foreground),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                AnimatedPositioned(
-                  duration: _sortAnimationDuration,
-                  curve: Curves.easeOut,
-                  left: 0,
-                  right: 0,
-                  top: glyphTop,
-                  height: _glyph,
-                  child: Center(
-                    child: Icon(
-                      sortFieldIcon(state.field),
-                      size: _glyph,
-                      color: foreground,
+                    AnimatedPositioned(
+                      duration: _sortAnimationDuration,
+                      curve: Curves.easeOut,
+                      left: 0,
+                      right: 0,
+                      top: glyphTop,
+                      height: _glyph,
+                      child: Center(
+                        child: Icon(
+                          sortFieldIcon(state.field),
+                          size: _glyph,
+                          color: foreground,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -677,13 +695,14 @@ class ActiveFilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAll = value == ActiveFilter.all;
     final isActive = value == ActiveFilter.active;
     final gray = colors.surfaceContainerHighest;
-    final blue = colors.primary;
-    final inner = Theme.of(context).brightness == Brightness.dark
-        ? Colors.black
-        : colors.onSurfaceVariant;
+    const lightBlue = Color(0xFFBAC3FF);
+    final blue = isDark ? colors.primary : lightBlue;
+    final inner = isDark ? Colors.black : Colors.white;
+    final innerOutline = isDark ? Colors.white : Colors.black;
 
     return Tooltip(
       message: value.label(),
@@ -720,7 +739,7 @@ class ActiveFilterButton extends StatelessWidget {
                         color: inner,
                         borderRadius: BorderRadius.circular(4.5),
                         border: Border.all(
-                          color: Colors.white,
+                          color: innerOutline,
                           width: 2,
                         ),
                       ),
@@ -867,6 +886,15 @@ Future<void> showSourceSortOptions(
                 ),
                 const Divider(height: 24),
                 CheckboxListTile(
+                  value: local.enabledFirst,
+                  onChanged: (value) =>
+                      apply(local.copyWith(enabledFirst: value ?? false)),
+                  title: Text(getLocalText.s("Enabled first")),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+                CheckboxListTile(
                   value: local.groupByType,
                   onChanged: (value) =>
                       apply(local.copyWith(groupByType: value ?? false)),
@@ -883,20 +911,6 @@ Future<void> showSourceSortOptions(
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 32),
-                              child: CheckboxListTile(
-                                value: local.groupByActive,
-                                onChanged: (value) => apply(local.copyWith(
-                                  groupByActive: value ?? false,
-                                )),
-                                title: Text(getLocalText.s("Group by active state")),
-                                controlAffinity: ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
-                                dense: true,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
                             Text(
                               getLocalText.s("Group order"),
                               style: Theme.of(sheetCtx).textTheme.labelLarge,
