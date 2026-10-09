@@ -5841,9 +5841,6 @@
   "Timer": {
     "value": "Таймер"
   },
-  "Group by active state": {
-    "value": "Группировать по состоянию вкл/выкл"
-  },
   "Show all sources": {
     "value": "Все источники"
   },
@@ -5855,5 +5852,8 @@
   },
   "No sources match this filter": {
     "value": "Нет источников, соответствующих фильтру"
+  },
+  "Enabled first": {
+    "value": "Включённые сверху"
   }
 }
