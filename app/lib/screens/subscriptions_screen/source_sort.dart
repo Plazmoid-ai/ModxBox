@@ -818,8 +818,7 @@ Future<void> showSourceSortOptions(
                             label: field == SortField.byDefault
                                 ? label.replaceFirst(' ', '\n')
                                 : label,
-                            selected: sortState.field == field &&
-                                field != SortField.byDefault,
+                            selected: sortState.field == field,
                             showArrow: sortState.field == field &&
                                 field != SortField.byDefault,
                             dir: sortState.dir,
