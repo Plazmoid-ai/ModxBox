@@ -51,24 +51,28 @@ class SourceSortSettings {
   const SourceSortSettings({
     this.mode = SourceSortMode.defaultOrder,
     this.groupByType = false,
+    this.groupByActive = false,
     this.groupOrder = defaultSourceGroupOrder,
     this.chipStyle = SortChipStyle.calm,
   });
 
   final SourceSortMode mode;
   final bool groupByType;
+  final bool groupByActive;
   final List<String> groupOrder;
   final SortChipStyle chipStyle;
 
   SourceSortSettings copyWith({
     SourceSortMode? mode,
     bool? groupByType,
+    bool? groupByActive,
     List<String>? groupOrder,
     SortChipStyle? chipStyle,
   }) =>
       SourceSortSettings(
         mode: mode ?? this.mode,
         groupByType: groupByType ?? this.groupByType,
+        groupByActive: groupByActive ?? this.groupByActive,
         groupOrder: groupOrder ?? this.groupOrder,
         chipStyle: chipStyle ?? this.chipStyle,
       );
@@ -76,6 +80,7 @@ class SourceSortSettings {
   Map<String, dynamic> toJson() => {
         'mode': mode.name,
         'group_by_type': groupByType,
+        'group_by_active': groupByActive,
         'group_order': groupOrder,
         'chip_style': chipStyle.name,
       };
@@ -115,6 +120,7 @@ class SourceSortSettings {
       return SourceSortSettings(
         mode: mode,
         groupByType: decoded['group_by_type'] == true,
+        groupByActive: decoded['group_by_active'] == true,
         groupOrder: List<String>.unmodifiable(order),
         chipStyle: chipStyle,
       );
@@ -171,6 +177,7 @@ List<T> sortSourceItems<T>(
   required String Function(T item) kindOf,
   required DateTime? Function(T item) modifiedOf,
   required DateTime? Function(T item) createdOf,
+  bool Function(T item)? enabledOf,
 }) {
   final indexed = [
     for (var i = 0; i < items.length; i++)
@@ -231,6 +238,15 @@ List<T> sortSourceItems<T>(
   ) {
     final copy = [...bucket];
     copy.sort(compareItems);
+    if (settings.groupByType && settings.groupByActive && enabledOf != null) {
+      // Stable partition: enabled entries first, retaining each side's order.
+      final enabled = <({T item, int index})>[];
+      final disabled = <({T item, int index})>[];
+      for (final entry in copy) {
+        (enabledOf(entry.item) ? enabled : disabled).add(entry);
+      }
+      return [...enabled, ...disabled];
+    }
     return copy;
   }
 
@@ -287,8 +303,8 @@ class SortState {
 SortState _sortStateFromMode(SourceSortMode mode) => switch (mode) {
       SourceSortMode.defaultOrder =>
         const SortState(SortField.byDefault, SortDir.up),
-      SourceSortMode.nameAsc => const SortState(SortField.name, SortDir.up),
-      SourceSortMode.nameDesc => const SortState(SortField.name, SortDir.down),
+      SourceSortMode.nameAsc => const SortState(SortField.name, SortDir.down),
+      SourceSortMode.nameDesc => const SortState(SortField.name, SortDir.up),
       SourceSortMode.modifiedNewest =>
         const SortState(SortField.modified, SortDir.down),
       SourceSortMode.modifiedOldest =>
@@ -302,7 +318,7 @@ SortState _sortStateFromMode(SourceSortMode mode) => switch (mode) {
 SourceSortMode _sourceSortModeFromState(SortState state) => switch (state.field) {
       SortField.byDefault => SourceSortMode.defaultOrder,
       SortField.name =>
-        state.dir == SortDir.up
+        state.dir == SortDir.down
             ? SourceSortMode.nameAsc
             : SourceSortMode.nameDesc,
       SortField.modified =>
@@ -318,7 +334,7 @@ SourceSortMode _sourceSortModeFromState(SortState state) => switch (state.field)
 String _sortCaption(SortState state) => switch (state.field) {
       SortField.byDefault => getLocalText.s("Default"),
       SortField.name => getLocalText.s(
-          state.dir == SortDir.up ? "Name A–Z" : "Name Z–A",
+          state.dir == SortDir.down ? "Name A–Z" : "Name Z–A",
         ),
       SortField.modified => getLocalText.s(
           state.dir == SortDir.up
@@ -451,7 +467,7 @@ class _SortChip extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.labelLarge?.copyWith(
-                            fontSize: 14,
+                            fontSize: label == getLocalText.s("Default") ? 12 : 14,
                             color: foreground,
                             fontWeight: selected
                                 ? FontWeight.w600
@@ -490,7 +506,7 @@ Future<void> showSourceSortOptions(
 
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -560,9 +576,7 @@ Future<void> showSourceSortOptions(
                         onSortChanged(
                           SortState(
                             field,
-                            field == SortField.name
-                                ? SortDir.up
-                                : SortDir.down,
+                            SortDir.down,
                           ),
                         );
                       }
@@ -646,17 +660,37 @@ Future<void> showSourceSortOptions(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
-                if (local.groupByType) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    getLocalText.s("Group order"),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  alignment: Alignment.topCenter,
+                  child: local.groupByType
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 32),
+                              child: CheckboxListTile(
+                                value: local.groupByActive,
+                                onChanged: (value) => apply(local.copyWith(
+                                  groupByActive: value ?? false,
+                                )),
+                                title: Text(getLocalText.s("Group by active state")),
+                                controlAffinity: ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              getLocalText.s("Group order"),
                     style: Theme.of(sheetCtx).textTheme.labelLarge,
                   ),
-                  const SizedBox(height: 4),
-                  ReorderableListView.builder(
+                            const SizedBox(height: 4),
+                            ReorderableListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    buildDefaultDragHandles: true,
+                    buildDefaultDragHandles: false,
                     itemCount: local.groupOrder.length,
                     onReorderItem: (oldIndex, newIndex) {
                       final next = [...local.groupOrder];
@@ -674,11 +708,20 @@ Future<void> showSourceSortOptions(
                         contentPadding: EdgeInsets.zero,
                         leading: Icon(sourceTypeIcon(kind), size: 20),
                         title: Text(sourceTypeLabel(kind)),
-                        trailing: const Icon(Icons.drag_handle),
+                        trailing: ReorderableDragStartListener(
+                          index: index,
+                          child: const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Icon(Icons.drag_handle),
+                          ),
+                        ),
                       );
                     },
                   ),
-                ],
+                          ],
+                        )
+                      : const SizedBox(width: double.infinity),
+                ),
               ],
             ),
           ),
