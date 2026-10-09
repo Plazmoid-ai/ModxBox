@@ -5570,5 +5570,17 @@
   },
   "Group by active state": {
     "value": "按启用/停用状态分组"
+  },
+  "Show all sources": {
+    "value": "显示全部来源"
+  },
+  "Show only active sources": {
+    "value": "仅显示已启用"
+  },
+  "Show only inactive sources": {
+    "value": "仅显示已停用"
+  },
+  "No sources match this filter": {
+    "value": "没有符合此筛选条件的来源"
   }
 }
