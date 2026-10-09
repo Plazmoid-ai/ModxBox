@@ -53,7 +53,6 @@ class SourceSortSettings {
     this.groupByType = false,
     this.groupByActive = false,
     this.groupOrder = defaultSourceGroupOrder,
-    this.chipStyle = SortChipStyle.calm,
     this.activeFilter = ActiveFilter.all,
   });
 
@@ -61,7 +60,6 @@ class SourceSortSettings {
   final bool groupByType;
   final bool groupByActive;
   final List<String> groupOrder;
-  final SortChipStyle chipStyle;
   final ActiveFilter activeFilter;
 
   SourceSortSettings copyWith({
@@ -69,7 +67,6 @@ class SourceSortSettings {
     bool? groupByType,
     bool? groupByActive,
     List<String>? groupOrder,
-    SortChipStyle? chipStyle,
     ActiveFilter? activeFilter,
   }) =>
       SourceSortSettings(
@@ -77,7 +74,6 @@ class SourceSortSettings {
         groupByType: groupByType ?? this.groupByType,
         groupByActive: groupByActive ?? this.groupByActive,
         groupOrder: groupOrder ?? this.groupOrder,
-        chipStyle: chipStyle ?? this.chipStyle,
         activeFilter: activeFilter ?? this.activeFilter,
       );
 
@@ -86,7 +82,6 @@ class SourceSortSettings {
         'group_by_type': groupByType,
         'group_by_active': groupByActive,
         'group_order': groupOrder,
-        'chip_style': chipStyle.name,
         'active_filter': activeFilter.name,
       };
 
@@ -99,10 +94,6 @@ class SourceSortSettings {
       final mode = SourceSortMode.values.firstWhere(
         (m) => m.name == modeName,
         orElse: () => SourceSortMode.defaultOrder,
-      );
-      final chipStyle = SortChipStyle.values.firstWhere(
-        (s) => s.name == decoded['chip_style'],
-        orElse: () => SortChipStyle.calm,
       );
       final activeFilter = ActiveFilter.values.firstWhere(
         (f) => f.name == decoded['active_filter'],
@@ -131,7 +122,6 @@ class SourceSortSettings {
         groupByType: decoded['group_by_type'] == true,
         groupByActive: decoded['group_by_active'] == true,
         groupOrder: List<String>.unmodifiable(order),
-        chipStyle: chipStyle,
         activeFilter: activeFilter,
       );
     } catch (_) {
@@ -290,23 +280,10 @@ List<T> sortSourceItems<T>(
 }
 
 
-extension SourceSortModeX on SourceSortMode {
-  IconData get directionIcon => switch (this) {
-        SourceSortMode.defaultOrder => Icons.swap_vert,
-        SourceSortMode.nameAsc ||
-        SourceSortMode.modifiedNewest ||
-        SourceSortMode.createdNewest => Icons.arrow_downward,
-        SourceSortMode.nameDesc ||
-        SourceSortMode.modifiedOldest ||
-        SourceSortMode.createdOldest => Icons.arrow_upward,
-      };
-}
 
 enum SortField { byDefault, name, modified, created }
 
 enum SortDir { up, down }
-
-enum SortChipStyle { calm, lively }
 
 enum ActiveFilter { all, active, inactive }
 
@@ -342,11 +319,32 @@ class SortState {
   int get hashCode => Object.hash(field, dir);
 }
 
+/// up = A–Я / oldest, down = Я–А / newest.
+SortState sortAfterTap(SortState current, SortField tapped) {
+  if (tapped == current.field && tapped != SortField.byDefault) {
+    return SortState(
+      tapped,
+      current.dir == SortDir.up ? SortDir.down : SortDir.up,
+    );
+  }
+  return SortState(
+    tapped,
+    tapped == SortField.name ? SortDir.up : SortDir.down,
+  );
+}
+
+IconData sortFieldIcon(SortField field) => switch (field) {
+      SortField.byDefault => Icons.swap_vert,
+      SortField.name => Icons.sort_by_alpha,
+      SortField.modified => Icons.history,
+      SortField.created => Icons.calendar_month,
+    };
+
 SortState _sortStateFromMode(SourceSortMode mode) => switch (mode) {
       SourceSortMode.defaultOrder =>
-        const SortState(SortField.byDefault, SortDir.up),
-      SourceSortMode.nameAsc => const SortState(SortField.name, SortDir.down),
-      SourceSortMode.nameDesc => const SortState(SortField.name, SortDir.up),
+        const SortState(SortField.byDefault, SortDir.down),
+      SourceSortMode.nameAsc => const SortState(SortField.name, SortDir.up),
+      SourceSortMode.nameDesc => const SortState(SortField.name, SortDir.down),
       SourceSortMode.modifiedNewest =>
         const SortState(SortField.modified, SortDir.down),
       SourceSortMode.modifiedOldest =>
@@ -360,7 +358,7 @@ SortState _sortStateFromMode(SourceSortMode mode) => switch (mode) {
 SourceSortMode _sourceSortModeFromState(SortState state) => switch (state.field) {
       SortField.byDefault => SourceSortMode.defaultOrder,
       SortField.name =>
-        state.dir == SortDir.down
+        state.dir == SortDir.up
             ? SourceSortMode.nameAsc
             : SourceSortMode.nameDesc,
       SortField.modified =>
@@ -376,7 +374,7 @@ SourceSortMode _sourceSortModeFromState(SortState state) => switch (state.field)
 String _sortCaption(SortState state) => switch (state.field) {
       SortField.byDefault => getLocalText.s("Default"),
       SortField.name => getLocalText.s(
-          state.dir == SortDir.down ? "Name A–Z" : "Name Z–A",
+          state.dir == SortDir.up ? "Name A–Z" : "Name Z–A",
         ),
       SortField.modified => getLocalText.s(
           state.dir == SortDir.up
@@ -390,14 +388,74 @@ String _sortCaption(SortState state) => switch (state.field) {
         ),
     };
 
-class _SortChip extends StatelessWidget {
-  const _SortChip({
+// Shared, fixed-geometry chevron for both the sort sheet and toolbar.
+class SortChevron extends StatelessWidget {
+  const SortChevron({super.key, required this.color});
+
+  final Color color;
+
+  static const double width = 24;
+  static const double height = 12;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+        size: const Size(width, height),
+        painter: _ChevronPainter(color),
+      );
+}
+
+class _ChevronPainter extends CustomPainter {
+  _ChevronPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 16;
+    final sy = size.height / 10;
+    const points = <Offset>[
+      Offset(0.8, 1.2),
+      Offset(8, 6),
+      Offset(15.2, 1.2),
+      Offset(15.2, 2.6),
+      Offset(8, 9.6),
+      Offset(0.8, 2.6),
+    ];
+
+    final path = Path()..moveTo(points.first.dx * sx, points.first.dy * sy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx * sx, point.dy * sy);
+    }
+    path.close();
+
+    canvas.drawPath(path, Paint()..color = color);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ChevronPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+const Duration _sortAnimationDuration = Duration(milliseconds: 180);
+
+// Every animated element moves inside a permanently 60 px high chip.
+// Only opacity, rotation and top offsets change; the grid geometry stays fixed.
+class SortChip extends StatelessWidget {
+  const SortChip({
+    super.key,
     required this.icon,
     required this.label,
     required this.selected,
     required this.showArrow,
     required this.dir,
-    required this.style,
     required this.onTap,
   });
 
@@ -406,55 +464,36 @@ class _SortChip extends StatelessWidget {
   final bool selected;
   final bool showArrow;
   final SortDir dir;
-  final SortChipStyle style;
   final VoidCallback onTap;
 
-  // Геометрия постоянная для обоих вариантов. Зарезервированные зоны стрелки
-  // не участвуют в расчёте высоты и не заставляют сетку менять размер.
-  static const double _h = 60;
-  static const double _labelH = 20;
-  static const double _arrowH = 16;
-  static const double _edge = 6;
-  static const _anim = Duration(milliseconds: 150);
-
-  double get _labelTop {
-    const center = (_h - _labelH) / 2; // 20
-    if (!showArrow || style == SortChipStyle.calm) return center;
-
-    // lively: стрелка ↑ над надписью, надпись у нижнего края;
-    // стрелка ↓ под надписью, надпись у верхнего края.
-    return dir == SortDir.up ? _h - _edge - _labelH : _edge;
-  }
-
-  double get _arrowTop {
-    if (style == SortChipStyle.calm) {
-      const center = (_h - _labelH) / 2; // 20
-      return dir == SortDir.up
-          ? center - _arrowH // 4: стрелка сверху
-          : center + _labelH; // 40: стрелка снизу
-    }
-
-    return dir == SortDir.up
-        ? _edge // 6: стрелка сверху
-        : _h - _edge - _arrowH; // 38: стрелка снизу
-  }
+  static const double _height = 60;
+  static const double _labelHeight = 20;
+  static const double _labelEdge = 6;
+  static const double _arrowEdge = 8;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final foreground = selected ? cs.onSecondaryContainer : cs.onSurface;
-    final arrowColor = selected ? cs.primary : foreground;
+    final colors = theme.colorScheme;
+    final foreground = selected ? colors.onSecondaryContainer : colors.onSurface;
     final radius = BorderRadius.circular(8);
+    final isUp = dir == SortDir.up;
+
+    final labelTop = !showArrow
+        ? (_height - _labelHeight) / 2
+        : (isUp ? _height - _labelEdge - _labelHeight : _labelEdge);
+    final arrowTop = (showArrow && !isUp)
+        ? _height - _arrowEdge - SortChevron.height
+        : _arrowEdge;
 
     return AnimatedContainer(
-      duration: _anim,
-      height: _h,
+      duration: _sortAnimationDuration,
+      height: _height,
       decoration: BoxDecoration(
-        color: selected ? cs.secondaryContainer : Colors.transparent,
+        color: selected ? colors.secondaryContainer : Colors.transparent,
         borderRadius: radius,
         border: Border.all(
-          color: selected ? cs.primary : cs.outlineVariant,
+          color: selected ? colors.primary : colors.outlineVariant,
         ),
       ),
       child: Material(
@@ -464,37 +503,32 @@ class _SortChip extends StatelessWidget {
           onTap: onTap,
           child: Stack(
             children: [
-              // Стрелка всегда занимает собственный слот. Скрытие делается
-              // только opacity, а положение плавно меняется через top.
               AnimatedPositioned(
-                duration: _anim,
+                duration: _sortAnimationDuration,
                 curve: Curves.easeOut,
                 left: 0,
                 right: 0,
-                top: _arrowTop,
-                height: _arrowH,
-                child: AnimatedOpacity(
-                  duration: _anim,
-                  opacity: showArrow ? 1 : 0,
-                  child: Icon(
-                    dir == SortDir.up
-                        ? Icons.arrow_upward
-                        : Icons.arrow_downward,
-                    size: _arrowH,
-                    color: arrowColor,
+                top: arrowTop,
+                height: SortChevron.height,
+                child: Center(
+                  child: AnimatedOpacity(
+                    duration: _sortAnimationDuration,
+                    opacity: showArrow ? 1 : 0,
+                    child: AnimatedRotation(
+                      duration: _sortAnimationDuration,
+                      turns: isUp ? 0.5 : 0,
+                      child: SortChevron(color: foreground),
+                    ),
                   ),
                 ),
               ),
-
-              // Иконка поля и подпись перемещаются вместе — именно подпись
-              // меняет край в lively. В calm top всегда остаётся 20.
               AnimatedPositioned(
-                duration: _anim,
+                duration: _sortAnimationDuration,
                 curve: Curves.easeOut,
                 left: 0,
                 right: 0,
-                top: _labelTop,
-                height: _labelH,
+                top: labelTop,
+                height: _labelHeight,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: Row(
@@ -511,9 +545,8 @@ class _SortChip extends StatelessWidget {
                           style: theme.textTheme.labelLarge?.copyWith(
                             fontSize: label == getLocalText.s("Default") ? 12 : 14,
                             color: foreground,
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.w500,
+                            fontWeight:
+                                selected ? FontWeight.w600 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -522,6 +555,104 @@ class _SortChip extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SortToolbarButton extends StatelessWidget {
+  const SortToolbarButton({
+    super.key,
+    required this.state,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  final SortState state;
+  final VoidCallback onTap;
+  final bool enabled;
+
+  static const double _size = 48;
+  static const double _glyph = 22;
+  static const double _gap = 4;
+  static const double _edge =
+      (_size - SortChevron.height - _gap - _glyph) / 2;
+  static const BorderRadius _radius =
+      BorderRadius.all(Radius.circular(14));
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final active = state.field != SortField.byDefault;
+    final isUp = state.dir == SortDir.up;
+    final foreground = !enabled
+        ? theme.disabledColor
+        : active
+            ? colors.onSecondaryContainer
+            : colors.onSurfaceVariant;
+
+    final glyphTop = !active
+        ? (_size - _glyph) / 2
+        : (isUp ? _edge + SortChevron.height + _gap : _edge);
+    final arrowTop =
+        (active && !isUp) ? _edge + _glyph + _gap : _edge;
+
+    return Tooltip(
+      message: _sortCaption(state),
+      child: AnimatedContainer(
+        duration: _sortAnimationDuration,
+        width: _size,
+        height: _size,
+        decoration: BoxDecoration(
+          color: active ? colors.secondaryContainer : Colors.transparent,
+          borderRadius: _radius,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: _radius,
+            onTap: enabled ? onTap : null,
+            child: Stack(
+              children: [
+                AnimatedPositioned(
+                  duration: _sortAnimationDuration,
+                  curve: Curves.easeOut,
+                  left: 0,
+                  right: 0,
+                  top: arrowTop,
+                  height: SortChevron.height,
+                  child: Center(
+                    child: AnimatedOpacity(
+                      duration: _sortAnimationDuration,
+                      opacity: active ? 1 : 0,
+                      child: AnimatedRotation(
+                        duration: _sortAnimationDuration,
+                        turns: isUp ? 0.5 : 0,
+                        child: SortChevron(color: foreground),
+                      ),
+                    ),
+                  ),
+                ),
+                AnimatedPositioned(
+                  duration: _sortAnimationDuration,
+                  curve: Curves.easeOut,
+                  left: 0,
+                  right: 0,
+                  top: glyphTop,
+                  height: _glyph,
+                  child: Center(
+                    child: Icon(
+                      sortFieldIcon(state.field),
+                      size: _glyph,
+                      color: foreground,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -635,41 +766,9 @@ Future<void> showSourceSortOptions(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        getLocalText.s("Sort options"),
-                        style: Theme.of(sheetCtx).textTheme.titleMedium,
-                      ),
-                    ),
-                    Tooltip(
-                      message: local.chipStyle == SortChipStyle.calm
-                          ? getLocalText.s("Switch to lively sort animation")
-                          : getLocalText.s("Switch to calm sort animation"),
-                      child: IconButton(
-                        visualDensity: VisualDensity.compact,
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                        padding: EdgeInsets.zero,
-                        onPressed: () => apply(
-                          local.copyWith(
-                            chipStyle: local.chipStyle == SortChipStyle.calm
-                                ? SortChipStyle.lively
-                                : SortChipStyle.calm,
-                          ),
-                        ),
-                        icon: Icon(
-                          Icons.animation,
-                          color: local.chipStyle == SortChipStyle.lively
-                              ? Theme.of(sheetCtx).colorScheme.primary
-                              : null,
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  getLocalText.s("Sort options"),
+                  style: Theme.of(sheetCtx).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
                 Builder(
@@ -686,24 +785,7 @@ Future<void> showSourceSortOptions(
                     }
 
                     void onChipTap(SortField field) {
-                      if (field == sortState.field &&
-                          field != SortField.byDefault) {
-                        onSortChanged(
-                          SortState(
-                            field,
-                            sortState.dir == SortDir.up
-                                ? SortDir.down
-                                : SortDir.up,
-                          ),
-                        );
-                      } else {
-                        onSortChanged(
-                          SortState(
-                            field,
-                            SortDir.down,
-                          ),
-                        );
-                      }
+                      onSortChanged(sortAfterTap(sortState, field));
                     }
 
                     Widget chip(
@@ -712,31 +794,39 @@ Future<void> showSourceSortOptions(
                       String label,
                     ) =>
                         Expanded(
-                          child: _SortChip(
+                          child: SortChip(
                             icon: icon,
                             label: label,
                             selected: sortState.field == field,
                             showArrow: sortState.field == field &&
                                 field != SortField.byDefault,
                             dir: sortState.dir,
-                            style: local.chipStyle,
                             onTap: () => onChipTap(field),
                           ),
                         );
 
                     return Column(
                       children: [
-                        Text(
-                          _sortCaption(sortState),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
+                        SizedBox(
+                          height: 24,
+                          child: AnimatedSwitcher(
+                            duration: _sortAnimationDuration,
+                            child: Align(
+                              key: ValueKey(_sortCaption(sortState)),
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                _sortCaption(sortState),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
                               ),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Row(
