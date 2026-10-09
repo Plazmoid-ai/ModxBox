@@ -5849,5 +5849,17 @@
   },
   "Group by active state": {
     "value": "Группировать по состоянию вкл/выкл"
+  },
+  "Show all sources": {
+    "value": "Все источники"
+  },
+  "Show only active sources": {
+    "value": "Только активные"
+  },
+  "Show only inactive sources": {
+    "value": "Только неактивные"
+  },
+  "No sources match this filter": {
+    "value": "Нет источников, соответствующих фильтру"
   }
 }
