@@ -1396,6 +1396,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       kindOf: (row) => row.kind,
       modifiedOf: (row) => _sortMetadata[row.sourceKey]?.modifiedAt,
       createdOf: (row) => _sortMetadata[row.sourceKey]?.createdAt,
+      enabledOf: (row) => row.enabled,
     );
 
     if (!_sortSettings.groupByType) {
@@ -1667,6 +1668,8 @@ class _SourceRow {
   }
 
   String get displayLabel => chain != null ? chain!.tag : entry!.list.name;
+
+  bool get enabled => chain != null ? chain!.enabled : entry!.list.enabled;
 }
 
 class _SourceDisplayRow {
