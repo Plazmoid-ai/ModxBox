@@ -4143,6 +4143,12 @@
   "Sort options": {
     "value": "排序选项"
   },
+  "Switch to lively sort animation": {
+    "value": "切换为动态排序动画"
+  },
+  "Switch to calm sort animation": {
+    "value": "切换为平稳排序动画"
+  },
   "Name A–Z": {
     "value": "名称 A–Z"
   },
