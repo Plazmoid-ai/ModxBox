@@ -155,28 +155,59 @@ void main() {
       );
     });
 
-    test(
-      'group by active state stably moves enabled entries to top of each type',
-      () {
+    test('enabled first stably partitions each type when grouping is on', () {
       final items = [
         _Item('Disabled first', 'server', null, null, enabled: false),
         _Item('Enabled A', 'server', null, null),
         _Item('Enabled B', 'server', null, null),
         _Item('Disabled second', 'server', null, null, enabled: false),
+        _Item('Disabled folder', 'folder', null, null, enabled: false),
+        _Item('Enabled folder', 'folder', null, null),
       ];
-        final sorted = _apply(
-          items,
-          const SourceSortSettings(
-            groupByType: true,
-            groupByActive: true,
-          ),
-        );
-        expect(
-          sorted.map((e) => e.name).toList(),
-          ['Enabled A', 'Enabled B', 'Disabled first', 'Disabled second'],
-        );
-      },
-    );
+      final sorted = _apply(
+        items,
+        const SourceSortSettings(
+          groupByType: true,
+          enabledFirst: true,
+          groupOrder: ['server', 'folder', 'subscription', 'chain'],
+        ),
+      );
+      expect(
+        sorted.map((e) => e.name).toList(),
+        [
+          'Enabled A',
+          'Enabled B',
+          'Disabled first',
+          'Disabled second',
+          'Enabled folder',
+          'Disabled folder',
+        ],
+      );
+    });
+
+    test('enabled first also works with grouping disabled', () {
+      final items = [
+        _Item('Disabled first', 'server', null, null, enabled: false),
+        _Item('Enabled A', 'server', null, null),
+        _Item('Disabled folder', 'folder', null, null, enabled: false),
+        _Item('Enabled B', 'server', null, null),
+      ];
+      final sorted = _apply(
+        items,
+        const SourceSortSettings(enabledFirst: true),
+      );
+      expect(
+        sorted.map((e) => e.name).toList(),
+        ['Enabled A', 'Enabled B', 'Disabled first', 'Disabled folder'],
+      );
+    });
+
+    test('legacy group_by_active setting maps to enabled first', () {
+      final settings = SourceSortSettings.fromJson(
+        '{"group_by_active":true}',
+      );
+      expect(settings.enabledFirst, isTrue);
+    });
 
     test('default mode preserves relative order inside each group', () {
       final settings = SourceSortSettings(
@@ -218,13 +249,13 @@ void main() {
     test('persists sorting options and active filter', () {
       final source = SourceSortSettings(
         mode: SourceSortMode.createdNewest,
-        groupByActive: true,
+        enabledFirst: true,
         activeFilter: ActiveFilter.inactive,
       );
       final restored = SourceSortSettings.fromJson(jsonEncode(source.toJson()));
 
       expect(restored.mode, SourceSortMode.createdNewest);
-      expect(restored.groupByActive, isTrue);
+      expect(restored.enabledFirst, isTrue);
       expect(restored.activeFilter, ActiveFilter.inactive);
     });
 
@@ -234,7 +265,7 @@ void main() {
       );
 
       expect(restored.mode, SourceSortMode.nameAsc);
-      expect(restored.groupByActive, isFalse);
+      expect(restored.enabledFirst, isFalse);
       expect(restored.activeFilter, ActiveFilter.all);
     });
 
