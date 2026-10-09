@@ -550,7 +550,9 @@ class ActiveFilterButton extends StatelessWidget {
     final isActive = value == ActiveFilter.active;
     final gray = colors.surfaceContainerHighest;
     final blue = colors.primary;
-    final inner = Colors.black;
+    final inner = Theme.of(context).brightness == Brightness.dark
+        ? Colors.black
+        : colors.onSurfaceVariant;
 
     return Tooltip(
       message: value.label(),
