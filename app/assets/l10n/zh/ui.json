@@ -5567,5 +5567,8 @@
   },
   "Timer": {
     "value": "计时器"
+  },
+  "Group by active state": {
+    "value": "按启用/停用状态分组"
   }
 }
