@@ -87,6 +87,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   static const _sortSettingsStorageKey = 'server_list_sorting';
   static const _sortMetadataStorageKey = 'server_list_sort_meta';
   bool _sortStateReady = false;
+  Timer? _sortTooltipTimer;
+  String? _sortTooltipMessage;
+  bool _showSortTooltip = false;
 
   /// Цепочки общего списка — срез [_sources]. Нужен диалогам (редактор
   /// цепочки хочет соседей, чтобы показать законные позиции) и гейту тега.
@@ -186,6 +189,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   void _dismissHighlight({required bool animated}) {
+    _sortTooltipTimer?.cancel();
     _highlightTimer?.cancel();
     _highlightFadeTimer?.cancel();
     if (_highlightedEntryId == null) return;
@@ -411,9 +415,21 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   void _cycleSourceSort() {
-    _updateSortSettings(
-      _sortSettings.copyWith(mode: _sortSettings.mode.next),
-    );
+    final next = _sortSettings.mode.next;
+    _updateSortSettings(_sortSettings.copyWith(mode: next));
+    _showSortModeHint(next.label());
+  }
+
+  void _showSortModeHint(String label) {
+    _sortTooltipTimer?.cancel();
+    setState(() {
+      _sortTooltipMessage = label;
+      _showSortTooltip = true;
+    });
+    _sortTooltipTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      setState(() => _showSortTooltip = false);
+    });
   }
 
   void _openSourceSortOptions() {
@@ -1271,56 +1287,108 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: Tooltip(
-              message: _sortSettings.mode.label(),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Semantics(
-                    button: true,
-                    label: _sortSettings.mode.label(),
-                    child: Material(
-                      color: Colors.transparent,
-                      shape: const CircleBorder(),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ActiveFilterButton(
+                  value: _sortSettings.activeFilter,
+                  enabled: hasSources,
+                  onChanged: (value) => _updateSortSettings(
+                    _sortSettings.copyWith(activeFilter: value),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Material(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         onTap: hasSources ? _cycleSourceSort : null,
                         onLongPress:
                             hasSources ? _openSourceSortOptions : null,
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(8),
                         child: SizedBox(
-                          width: 36,
-                          height: 36,
+                          width: 44,
+                          height: 44,
                           child: Center(
-                            child: Icon(
-                              _sortSettings.mode.icon,
-                              size: 20,
-                              color: hasSources
-                                  ? null
-                                  : Theme.of(context).disabledColor,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _sortSettings.mode.directionIcon,
+                                  size: 16,
+                                  color: hasSources
+                                      ? Theme.of(context).colorScheme.onSurfaceVariant
+                                      : Theme.of(context).disabledColor,
+                                ),
+                                const SizedBox(width: 1),
+                                Icon(
+                                  _sortSettings.mode.icon,
+                                  size: 18,
+                                  color: hasSources
+                                      ? Theme.of(context).colorScheme.onSurfaceVariant
+                                      : Theme.of(context).disabledColor,
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  if (isSourceSortNonDefault(_sortSettings))
-                    Positioned(
-                      right: 4,
-                      top: 4,
-                      child: IgnorePointer(
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.amber,
-                            shape: BoxShape.circle,
+                    if (isSourceSortNonDefault(_sortSettings))
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: IgnorePointer(
+                          child: Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: Colors.amber,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
-              ),
+                    if (_showSortTooltip && _sortTooltipMessage != null)
+                      Positioned(
+                        right: 48,
+                        child: IgnorePointer(
+                          child: AnimatedOpacity(
+                            opacity: _showSortTooltip ? 1 : 0,
+                            duration: const Duration(milliseconds: 120),
+                            child: Material(
+                              elevation: 4,
+                              color: Theme.of(context).colorScheme.inverseSurface,
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                child: Text(
+                                  _sortTooltipMessage!,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onInverseSurface,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -1389,8 +1457,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   List<_SourceDisplayRow> _displayRows(SubscriptionController ctrl) {
+    final sourceRows = _rows(ctrl)
+        .where((row) => _sortSettings.activeFilter.accepts(row.enabled))
+        .toList();
     final rows = sortSourceItems(
-      _rows(ctrl),
+      sourceRows,
       _sortSettings,
       nameOf: (row) => row.displayLabel,
       kindOf: (row) => row.kind,
@@ -1445,6 +1516,21 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   Widget _buildList(SubscriptionController ctrl) {
     final displayRows = _displayRows(ctrl);
     if (displayRows.isEmpty) {
+      if (_rows(ctrl).isNotEmpty &&
+          _sortSettings.activeFilter != ActiveFilter.all) {
+        return SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                getLocalText.s("No sources match this filter"),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        );
+      }
       return SliverFillRemaining(
         hasScrollBody: false,
         child: SubscriptionsEmptyState(
