@@ -815,7 +815,9 @@ Future<void> showSourceSortOptions(
                         Expanded(
                           child: SortChip(
                             icon: icon,
-                            label: label,
+                            label: field == SortField.byDefault
+                                ? label.replaceFirst(' ', '\n')
+                                : label,
                             selected: sortState.field == field &&
                                 field != SortField.byDefault,
                             showArrow: sortState.field == field &&
