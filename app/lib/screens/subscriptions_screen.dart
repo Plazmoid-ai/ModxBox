@@ -1334,7 +1334,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   state: sortStateFromMode(_sortSettings.mode),
                   enabled: hasSources,
                   onTap: _openSourceSortOptions,
-                )
+                ),
               ],
             ),
           ),
