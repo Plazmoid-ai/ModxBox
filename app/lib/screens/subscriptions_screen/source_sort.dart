@@ -52,27 +52,32 @@ class SourceSortSettings {
     this.mode = SourceSortMode.defaultOrder,
     this.groupByType = false,
     this.groupOrder = defaultSourceGroupOrder,
+    this.chipStyle = SortChipStyle.calm,
   });
 
   final SourceSortMode mode;
   final bool groupByType;
   final List<String> groupOrder;
+  final SortChipStyle chipStyle;
 
   SourceSortSettings copyWith({
     SourceSortMode? mode,
     bool? groupByType,
     List<String>? groupOrder,
+    SortChipStyle? chipStyle,
   }) =>
       SourceSortSettings(
         mode: mode ?? this.mode,
         groupByType: groupByType ?? this.groupByType,
         groupOrder: groupOrder ?? this.groupOrder,
+        chipStyle: chipStyle ?? this.chipStyle,
       );
 
   Map<String, dynamic> toJson() => {
         'mode': mode.name,
         'group_by_type': groupByType,
         'group_order': groupOrder,
+        'chip_style': chipStyle.name,
       };
 
   static SourceSortSettings fromJson(String raw) {
@@ -84,6 +89,10 @@ class SourceSortSettings {
       final mode = SourceSortMode.values.firstWhere(
         (m) => m.name == modeName,
         orElse: () => SourceSortMode.defaultOrder,
+      );
+      final chipStyle = SortChipStyle.values.firstWhere(
+        (s) => s.name == decoded['chip_style'],
+        orElse: () => SortChipStyle.calm,
       );
 
       final order = <String>[];
@@ -107,6 +116,7 @@ class SourceSortSettings {
         mode: mode,
         groupByType: decoded['group_by_type'] == true,
         groupOrder: List<String>.unmodifiable(order),
+        chipStyle: chipStyle,
       );
     } catch (_) {
       return const SourceSortSettings();
@@ -307,16 +317,19 @@ SourceSortMode _sourceSortModeFromState(SortState state) => switch (state.field)
 
 String _sortCaption(SortState state) => switch (state.field) {
       SortField.byDefault => getLocalText.s("Default"),
-      SortField.name =>
-        state.dir == SortDir.up ? "Имя А–Я" : "Имя Я–А",
-      SortField.modified =>
-        state.dir == SortDir.up
-            ? "Изменено — сначала старые"
-            : "Изменено — сначала новые",
-      SortField.created =>
-        state.dir == SortDir.up
-            ? "Создано — сначала старые"
-            : "Создано — сначала новые",
+      SortField.name => getLocalText.s(
+          state.dir == SortDir.up ? "Name A–Z" : "Name Z–A",
+        ),
+      SortField.modified => getLocalText.s(
+          state.dir == SortDir.up
+              ? "Modified — oldest"
+              : "Modified — newest",
+        ),
+      SortField.created => getLocalText.s(
+          state.dir == SortDir.up
+              ? "Created — oldest"
+              : "Created — newest",
+        ),
     };
 
 class _SortChip extends StatelessWidget {
@@ -338,102 +351,120 @@ class _SortChip extends StatelessWidget {
   final SortChipStyle style;
   final VoidCallback onTap;
 
+  // Геометрия постоянная для обоих вариантов. Зарезервированные зоны стрелки
+  // не участвуют в расчёте высоты и не заставляют сетку менять размер.
+  static const double _h = 60;
+  static const double _labelH = 20;
+  static const double _arrowH = 16;
+  static const double _edge = 6;
+  static const _anim = Duration(milliseconds: 150);
+
+  double get _labelTop {
+    const center = (_h - _labelH) / 2; // 20
+    if (!showArrow || style == SortChipStyle.calm) return center;
+
+    // lively: стрелка ↑ над надписью, надпись у нижнего края;
+    // стрелка ↓ под надписью, надпись у верхнего края.
+    return dir == SortDir.up ? _h - _edge - _labelH : _edge;
+  }
+
+  double get _arrowTop {
+    if (style == SortChipStyle.calm) {
+      const center = (_h - _labelH) / 2; // 20
+      return dir == SortDir.up
+          ? center - _arrowH // 4: стрелка сверху
+          : center + _labelH; // 40: стрелка снизу
+    }
+
+    return dir == SortDir.up
+        ? _edge // 6: стрелка сверху
+        : _h - _edge - _arrowH; // 38: стрелка снизу
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
+    final foreground = selected ? cs.onSecondaryContainer : cs.onSurface;
+    final arrowColor = selected ? cs.primary : foreground;
+    final radius = BorderRadius.circular(8);
 
-    final foreground =
-        selected ? colorScheme.onSecondaryContainer : colorScheme.onSurface;
-    final background =
-        selected ? colorScheme.secondaryContainer : colorScheme.surface;
-    final borderColor =
-        selected ? colorScheme.secondary : colorScheme.outlineVariant;
-
-    final chipLabel = Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.center,
-      style: theme.textTheme.labelLarge?.copyWith(
-        color: foreground,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+    return AnimatedContainer(
+      duration: _anim,
+      height: _h,
+      decoration: BoxDecoration(
+        color: selected ? cs.secondaryContainer : Colors.transparent,
+        borderRadius: radius,
+        border: Border.all(
+          color: selected ? cs.primary : cs.outlineVariant,
+        ),
       ),
-    );
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Stack(
+            children: [
+              // Стрелка всегда занимает собственный слот. Скрытие делается
+              // только opacity, а положение плавно меняется через top.
+              AnimatedPositioned(
+                duration: _anim,
+                curve: Curves.easeOut,
+                left: 0,
+                right: 0,
+                top: _arrowTop,
+                height: _arrowH,
+                child: AnimatedOpacity(
+                  duration: _anim,
+                  opacity: showArrow ? 1 : 0,
+                  child: Icon(
+                    dir == SortDir.up
+                        ? Icons.arrow_upward
+                        : Icons.arrow_downward,
+                    size: _arrowH,
+                    color: arrowColor,
+                  ),
+                ),
+              ),
 
-    Widget content;
-    if (style == SortChipStyle.calm) {
-      final arrow = Icon(
-        dir == SortDir.up ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-        size: 16,
-        color: colorScheme.primary,
-      );
-
-      content = Stack(
-        alignment: Alignment.center,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-              top: showArrow && dir == SortDir.down ? 2 : 0,
-              bottom: showArrow && dir == SortDir.up ? 2 : 0,
-              left: 28,
-              right: 28,
-            ),
-            child: chipLabel,
+              // Иконка поля и подпись перемещаются вместе — именно подпись
+              // меняет край в lively. В calm top всегда остаётся 20.
+              AnimatedPositioned(
+                duration: _anim,
+                curve: Curves.easeOut,
+                left: 0,
+                right: 0,
+                top: _labelTop,
+                height: _labelH,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 18, color: foreground),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontSize: 14,
+                            color: foreground,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          Positioned(
-            left: 10,
-            child: Icon(
-              icon,
-              size: 18,
-              color: foreground,
-            ),
-          ),
-          if (showArrow)
-            Positioned(
-              top: dir == SortDir.up ? 1 : null,
-              bottom: dir == SortDir.down ? 1 : null,
-              child: arrow,
-            ),
-        ],
-      );
-    } else {
-      content = Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: foreground,
-          ),
-          const SizedBox(width: 6),
-          Flexible(child: chipLabel),
-          if (showArrow) ...[
-            const SizedBox(width: 4),
-            Icon(
-              dir == SortDir.up
-                  ? Icons.keyboard_arrow_up
-                  : Icons.keyboard_arrow_down,
-              size: 18,
-              color: colorScheme.primary,
-            ),
-          ],
-        ],
-      );
-    }
-
-    return Material(
-      color: background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: borderColor),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          height: 48,
-          child: Center(child: content),
         ),
       ),
     );
@@ -464,9 +495,43 @@ Future<void> showSourceSortOptions(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  getLocalText.s("Sort options"),
-                  style: Theme.of(sheetCtx).textTheme.titleMedium,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        getLocalText.s("Sort options"),
+                        style: Theme.of(sheetCtx).textTheme.titleMedium,
+                      ),
+                    ),
+                    Tooltip(
+                      message: getLocalText.s(
+                        local.chipStyle == SortChipStyle.calm
+                            ? "Switch to lively sort animation"
+                            : "Switch to calm sort animation",
+                      ),
+                      child: IconButton(
+                        visualDensity: VisualDensity.compact,
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                        padding: EdgeInsets.zero,
+                        onPressed: () => apply(
+                          local.copyWith(
+                            chipStyle: local.chipStyle == SortChipStyle.calm
+                                ? SortChipStyle.lively
+                                : SortChipStyle.calm,
+                          ),
+                        ),
+                        icon: Icon(
+                          Icons.animation,
+                          color: local.chipStyle == SortChipStyle.lively
+                              ? Theme.of(sheetCtx).colorScheme.primary
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Builder(
@@ -518,7 +583,7 @@ Future<void> showSourceSortOptions(
                             showArrow: sortState.field == field &&
                                 field != SortField.byDefault,
                             dir: sortState.dir,
-                            style: SortChipStyle.calm,
+                            style: local.chipStyle,
                             onTap: () => onChipTap(field),
                           ),
                         );
