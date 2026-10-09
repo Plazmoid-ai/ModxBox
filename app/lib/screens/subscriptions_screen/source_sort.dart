@@ -504,11 +504,9 @@ Future<void> showSourceSortOptions(
                       ),
                     ),
                     Tooltip(
-                      message: getLocalText.s(
-                        local.chipStyle == SortChipStyle.calm
-                            ? "Switch to lively sort animation"
-                            : "Switch to calm sort animation",
-                      ),
+                      message: local.chipStyle == SortChipStyle.calm
+                          ? getLocalText.s("Switch to lively sort animation")
+                          : getLocalText.s("Switch to calm sort animation"),
                       child: IconButton(
                         visualDensity: VisualDensity.compact,
                         constraints: const BoxConstraints(
