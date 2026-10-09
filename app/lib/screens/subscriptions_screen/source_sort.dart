@@ -797,7 +797,8 @@ Future<void> showSourceSortOptions(
                           child: SortChip(
                             icon: icon,
                             label: label,
-                            selected: sortState.field == field,
+                            selected: sortState.field == field &&
+                                field != SortField.byDefault,
                             showArrow: sortState.field == field &&
                                 field != SortField.byDefault,
                             dir: sortState.dir,
