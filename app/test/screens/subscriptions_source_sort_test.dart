@@ -3,12 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lxbox/screens/subscriptions_screen/source_sort.dart';
 
 class _Item {
-  _Item(this.name, this.kind, this.createdAt, this.modifiedAt);
+  _Item(this.name, this.kind, this.createdAt, this.modifiedAt, {this.enabled = true});
 
   final String name;
   final String kind;
   final DateTime? createdAt;
   final DateTime? modifiedAt;
+  final bool enabled;
 }
 
 List<_Item> _apply(
@@ -22,6 +23,7 @@ List<_Item> _apply(
       kindOf: (item) => item.kind,
       createdOf: (item) => item.createdAt,
       modifiedOf: (item) => item.modifiedAt,
+      enabledOf: (item) => item.enabled,
     );
 
 void main() {
@@ -108,6 +110,22 @@ void main() {
       );
     });
 
+    test('group by active state stably moves enabled entries to top of each type', () {
+      final items = [
+        _Item('Disabled first', 'server', null, null, enabled: false),
+        _Item('Enabled A', 'server', null, null),
+        _Item('Enabled B', 'server', null, null),
+        _Item('Disabled second', 'server', null, null, enabled: false),
+      ];
+      final sorted = _apply(items, const SourceSortSettings(
+        groupByType: true,
+        groupByActive: true,
+      ));
+      expect(sorted.map((e) => e.name).toList(), [
+        'Enabled A', 'Enabled B', 'Disabled first', 'Disabled second',
+      ]);
+    });
+
     test('default mode preserves relative order inside each group', () {
       final settings = SourceSortSettings(
         groupByType: true,
@@ -137,12 +155,14 @@ void main() {
 
       expect(restored.mode, SourceSortMode.createdNewest);
       expect(restored.chipStyle, SortChipStyle.lively);
+      expect(restored.groupByActive, isFalse);
     });
 
     test('older settings default to calm chip animation', () {
       final restored = SourceSortSettings.fromJson('{"mode":"nameAsc"}');
 
       expect(restored.chipStyle, SortChipStyle.calm);
+      expect(restored.groupByActive, isFalse);
     });
 
     test('repairs an incomplete group order while decoding', () {
