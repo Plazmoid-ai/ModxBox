@@ -1446,7 +1446,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
