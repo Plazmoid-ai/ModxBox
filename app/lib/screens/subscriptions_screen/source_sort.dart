@@ -340,7 +340,7 @@ IconData sortFieldIcon(SortField field) => switch (field) {
       SortField.created => Icons.calendar_month,
     };
 
-SortState _sortStateFromMode(SourceSortMode mode) => switch (mode) {
+SortState sortStateFromMode(SourceSortMode mode) => switch (mode) {
       SourceSortMode.defaultOrder =>
         const SortState(SortField.byDefault, SortDir.down),
       SourceSortMode.nameAsc => const SortState(SortField.name, SortDir.up),
@@ -773,7 +773,7 @@ Future<void> showSourceSortOptions(
                 const SizedBox(height: 4),
                 Builder(
                   builder: (context) {
-                    var sortState = _sortStateFromMode(local.mode);
+                    var sortState = sortStateFromMode(local.mode);
 
                     void onSortChanged(SortState next) {
                       sortState = next;
