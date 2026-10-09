@@ -843,6 +843,7 @@ Future<void> showSourceSortOptions(
                           ],
                         )
                       : const SizedBox(width: double.infinity),
+                ),
                   ],
                 ),
               ),
