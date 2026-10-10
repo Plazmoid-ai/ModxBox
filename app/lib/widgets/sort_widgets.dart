@@ -611,40 +611,37 @@ class SortToolbarButton extends StatelessWidget {
     final label = sortLabel(state.field, state.reverse);
     final r = BorderRadius.circular(14);
 
-    return Tooltip(
-      message: label,
-      child: Semantics(
-        button: true,
-        label: label,
-        onTap: () => onChanged(state.next()),
-        onLongPress: onOpenMenu,
-        excludeSemantics: true,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: r,
-              onTap: () => onChanged(state.next()),
-              onLongPress: onOpenMenu,
-              child: Center(
-                child: AnimatedSwitcher(
-                  duration: _anim,
-                  transitionBuilder: (child, a) => FadeTransition(
-                    opacity: a,
-                    child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.8, end: 1).animate(a),
-                      child: child,
-                    ),
+    return Semantics(
+      button: true,
+      label: label,
+      onTap: () => onChanged(state.next()),
+      onLongPress: onOpenMenu,
+      excludeSemantics: true,
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: r,
+            onTap: () => onChanged(state.next()),
+            onLongPress: onOpenMenu,
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: _anim,
+                transitionBuilder: (child, a) => FadeTransition(
+                  opacity: a,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.8, end: 1).animate(a),
+                    child: child,
                   ),
-                  child: SortGlyph(
-                    key: ValueKey(state.field),
-                    field: state.field,
-                    reversed: state.reverse,
-                    color: cs.onSurface,
-                    compact: true,
-                  ),
+                ),
+                child: SortGlyph(
+                  key: ValueKey(state.field),
+                  field: state.field,
+                  reversed: state.reverse,
+                  color: cs.onSurface,
+                  compact: true,
                 ),
               ),
             ),
