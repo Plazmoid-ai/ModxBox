@@ -295,6 +295,35 @@ void main() {
       expect(restored.activeFilter, ActiveFilter.inactive);
     });
 
+    test('persists independently remembered directions for every field', () {
+      final state = const modern_sort.SortState()
+          .tapInMenu(modern_sort.SortField.modified)
+          .tapInBar()
+          .tapInMenu(modern_sort.SortField.created);
+      final source = const SourceSortSettings().copyWith(sortState: state);
+      final restored =
+          SourceSortSettings.fromJson(jsonEncode(source.toJson()));
+
+      expect(restored.sortState.field, modern_sort.SortField.created);
+      expect(restored.sortState.dirOf(modern_sort.SortField.created),
+          modern_sort.SortDir.down);
+      expect(restored.sortState.dirOf(modern_sort.SortField.modified),
+          modern_sort.SortDir.up);
+      expect(restored.sortState.dirOf(modern_sort.SortField.name),
+          modern_sort.SortDir.down);
+      expect(restored.mode, SourceSortMode.createdNewest);
+    });
+
+    test('legacy name modes preserve A–Z and Z–A meanings', () {
+      final ascending = SourceSortSettings.fromJson('{"mode":"nameAsc"}');
+      final descending = SourceSortSettings.fromJson('{"mode":"nameDesc"}');
+
+      expect(ascending.sortState.field, modern_sort.SortField.name);
+      expect(ascending.sortState.dir, modern_sort.SortDir.down);
+      expect(descending.sortState.field, modern_sort.SortField.name);
+      expect(descending.sortState.dir, modern_sort.SortDir.up);
+    });
+
     test('older settings ignore obsolete chip animation and default options', () {
       final restored = SourceSortSettings.fromJson(
         '{"mode":"nameAsc","chip_style":"lively"}',
