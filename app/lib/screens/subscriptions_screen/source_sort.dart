@@ -93,14 +93,21 @@ class SourceSortSettings {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'mode': _sortModeFromState(sortState).name,
-        'sort_state': sortState.toJson(),
-        'group_by_type': groupByType,
-        'enabled_first': enabledFirst,
-        'group_order': groupOrder,
-        'active_filter': activeFilter.name,
-      };
+  Map<String, dynamic> toJson() {
+    // A few tests and migration callers still construct settings by legacy
+    // mode. If that mode and the new state differ, persist a consistent pair.
+    final state = mode == _sortModeFromState(sortState)
+        ? sortState
+        : _sortStateFromLegacyMode(mode);
+    return {
+      'mode': _sortModeFromState(state).name,
+      'sort_state': state.toJson(),
+      'group_by_type': groupByType,
+      'enabled_first': enabledFirst,
+      'group_order': groupOrder,
+      'active_filter': activeFilter.name,
+    };
+  }
 
   static SourceSortSettings fromJson(String raw) {
     try {
