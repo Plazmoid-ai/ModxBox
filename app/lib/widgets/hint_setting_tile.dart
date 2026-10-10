@@ -138,7 +138,7 @@ class _HintSettingTileState extends State<HintSettingTile> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: cs.surfaceContainerHighest.withOpacity(0.5),
+                        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -180,14 +180,14 @@ class _LeadingIcon extends StatelessWidget {
         shape: BoxShape.circle,
         color: enabled
             ? (active ? cs.primaryContainer : cs.surfaceContainerHighest)
-            : cs.surfaceContainerHighest.withOpacity(0.5),
+            : cs.surfaceContainerHighest.withValues(alpha: 0.5),
       ),
       child: Icon(
         icon,
         size: 20,
         color: enabled
             ? (active ? cs.onPrimaryContainer : cs.onSurfaceVariant)
-            : cs.onSurface.withOpacity(0.38),
+            : cs.onSurface.withValues(alpha: 0.38),
       ),
     );
   }
@@ -255,13 +255,13 @@ class RockerSwitch extends StatelessWidget {
 
     final borderColor = enabled
         ? (value ? cs.primary : cs.outline)
-        : cs.outline.withOpacity(0.45);
+        : cs.outline.withValues(alpha: 0.45);
     final backgroundColor = enabled
         ? (value ? cs.primaryContainer : cs.surfaceContainerHighest)
-        : cs.surfaceContainerHighest.withOpacity(0.5);
+        : cs.surfaceContainerHighest.withValues(alpha: 0.5);
     final thumbColor = enabled
         ? (value ? cs.primary : cs.outline)
-        : cs.outline.withOpacity(0.45);
+        : cs.outline.withValues(alpha: 0.45);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
