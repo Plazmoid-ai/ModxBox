@@ -70,6 +70,13 @@ class SourceSortSettings {
   final List<String> groupOrder;
   final ActiveFilter activeFilter;
 
+  /// Resolve settings created through the old single-mode constructor while
+  /// the screen itself uses the per-field state model.
+  modern_sort.SortState get effectiveSortState =>
+      mode == _sortModeFromState(sortState)
+          ? sortState
+          : _sortStateFromLegacyMode(mode);
+
   SourceSortSettings copyWith({
     SourceSortMode? mode,
     modern_sort.SortState? sortState,
@@ -96,9 +103,7 @@ class SourceSortSettings {
   Map<String, dynamic> toJson() {
     // A few tests and migration callers still construct settings by legacy
     // mode. If that mode and the new state differ, persist a consistent pair.
-    final state = mode == _sortModeFromState(sortState)
-        ? sortState
-        : _sortStateFromLegacyMode(mode);
+    final state = effectiveSortState;
     return {
       'mode': _sortModeFromState(state).name,
       'sort_state': state.toJson(),
@@ -214,7 +219,8 @@ class SourceSortTimestamps {
 }
 
 bool isSourceSortNonDefault(SourceSortSettings settings) =>
-    settings.mode != SourceSortMode.defaultOrder ||
+    settings.effectiveSortState.field != modern_sort.SortField.name ||
+    settings.effectiveSortState.reverse ||
     settings.groupByType ||
     settings.enabledFirst ||
     settings.activeFilter != ActiveFilter.all ||
@@ -268,31 +274,21 @@ List<T> sortSourceItems<T>(
     ({T item, int index}) a,
     ({T item, int index}) b,
   ) {
-    final result = switch (settings.mode) {
-      SourceSortMode.defaultOrder => 0,
-      SourceSortMode.nameAsc =>
-        compareNames(nameOf(a.item), nameOf(b.item)),
-      SourceSortMode.nameDesc =>
-        compareNames(nameOf(b.item), nameOf(a.item)),
-      SourceSortMode.modifiedNewest => compareDates(
+    final state = settings.effectiveSortState;
+    final reversed = state.reverse;
+    final result = switch (state.field) {
+      modern_sort.SortField.name => reversed
+          ? compareNames(nameOf(b.item), nameOf(a.item))
+          : compareNames(nameOf(a.item), nameOf(b.item)),
+      modern_sort.SortField.modified => compareDates(
           modifiedOf(a.item),
           modifiedOf(b.item),
-          newestFirst: true,
+          newestFirst: !reversed,
         ),
-      SourceSortMode.modifiedOldest => compareDates(
-          modifiedOf(a.item),
-          modifiedOf(b.item),
-          newestFirst: false,
-        ),
-      SourceSortMode.createdNewest => compareDates(
+      modern_sort.SortField.created => compareDates(
           createdOf(a.item),
           createdOf(b.item),
-          newestFirst: true,
-        ),
-      SourceSortMode.createdOldest => compareDates(
-          createdOf(a.item),
-          createdOf(b.item),
-          newestFirst: false,
+          newestFirst: !reversed,
         ),
     };
 
