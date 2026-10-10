@@ -383,8 +383,9 @@ class _Roll extends StatelessWidget {
           ]),
         );
       });
+}
 
-// ───────────── Меню: подсказка + [реверс] [Имя] [Изменено] [Создано] ─────────────
+/// ───────────── Меню: подсказка + [реверс] [Имя] [Изменено] [Создано] ─────────────
 
 class SortChips extends StatelessWidget {
   const SortChips({super.key, required this.state, required this.onChanged});
