@@ -103,7 +103,7 @@ class GeneralTab extends StatelessWidget {
           title: getLocalText.s("Auto-restart VPN on settings change"),
           summary: getLocalText.s("Tunnel drops for ~3 s"),
           hint: '${getLocalText.s("Apply every config change to the running tunnel by itself, so no banner is left to tap. Each apply drops the tunnel for about 3 seconds and kills open connections.")}\n\n'
-              '${getLocalText.s("While this is on, the per-subscription "On update" setting is hidden — everything is applied immediately. Turning it off brings each subscription's own choice back.")}',
+              '${getLocalText.s("While this is on, the per-subscription \"On update\" setting is hidden — everything is applied immediately. Turning it off brings each subscription's own choice back.")}',
           value: autoReloadOnChange,
           enabled: loaded,
           onChanged: onAutoReloadOnChangeChanged,
