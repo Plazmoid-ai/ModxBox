@@ -165,47 +165,33 @@ class SourceSortSettings {
   }
 }
 
-/// Map a saved legacy single-mode value to the new per-field direction model.
-/// The old A–Z value maps to the new down direction; the dates keep their
-/// newest/oldest meaning.
+/// Map persisted legacy modes to the new per-field reverse flags.
 modern_sort.SortState _sortStateFromLegacyMode(SourceSortMode mode) {
-  final (field, dir) = switch (mode) {
+  final (field, reversed) = switch (mode) {
     SourceSortMode.defaultOrder || SourceSortMode.nameAsc =>
-      (modern_sort.SortField.name, modern_sort.SortDir.down),
-    SourceSortMode.nameDesc =>
-      (modern_sort.SortField.name, modern_sort.SortDir.up),
-    SourceSortMode.modifiedNewest =>
-      (modern_sort.SortField.modified, modern_sort.SortDir.down),
-    SourceSortMode.modifiedOldest =>
-      (modern_sort.SortField.modified, modern_sort.SortDir.up),
-    SourceSortMode.createdNewest =>
-      (modern_sort.SortField.created, modern_sort.SortDir.down),
-    SourceSortMode.createdOldest =>
-      (modern_sort.SortField.created, modern_sort.SortDir.up),
-  };
-  const defaultDirs = <modern_sort.SortField, modern_sort.SortDir>{
-    modern_sort.SortField.name: modern_sort.SortDir.down,
-    modern_sort.SortField.modified: modern_sort.SortDir.down,
-    modern_sort.SortField.created: modern_sort.SortDir.down,
+      (modern_sort.SortField.name, false),
+    SourceSortMode.nameDesc => (modern_sort.SortField.name, true),
+    SourceSortMode.modifiedNewest => (modern_sort.SortField.modified, false),
+    SourceSortMode.modifiedOldest => (modern_sort.SortField.modified, true),
+    SourceSortMode.createdNewest => (modern_sort.SortField.created, false),
+    SourceSortMode.createdOldest => (modern_sort.SortField.created, true),
   };
   return modern_sort.SortState(
     field: field,
-    dirs: {...defaultDirs, field: dir},
+    reversed: {field: reversed},
   );
 }
 
 SourceSortMode _sortModeFromState(modern_sort.SortState state) =>
     switch (state.field) {
-      modern_sort.SortField.name => state.dir == modern_sort.SortDir.down
-          ? SourceSortMode.nameAsc
-          : SourceSortMode.nameDesc,
-      modern_sort.SortField.modified =>
-        state.dir == modern_sort.SortDir.down
-            ? SourceSortMode.modifiedNewest
-            : SourceSortMode.modifiedOldest,
-      modern_sort.SortField.created => state.dir == modern_sort.SortDir.down
-          ? SourceSortMode.createdNewest
-          : SourceSortMode.createdOldest,
+      modern_sort.SortField.name =>
+        state.reverse ? SourceSortMode.nameDesc : SourceSortMode.nameAsc,
+      modern_sort.SortField.modified => state.reverse
+          ? SourceSortMode.modifiedOldest
+          : SourceSortMode.modifiedNewest,
+      modern_sort.SortField.created => state.reverse
+          ? SourceSortMode.createdOldest
+          : SourceSortMode.createdNewest,
     };
 
 class SourceSortTimestamps {
