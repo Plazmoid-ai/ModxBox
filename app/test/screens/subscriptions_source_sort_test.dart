@@ -314,24 +314,21 @@ void main() {
       expect(restored.activeFilter, ActiveFilter.inactive);
     });
 
-    test('persists independently remembered directions for every field', () {
-      final base = const modern_sort.SortState();
-      final state = base
-          .tapInMenu(modern_sort.SortField.modified)
-          .tapInBar()
-          .tapInMenu(modern_sort.SortField.created);
-      final source =
-          const SourceSortSettings().copyWith(sortState: state);
+    test('persists independently remembered reverse flags for every field', () {
+      final state = const modern_sort.SortState()
+          .select(modern_sort.SortField.modified)
+          .toggleReverse()
+          .select(modern_sort.SortField.created);
+      final source = const SourceSortSettings().copyWith(sortState: state);
       final restored =
           SourceSortSettings.fromJson(jsonEncode(source.toJson()));
 
       expect(restored.sortState.field, modern_sort.SortField.created);
-      expect(restored.sortState.dirOf(modern_sort.SortField.created),
-          modern_sort.SortDir.down);
-      expect(restored.sortState.dirOf(modern_sort.SortField.modified),
-          modern_sort.SortDir.up);
-      expect(restored.sortState.dirOf(modern_sort.SortField.name),
-          modern_sort.SortDir.down);
+      expect(restored.sortState.isReversed(modern_sort.SortField.created),
+          isFalse);
+      expect(restored.sortState.isReversed(modern_sort.SortField.modified),
+          isTrue);
+      expect(restored.sortState.isReversed(modern_sort.SortField.name), isFalse);
       expect(restored.mode, SourceSortMode.createdNewest);
     });
 
@@ -340,9 +337,9 @@ void main() {
       final descending = SourceSortSettings.fromJson('{"mode":"nameDesc"}');
 
       expect(ascending.sortState.field, modern_sort.SortField.name);
-      expect(ascending.sortState.dir, modern_sort.SortDir.down);
+      expect(ascending.sortState.reverse, isFalse);
       expect(descending.sortState.field, modern_sort.SortField.name);
-      expect(descending.sortState.dir, modern_sort.SortDir.up);
+      expect(descending.sortState.reverse, isTrue);
     });
 
     test('older settings ignore obsolete chip animation and default options', () {
