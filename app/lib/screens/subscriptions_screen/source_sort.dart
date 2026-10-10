@@ -434,22 +434,6 @@ SortState sortStateFromMode(SourceSortMode mode) => switch (mode) {
         const SortState(SortField.created, SortDir.up),
     };
 
-SourceSortMode _sourceSortModeFromState(SortState state) => switch (state.field) {
-      SortField.byDefault => SourceSortMode.defaultOrder,
-      SortField.name =>
-        state.dir == SortDir.up
-            ? SourceSortMode.nameAsc
-            : SourceSortMode.nameDesc,
-      SortField.modified =>
-        state.dir == SortDir.up
-            ? SourceSortMode.modifiedOldest
-            : SourceSortMode.modifiedNewest,
-      SortField.created =>
-        state.dir == SortDir.up
-            ? SourceSortMode.createdOldest
-            : SourceSortMode.createdNewest,
-    };
-
 String _sortCaption(SortState state) => switch (state.field) {
       SortField.byDefault => getLocalText.s("Default"),
       SortField.name => getLocalText.s(
