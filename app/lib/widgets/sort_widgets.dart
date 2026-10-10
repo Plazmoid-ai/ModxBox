@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/l10n/locale_controller.dart';
+
 enum SortField { name, modified, created }
 
 /// down: А–Я / сначала новые. up: Я–А / сначала старые.
@@ -67,15 +69,15 @@ String sortLabel(SortField f, SortDir d) {
   final down = d == SortDir.down;
   switch (f) {
     case SortField.name:
-      return down ? 'Имя А–Я' : 'Имя Я–А';
+      return getLocalText.s(down ? 'Name A–Z' : 'Name Z–A');
     case SortField.modified:
-      return down
-          ? 'Изменено — сначала новые'
-          : 'Изменено — сначала старые';
+      return getLocalText.s(
+        down ? 'Modified — newest' : 'Modified — oldest',
+      );
     case SortField.created:
-      return down
-          ? 'Создано — сначала новые'
-          : 'Создано — сначала старые';
+      return getLocalText.s(
+        down ? 'Created — newest' : 'Created — oldest',
+      );
   }
 }
 
