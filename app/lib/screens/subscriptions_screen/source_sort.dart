@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/l10n/locale_controller.dart';
 import '../../widgets/app_bottom_sheet.dart';
+import '../../widgets/sort_widgets.dart' as modern_sort;
 
 enum SourceSortMode {
   defaultOrder(Icons.swap_vert),
@@ -49,14 +50,21 @@ const List<String> defaultSourceGroupOrder = <String>[
 
 class SourceSortSettings {
   const SourceSortSettings({
-    this.mode = SourceSortMode.defaultOrder,
+    this.mode = SourceSortMode.nameAsc,
+    this.sortState = const modern_sort.SortState(),
     this.groupByType = false,
     this.enabledFirst = false,
     this.groupOrder = defaultSourceGroupOrder,
     this.activeFilter = ActiveFilter.all,
   });
 
+  /// Concrete mode used by the comparator. It is kept for compatibility with
+  /// existing list-sorting code and older saved settings.
   final SourceSortMode mode;
+
+  /// Current field plus separately remembered direction for each field.
+  final modern_sort.SortState sortState;
+
   final bool groupByType;
   final bool enabledFirst;
   final List<String> groupOrder;
@@ -64,21 +72,30 @@ class SourceSortSettings {
 
   SourceSortSettings copyWith({
     SourceSortMode? mode,
+    modern_sort.SortState? sortState,
     bool? groupByType,
     bool? enabledFirst,
     List<String>? groupOrder,
     ActiveFilter? activeFilter,
-  }) =>
-      SourceSortSettings(
-        mode: mode ?? this.mode,
-        groupByType: groupByType ?? this.groupByType,
-        enabledFirst: enabledFirst ?? this.enabledFirst,
-        groupOrder: groupOrder ?? this.groupOrder,
-        activeFilter: activeFilter ?? this.activeFilter,
-      );
+  }) {
+    final nextState = sortState ??
+        (mode == null ? this.sortState : _sortStateFromLegacyMode(mode));
+    final nextMode = sortState != null
+        ? _sortModeFromState(sortState)
+        : (mode ?? _sortModeFromState(nextState));
+    return SourceSortSettings(
+      mode: nextMode,
+      sortState: nextState,
+      groupByType: groupByType ?? this.groupByType,
+      enabledFirst: enabledFirst ?? this.enabledFirst,
+      groupOrder: groupOrder ?? this.groupOrder,
+      activeFilter: activeFilter ?? this.activeFilter,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
-        'mode': mode.name,
+        'mode': _sortModeFromState(sortState).name,
+        'sort_state': sortState.toJson(),
         'group_by_type': groupByType,
         'enabled_first': enabledFirst,
         'group_order': groupOrder,
@@ -91,10 +108,18 @@ class SourceSortSettings {
       if (decoded is! Map) return const SourceSortSettings();
 
       final modeName = decoded['mode'];
-      final mode = SourceSortMode.values.firstWhere(
+      final legacyMode = SourceSortMode.values.firstWhere(
         (m) => m.name == modeName,
-        orElse: () => SourceSortMode.defaultOrder,
+        orElse: () => SourceSortMode.nameAsc,
       );
+      final rawSortState = decoded['sort_state'];
+      final sortState = rawSortState is Map
+          ? modern_sort.SortState.fromJson(
+              Map<String, dynamic>.from(rawSortState),
+            )
+          : _sortStateFromLegacyMode(legacyMode);
+      final mode = _sortModeFromState(sortState);
+
       final activeFilter = ActiveFilter.values.firstWhere(
         (f) => f.name == decoded['active_filter'],
         orElse: () => ActiveFilter.all,
@@ -119,6 +144,7 @@ class SourceSortSettings {
 
       return SourceSortSettings(
         mode: mode,
+        sortState: sortState,
         groupByType: decoded['group_by_type'] == true,
         enabledFirst: decoded.containsKey('enabled_first')
             ? decoded['enabled_first'] == true
@@ -131,6 +157,49 @@ class SourceSortSettings {
     }
   }
 }
+
+/// Map a saved legacy single-mode value to the new per-field direction model.
+/// The old A–Z value maps to the new down direction; the dates keep their
+/// newest/oldest meaning.
+modern_sort.SortState _sortStateFromLegacyMode(SourceSortMode mode) {
+  final (field, dir) = switch (mode) {
+    SourceSortMode.defaultOrder || SourceSortMode.nameAsc =>
+      (modern_sort.SortField.name, modern_sort.SortDir.down),
+    SourceSortMode.nameDesc =>
+      (modern_sort.SortField.name, modern_sort.SortDir.up),
+    SourceSortMode.modifiedNewest =>
+      (modern_sort.SortField.modified, modern_sort.SortDir.down),
+    SourceSortMode.modifiedOldest =>
+      (modern_sort.SortField.modified, modern_sort.SortDir.up),
+    SourceSortMode.createdNewest =>
+      (modern_sort.SortField.created, modern_sort.SortDir.down),
+    SourceSortMode.createdOldest =>
+      (modern_sort.SortField.created, modern_sort.SortDir.up),
+  };
+  const defaultDirs = <modern_sort.SortField, modern_sort.SortDir>{
+    modern_sort.SortField.name: modern_sort.SortDir.down,
+    modern_sort.SortField.modified: modern_sort.SortDir.down,
+    modern_sort.SortField.created: modern_sort.SortDir.down,
+  };
+  return modern_sort.SortState(
+    field: field,
+    dirs: {...defaultDirs, field: dir},
+  );
+}
+
+SourceSortMode _sortModeFromState(modern_sort.SortState state) =>
+    switch (state.field) {
+      modern_sort.SortField.name => state.dir == modern_sort.SortDir.down
+          ? SourceSortMode.nameAsc
+          : SourceSortMode.nameDesc,
+      modern_sort.SortField.modified =>
+        state.dir == modern_sort.SortDir.down
+            ? SourceSortMode.modifiedNewest
+            : SourceSortMode.modifiedOldest,
+      modern_sort.SortField.created => state.dir == modern_sort.SortDir.down
+          ? SourceSortMode.createdNewest
+          : SourceSortMode.createdOldest,
+    };
 
 class SourceSortTimestamps {
   const SourceSortTimestamps({
@@ -791,100 +860,11 @@ Future<void> showSourceSortOptions(
                   style: Theme.of(sheetCtx).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
-                Builder(
-                  builder: (context) {
-                    var sortState = sortStateFromMode(local.mode);
-
-                    void onSortChanged(SortState next) {
-                      sortState = next;
-                      apply(
-                        local.copyWith(
-                          mode: _sourceSortModeFromState(next),
-                        ),
-                      );
-                    }
-
-                    void onChipTap(SortField field) {
-                      onSortChanged(sortAfterTap(sortState, field));
-                    }
-
-                    Widget chip(
-                      SortField field,
-                      IconData icon,
-                      String label,
-                    ) =>
-                        Expanded(
-                          child: SortChip(
-                            icon: icon,
-                            label: field == SortField.byDefault
-                                ? label.replaceFirst(' ', '\n')
-                                : label,
-                            selected: sortState.field == field,
-                            showArrow: sortState.field == field &&
-                                field != SortField.byDefault,
-                            dir: sortState.dir,
-                            onTap: () => onChipTap(field),
-                          ),
-                        );
-
-                    return Column(
-                      children: [
-                        SizedBox(
-                          height: 24,
-                          child: AnimatedSwitcher(
-                            duration: _sortAnimationDuration,
-                            child: Align(
-                              key: ValueKey(_sortCaption(sortState)),
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                _sortCaption(sortState),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            chip(
-                              SortField.byDefault,
-                              Icons.swap_vert,
-                              getLocalText.s("Default"),
-                            ),
-                            const SizedBox(width: 8),
-                            chip(
-                              SortField.name,
-                              Icons.sort_by_alpha,
-                              "Имя",
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            chip(
-                              SortField.modified,
-                              Icons.history,
-                              "Изменено",
-                            ),
-                            const SizedBox(width: 8),
-                            chip(
-                              SortField.created,
-                              Icons.calendar_month,
-                              "Создано",
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
+                modern_sort.SortChips(
+                  state: local.sortState,
+                  onChanged: (next) =>
+                      apply(local.copyWith(sortState: next)),
+                  sheetColor: Theme.of(sheetCtx).colorScheme.surface,
                 ),
                 const Divider(height: 24),
                 CheckboxListTile(
