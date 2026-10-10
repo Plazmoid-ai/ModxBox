@@ -419,7 +419,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   void _onSortStateChanged(sort_widgets.SortState next) {
     _updateSortSettings(_sortSettings.copyWith(sortState: next));
-    _showSortModeHint(sort_widgets.sortLabel(next.field, next.dir));
+    _showSortModeHint(sort_widgets.sortLabel(next.field, next.reverse));
   }
 
   void _showSortModeHint(String label) {
