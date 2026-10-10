@@ -87,37 +87,56 @@ void main() {
   });
 
   group('Animated sort state', () {
-    test('starts at Name A–Z and remembers each field direction', () {
+    test('select remembers reverse direction separately for every field', () {
       const initial = modern_sort.SortState();
       expect(initial.field, modern_sort.SortField.name);
-      expect(initial.dir, modern_sort.SortDir.down);
+      expect(initial.reverse, isFalse);
 
-      final modified = initial.tapInMenu(modern_sort.SortField.modified);
+      final reversedName = initial.toggleReverse();
+      expect(reversedName.reverse, isTrue);
+
+      final modified = reversedName.select(modern_sort.SortField.modified);
       expect(modified.field, modern_sort.SortField.modified);
-      expect(modified.dir, modern_sort.SortDir.down);
+      expect(modified.reverse, isFalse);
+      expect(modified.isReversed(modern_sort.SortField.name), isTrue);
 
-      final backToName = modified.tapInMenu(modern_sort.SortField.name);
-      expect(backToName.dir, modern_sort.SortDir.down);
-      expect(
-        backToName.tapInMenu(modern_sort.SortField.name).dir,
-        modern_sort.SortDir.up,
-      );
+      final backToName = modified.select(modern_sort.SortField.name);
+      expect(backToName.reverse, isTrue);
     });
 
-    test('toolbar flips the active field and state round-trips through JSON', () {
-      final base = const modern_sort.SortState();
-      final initial = base.tapInMenu(modern_sort.SortField.created);
-      final flipped = initial.tapInBar();
-      expect(flipped.dir, modern_sort.SortDir.up);
+    test('next cycles fields without changing any reverse flag', () {
+      final state = const modern_sort.SortState().toggleReverse();
+      final modified = state.next();
+      expect(modified.field, modern_sort.SortField.modified);
+      expect(modified.reverse, isFalse);
+      expect(modified.isReversed(modern_sort.SortField.name), isTrue);
+      expect(modified.next().field, modern_sort.SortField.created);
+      expect(modified.next().next().field, modern_sort.SortField.name);
+    });
+
+    test('state round-trips through JSON and reads the previous dirs schema', () {
+      final flipped = const modern_sort.SortState()
+          .select(modern_sort.SortField.created)
+          .toggleReverse();
 
       final restored = modern_sort.SortState.fromJson(
         Map<String, dynamic>.from(flipped.toJson()),
       );
       expect(restored.field, flipped.field);
-      expect(restored.dirOf(modern_sort.SortField.created),
-          modern_sort.SortDir.up);
-      expect(restored.dirOf(modern_sort.SortField.modified),
-          modern_sort.SortDir.down);
+      expect(restored.reverse, isTrue);
+      expect(restored.isReversed(modern_sort.SortField.name), isFalse);
+
+      final migrated = modern_sort.SortState.fromJson({
+        'field': 'modified',
+        'dirs': {
+          'name': 'down',
+          'modified': 'up',
+          'created': 'down',
+        },
+      });
+      expect(migrated.field, modern_sort.SortField.modified);
+      expect(migrated.reverse, isTrue);
+      expect(migrated.isReversed(modern_sort.SortField.name), isFalse);
     });
   });
 
