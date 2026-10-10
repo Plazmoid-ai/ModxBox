@@ -188,6 +188,7 @@ void main() {
       '"group_by_type":false,"enabled_first":false,'
       '"group_order":["folder","server","subscription","chain"],'
       '"active_filter":"all"}',
+      flush: false,
     );
     await _pumpServersScreen(tester, controller: controller, home: home);
 
