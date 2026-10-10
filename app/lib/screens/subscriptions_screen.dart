@@ -38,6 +38,7 @@ import 'subscriptions_screen/widgets/subscriptions_empty_state.dart';
 import 'subscriptions_screen/source_sort.dart';
 import '../services/l10n/locale_controller.dart';
 import '../services/file_import.dart';
+import '../widgets/sort_widgets.dart' as sort_widgets;
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({
@@ -416,10 +417,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     unawaited(_saveSortSettings());
   }
 
-  void _cycleSourceSort() {
-    final next = _sortSettings.mode.next;
-    _updateSortSettings(_sortSettings.copyWith(mode: next));
-    _showSortModeHint(next.label());
+  void _onSortStateChanged(sort_widgets.SortState next) {
+    _updateSortSettings(_sortSettings.copyWith(sortState: next));
+    _showSortModeHint(sort_widgets.sortLabel(next.field, next.dir));
   }
 
   void _showSortModeHint(String label) {
@@ -1363,10 +1363,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    SortToolbarButton(
-                      state: sortStateFromMode(_sortSettings.mode),
+                    sort_widgets.SortToolbarButton(
+                      state: _sortSettings.sortState,
                       enabled: hasSources,
-                      onTap: _cycleSourceSort,
+                      barColor: Theme.of(context).colorScheme.surface,
+                      onChanged: _onSortStateChanged,
                       onLongPress: _openSourceSortOptions,
                     ),
                     if (_showSortTooltip && _sortTooltipMessage != null)
