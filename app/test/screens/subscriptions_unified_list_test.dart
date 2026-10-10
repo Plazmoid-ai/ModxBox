@@ -175,24 +175,36 @@ void main() {
     }
   });
 
-  testWidgets('строки одного списка: цепочка между серверами, в порядке диска',
+  testWidgets('единый список: сортировка отображения не меняет порядок источников',
       (tester) async {
     final home = HomeController();
     addTearDown(home.dispose);
+
+    // Изолируем тест от настроек, оставленных другими экранами или тестами.
+    await SettingsStorage.setVar(
+      'server_list_sorting',
+      '{"mode":"nameAsc","sort_state":{"field":"name","reversed":'
+      '{"name":false,"modified":false,"created":false}},'
+      '"group_by_type":false,"enabled_first":false,'
+      '"group_order":["folder","server","subscription","chain"],'
+      '"active_filter":"all"}',
+    );
     await _pumpServersScreen(tester, controller: controller, home: home);
 
-    // Контроллер держит только контейнеры; экран рисует ВСЕ записи.
+    // Контроллер хранит контейнеры отдельно, а источники включают цепочку.
     expect(controller.entries.map((e) => e.id), ['u1', 'u2']);
+    expect(controller.scene.map((e) => e.sourceKey),
+        ['id:u1', 'chain:c1', 'id:u2']);
     expect(find.text('First'), findsOneWidget);
     expect(find.text('c1'), findsOneWidget);
     expect(find.text('Second'), findsOneWidget);
 
-    // Порядок на экране — порядок `sources[]`, а не «сначала контейнеры».
-    final yFirst = tester.getCenter(find.text('First')).dy;
+    // Отображение сортируется по имени: c1, First, Second.
     final yVia = tester.getCenter(find.text('c1')).dy;
+    final yFirst = tester.getCenter(find.text('First')).dy;
     final ySecond = tester.getCenter(find.text('Second')).dy;
-    expect(yFirst, lessThan(yVia));
-    expect(yVia, lessThan(ySecond));
+    expect(yVia, lessThan(yFirst));
+    expect(yFirst, lessThan(ySecond));
   });
 
   testWidgets('перестановка — ОДНА запись на жест', (tester) async {
