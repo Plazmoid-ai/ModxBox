@@ -69,15 +69,17 @@ String sortLabel(SortField f, SortDir d) {
   final down = d == SortDir.down;
   switch (f) {
     case SortField.name:
-      return getLocalText.s(down ? 'Name A–Z' : 'Name Z–A');
+      return down
+          ? getLocalText.s('Name A–Z')
+          : getLocalText.s('Name Z–A');
     case SortField.modified:
-      return getLocalText.s(
-        down ? 'Modified — newest' : 'Modified — oldest',
-      );
+      return down
+          ? getLocalText.s('Modified — newest')
+          : getLocalText.s('Modified — oldest');
     case SortField.created:
-      return getLocalText.s(
-        down ? 'Created — newest' : 'Created — oldest',
-      );
+      return down
+          ? getLocalText.s('Created — newest')
+          : getLocalText.s('Created — oldest');
   }
 }
 
