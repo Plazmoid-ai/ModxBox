@@ -841,6 +841,9 @@
   "Apply": {
     "value": "应用"
   },
+  "Tunnel drops for ~3 s": {
+    "value": "隧道中断约 3 秒"
+  },
   "Apply every config change to the running tunnel by itself, so no banner is left to tap. Each apply drops the tunnel for about 3 seconds and kills open connections.": {
     "value": "自动把每次配置改动应用到正在运行的隧道，不再留下待点击的横幅。每次应用会断开隧道约 3 秒并中断已建立的连接。"
   },

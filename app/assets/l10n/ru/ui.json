@@ -1030,6 +1030,9 @@
   "Apply": {
     "value": "Применить"
   },
+  "Tunnel drops for ~3 s": {
+    "value": "Туннель рвётся на ~3 с"
+  },
   "Apply every config change to the running tunnel by itself, so no banner is left to tap. Each apply drops the tunnel for about 3 seconds and kills open connections.": {
     "value": "Применять любое изменение конфига к работающему туннелю самостоятельно, чтобы не оставалось плашек. Каждое применение рвёт туннель примерно на 3 секунды и обрывает открытые соединения."
   },
