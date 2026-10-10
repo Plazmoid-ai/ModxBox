@@ -111,7 +111,7 @@ void main() {
       expect(flipped.dir, modern_sort.SortDir.up);
 
       final restored = modern_sort.SortState.fromJson(
-        flipped.toJson().map((key, value) => MapEntry(key, value)),
+        Map<String, dynamic>.from(flipped.toJson()),
       );
       expect(restored.field, flipped.field);
       expect(restored.dirOf(modern_sort.SortField.created),
