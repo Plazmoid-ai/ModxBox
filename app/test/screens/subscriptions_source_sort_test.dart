@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lxbox/widgets/sort_widgets.dart' as modern_sort;
 import 'package:lxbox/screens/subscriptions_screen/source_sort.dart';
 
 class _Item {
@@ -82,6 +83,41 @@ void main() {
         sortStateFromMode(SourceSortMode.modifiedNewest),
         const SortState(SortField.modified, SortDir.down),
       );
+    });
+  });
+
+  group('Animated sort state', () {
+    test('starts at Name A–Z and remembers each field direction', () {
+      const initial = modern_sort.SortState();
+      expect(initial.field, modern_sort.SortField.name);
+      expect(initial.dir, modern_sort.SortDir.down);
+
+      final modified = initial.tapInMenu(modern_sort.SortField.modified);
+      expect(modified.field, modern_sort.SortField.modified);
+      expect(modified.dir, modern_sort.SortDir.down);
+
+      final backToName = modified.tapInMenu(modern_sort.SortField.name);
+      expect(backToName.dir, modern_sort.SortDir.down);
+      expect(
+        backToName.tapInMenu(modern_sort.SortField.name).dir,
+        modern_sort.SortDir.up,
+      );
+    });
+
+    test('toolbar flips the active field and state round-trips through JSON', () {
+      final initial = const modern_sort.SortState()
+          .tapInMenu(modern_sort.SortField.created);
+      final flipped = initial.tapInBar();
+      expect(flipped.dir, modern_sort.SortDir.up);
+
+      final restored = modern_sort.SortState.fromJson(
+        flipped.toJson().map((key, value) => MapEntry(key, value)),
+      );
+      expect(restored.field, flipped.field);
+      expect(restored.dirOf(modern_sort.SortField.created),
+          modern_sort.SortDir.up);
+      expect(restored.dirOf(modern_sort.SortField.modified),
+          modern_sort.SortDir.down);
     });
   });
 
@@ -209,7 +245,7 @@ void main() {
       expect(settings.enabledFirst, isTrue);
     });
 
-    test('default mode preserves relative order inside each group', () {
+    test('initial mode sorts names A–Z inside each group', () {
       final settings = SourceSortSettings(
         groupByType: true,
         groupOrder: const ['folder', 'server', 'chain', 'subscription'],
@@ -220,8 +256,8 @@ void main() {
             .toList(),
         [
           'folder:Alpha',
-          'server:Zulu',
           'server:Beta',
+          'server:Zulu',
           'chain:Gamma',
         ],
       );
