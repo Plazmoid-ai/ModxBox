@@ -1365,10 +1365,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   children: [
                     sort_widgets.SortToolbarButton(
                       state: _sortSettings.sortState,
-                      enabled: hasSources,
-                      barColor: Theme.of(context).colorScheme.surface,
                       onChanged: _onSortStateChanged,
-                      onLongPress: _openSourceSortOptions,
+                      onOpenMenu: _openSourceSortOptions,
                     ),
                     if (_showSortTooltip && _sortTooltipMessage != null)
                       Positioned(
