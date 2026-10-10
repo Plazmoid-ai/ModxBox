@@ -837,7 +837,6 @@ Future<void> showSourceSortOptions(
                   state: local.sortState,
                   onChanged: (next) =>
                       apply(local.copyWith(sortState: next)),
-                  sheetColor: Theme.of(sheetCtx).colorScheme.surface,
                 ),
                 const Divider(height: 24),
                 CheckboxListTile(
