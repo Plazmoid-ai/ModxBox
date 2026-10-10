@@ -4,199 +4,138 @@ import '../services/l10n/locale_controller.dart';
 
 enum SortField { name, modified, created }
 
-/// down: А–Я / сначала новые. up: Я–А / сначала старые.
-enum SortDir { down, up }
-
-SortDir flip(SortDir d) => d == SortDir.down ? SortDir.up : SortDir.down;
-
-/// Поле + запомненное направление для каждого поля.
+/// Обычный порядок: А–Я / сначала новые. Обратный: Я–А / сначала старые.
 @immutable
 class SortState {
   const SortState({
     this.field = SortField.name,
-    this.dirs = _defaultDirs,
+    this.reversed = const {},
   });
 
-  static const Map<SortField, SortDir> _defaultDirs = {
-    SortField.name: SortDir.down,
-    SortField.modified: SortDir.down,
-    SortField.created: SortDir.down,
-  };
-
   final SortField field;
-  final Map<SortField, SortDir> dirs;
+  final Map<SortField, bool> reversed;
 
-  SortDir dirOf(SortField f) => dirs[f] ?? SortDir.down;
-  SortDir get dir => dirOf(field);
+  bool isReversed(SortField f) => reversed[f] ?? false;
+  bool get reverse => isReversed(field);
 
-  SortState withDir(SortField f, SortDir d) =>
-      SortState(field: field, dirs: {...dirs, f: d});
+  /// Выбор поля не меняет запомненное направление.
+  SortState select(SortField f) => SortState(field: f, reversed: reversed);
 
-  /// Меню: другое поле — берём его запомненное направление,
-  /// повторный тап по активному — переворачиваем.
-  SortState tapInMenu(SortField f) => f == field
-      ? withDir(f, flip(dirOf(f)))
-      : SortState(field: f, dirs: dirs);
+  /// Следующее поле по кругу.
+  SortState next() =>
+      select(SortField.values[(field.index + 1) % SortField.values.length]);
 
-  /// Панель: всегда переворачивает направление текущего поля.
-  SortState tapInBar() => withDir(field, flip(dir));
+  /// Меняет направление только у текущего поля.
+  SortState toggleReverse() =>
+      SortState(field: field, reversed: {...reversed, field: !reverse});
 
   Map<String, Object> toJson() => {
         'field': field.name,
-        'dirs': {for (final e in dirs.entries) e.key.name: e.value.name},
+        'reversed': {for (final f in SortField.values) f.name: isReversed(f)},
       };
 
   factory SortState.fromJson(Map<String, dynamic> j) {
-    final dirs = <SortField, SortDir>{..._defaultDirs};
-    final raw = j['dirs'];
-    if (raw is Map) {
-      for (final f in SortField.values) {
-        dirs[f] = SortDir.values.firstWhere(
-          (d) => d.name == raw[f.name],
-          orElse: () => SortDir.down,
-        );
-      }
-    }
-    final field = SortField.values.firstWhere(
-      (f) => f.name == j['field'],
-      orElse: () => SortField.name,
+    final rawReversed = j['reversed'];
+    final rawLegacyDirs = j['dirs'];
+    return SortState(
+      field: SortField.values.firstWhere(
+        (f) => f.name == j['field'],
+        orElse: () => SortField.name,
+      ),
+      reversed: {
+        for (final f in SortField.values)
+          f: rawReversed is Map
+              ? rawReversed[f.name] == true
+              : rawLegacyDirs is Map
+                  ? rawLegacyDirs[f.name] == 'up'
+                  : false,
+      },
     );
-    return SortState(field: field, dirs: dirs);
   }
 }
 
-String sortLabel(SortField f, SortDir d) {
-  final down = d == SortDir.down;
+String sortLabel(SortField f, bool rev) {
   switch (f) {
     case SortField.name:
-      return down
-          ? getLocalText.s('Name A–Z')
-          : getLocalText.s('Name Z–A');
+      return rev
+          ? getLocalText.s('Name Z–A')
+          : getLocalText.s('Name A–Z');
     case SortField.modified:
-      return down
-          ? getLocalText.s('Modified — newest')
-          : getLocalText.s('Modified — oldest');
+      return rev
+          ? getLocalText.s('Modified — oldest')
+          : getLocalText.s('Modified — newest');
     case SortField.created:
-      return down
-          ? getLocalText.s('Created — newest')
-          : getLocalText.s('Created — oldest');
+      return rev
+          ? getLocalText.s('Created — oldest')
+          : getLocalText.s('Created — newest');
   }
 }
 
-const _anim = Duration(milliseconds: 180);
-
-// ───────────── Уголок 22×11 с утолщением к острию ─────────────
-
-class SortChevron extends StatelessWidget {
-  const SortChevron({super.key, required this.color});
-  final Color color;
-  static const double width = 22, height = 11;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-        size: const Size(width, height),
-        painter: _ChevronPainter(color),
-      );
-}
-
-class _ChevronPainter extends CustomPainter {
-  _ChevronPainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final sx = size.width / 16, sy = size.height / 10;
-    const pts = [
-      Offset(0.8, 1.2), Offset(8, 6), Offset(15.2, 1.2),
-      Offset(15.2, 2.6), Offset(8, 9.6), Offset(0.8, 2.6),
-    ];
-    final path = Path()..moveTo(pts[0].dx * sx, pts[0].dy * sy);
-    for (final p in pts.skip(1)) {
-      path.lineTo(p.dx * sx, p.dy * sy);
-    }
-    path.close();
-    canvas.drawPath(path, Paint()..color = color);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ChevronPainter old) => old.color != color;
-}
+const _anim = Duration(milliseconds: 220);
 
 // ───────────── Иконки полей ─────────────
+// Имя: А—Я ↔ Я—А. Изменено: часы-«история» зеркалятся.
+// Создано: число 1 ↔ 31. compact = true — кнопка панели 48×48.
 
-/// Имя: А↔Я. Изменено: солнце (новые) / луна (старые) + карандаш.
-/// Создано: календарь 1 (новые) / 31 (старые).
-/// compact = true — для кнопки панели 48.
 class SortGlyph extends StatelessWidget {
   const SortGlyph({
     super.key,
     required this.field,
-    required this.dir,
+    required this.reversed,
     required this.color,
-    required this.badgeBg,
     this.compact = false,
   });
 
   final SortField field;
-  final SortDir dir;
+  final bool reversed;
   final Color color;
-  final Color badgeBg;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     switch (field) {
       case SortField.name:
-        return _NameGlyph(dir: dir, color: color, compact: compact);
+        return _NameGlyph(reversed: reversed, color: color, compact: compact);
       case SortField.modified:
-        return _SunMoonGlyph(
-          dir: dir,
-          color: color,
-          badgeBg: badgeBg,
-          compact: compact,
-        );
+        return _ClockGlyph(
+            reversed: reversed, color: color, compact: compact);
       case SortField.created:
-        return _CalendarGlyph(dir: dir, color: color, compact: compact);
+        return _CalendarGlyph(
+            reversed: reversed, color: color, compact: compact);
     }
   }
 }
 
 class _NameGlyph extends StatelessWidget {
   const _NameGlyph({
-    required this.dir,
+    required this.reversed,
     required this.color,
     required this.compact,
   });
-  final SortDir dir;
+  final bool reversed;
   final Color color;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final s = compact ? 12.0 : 16.0;
-    final right = compact ? 28.0 : 48.0;
-    final arrow = compact ? 12.0 : 16.0;
-    final fs = compact ? 16.0 : 20.0;
-    final down = dir == SortDir.down;
+    final s = compact ? 13.0 : 16.0;
+    final dash = compact ? 8.0 : 10.0;
+    final gap = compact ? 3.0 : 4.0;
+    final fs = compact ? 18.0 : 20.0;
+    final h = compact ? 22.0 : 24.0;
+    final dt = compact ? 2.0 : 2.5;
+    final right = s + gap + dash + gap;
 
     Widget slot(String t) => SizedBox(
           width: s,
-          height: 24,
+          height: h,
           child: Center(
             child: Text(
               t,
               style: TextStyle(
                 fontSize: fs,
                 height: 1,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: color,
               ),
             ),
@@ -205,24 +144,31 @@ class _NameGlyph extends StatelessWidget {
 
     return SizedBox(
       width: right + s,
-      height: 24,
+      height: h,
       child: Stack(children: [
         AnimatedPositioned(
           duration: _anim,
           curve: Curves.easeOut,
-          left: down ? 0 : right,
+          left: reversed ? right : 0,
           top: 0,
           child: slot('А'),
         ),
         Positioned(
-          left: s + (right - s - arrow) / 2,
-          top: (24 - arrow) / 2,
-          child: Icon(Icons.arrow_forward, size: arrow, color: color),
+          left: s + gap,
+          top: (h - dt) / 2,
+          width: dash,
+          height: dt,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
         ),
         AnimatedPositioned(
           duration: _anim,
           curve: Curves.easeOut,
-          left: down ? right : 0,
+          left: reversed ? 0 : right,
           top: 0,
           child: slot('Я'),
         ),
@@ -231,82 +177,110 @@ class _NameGlyph extends StatelessWidget {
   }
 }
 
-class _SunMoonGlyph extends StatelessWidget {
-  const _SunMoonGlyph({
-    required this.dir,
+class _ClockGlyph extends StatelessWidget {
+  const _ClockGlyph({
+    required this.reversed,
     required this.color,
-    required this.badgeBg,
     required this.compact,
   });
-  final SortDir dir;
+  final bool reversed;
   final Color color;
-  final Color badgeBg;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final n = compact ? 22.0 : 26.0;
-    final b = compact ? 13.0 : 17.0;
-    final bi = compact ? 11.0 : 14.0;
-    final down = dir == SortDir.down;
-
-    Widget layer(IconData icon, bool visible, double hiddenTurns) =>
-        AnimatedOpacity(
-          duration: _anim,
-          opacity: visible ? 1 : 0,
-          child: AnimatedScale(
-            duration: _anim,
-            scale: visible ? 1 : 0.6,
-            child: AnimatedRotation(
-              duration: _anim,
-              turns: visible ? 0 : hiddenTurns,
-              child: Icon(icon, size: n, color: color),
-            ),
-          ),
-        );
-
-    return SizedBox(
-      width: n,
-      height: n,
-      child: Stack(clipBehavior: Clip.none, children: [
-        Positioned.fill(child: layer(Icons.wb_sunny, down, 1 / 6)),
-        Positioned.fill(child: layer(Icons.dark_mode, !down, -1 / 6)),
-        Positioned(
-          right: compact ? -8 : -10,
-          bottom: compact ? -5 : -7,
-          child: Container(
-            width: b,
-            height: b,
-            decoration: BoxDecoration(
-              color: badgeBg,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.edit, size: bi, color: color),
-          ),
-        ),
-      ]),
+    final w = compact ? 28.0 : 30.0;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: reversed ? -1.0 : 1.0),
+      duration: _anim,
+      curve: Curves.easeOut,
+      builder: (_, v, child) => Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.diagonal3Values(v, 1, 1),
+        child: child,
+      ),
+      child: CustomPaint(
+        size: Size(w, w * 52 / 54),
+        painter: _HistoryPainter(color),
+      ),
     );
   }
 }
 
+/// Классические часы «история»: круговая стрелка и стрелки часов.
+class _HistoryPainter extends CustomPainter {
+  _HistoryPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 54, size.height / 52);
+    canvas.translate(-45, -24);
+
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.6
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final arc = Path()
+      ..moveTo(54.8, 62.05)
+      ..arcToPoint(
+        const Offset(54.8, 37.95),
+        radius: const Radius.circular(21),
+        largeArc: true,
+        clockwise: false,
+      );
+    canvas.drawPath(arc, stroke);
+
+    final head = Path()
+      ..moveTo(51.9, 42)
+      ..lineTo(61.4, 38.9)
+      ..lineTo(51.6, 32)
+      ..close();
+    canvas.drawPath(head, Paint()..color = color);
+    canvas.drawPath(
+      head,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    final hands = Path()
+      ..moveTo(72, 39)
+      ..lineTo(72, 50)
+      ..lineTo(79, 57);
+    canvas.drawPath(hands, stroke);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_HistoryPainter old) => old.color != color;
+}
+
 class _CalendarGlyph extends StatelessWidget {
   const _CalendarGlyph({
-    required this.dir,
+    required this.reversed,
     required this.color,
     required this.compact,
   });
-  final SortDir dir;
+  final bool reversed;
   final Color color;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final s = compact ? 23.0 : 28.0;
-    final r = compact ? 5.0 : 6.0;
-    final header = compact ? 6.0 : 7.0;
-    final ringInset = compact ? 4.0 : 6.0;
-    final ringH = compact ? 5.0 : 6.0;
-    final fs = compact ? 10.0 : 13.0;
+    final s = compact ? 24.0 : 28.0;
+    final r = (s * 0.21).roundToDouble();
+    final header = (s * 0.25).roundToDouble();
+    final ringInset = (s * 0.2).roundToDouble();
+    final ringH = (s * 0.2).roundToDouble() + 1;
+    final fs = (s * 0.46).roundToDouble();
     const bw = 1.5;
 
     Widget ring() => DecoratedBox(
@@ -357,7 +331,7 @@ class _CalendarGlyph extends StatelessWidget {
           child: _Roll(
             a: '1',
             b: '31',
-            second: dir == SortDir.up,
+            second: reversed,
             style: TextStyle(
               fontSize: fs,
               height: 1,
@@ -371,7 +345,7 @@ class _CalendarGlyph extends StatelessWidget {
   }
 }
 
-/// Два значения друг над другом; плавно «прокручивается» к нужному.
+/// Два значения друг над другом, плавно прокручиваются к нужному.
 class _Roll extends StatelessWidget {
   const _Roll({
     required this.a,
@@ -409,39 +383,19 @@ class _Roll extends StatelessWidget {
           ]),
         );
       });
-}
 
-// ───────────── Меню: подсказка + три чипа ─────────────
+// ───────────── Меню: подсказка + [реверс] [Имя] [Изменено] [Создано] ─────────────
 
 class SortChips extends StatelessWidget {
-  const SortChips({
-    super.key,
-    required this.state,
-    required this.onChanged,
-    this.sheetColor,
-  });
+  const SortChips({super.key, required this.state, required this.onChanged});
 
   final SortState state;
   final ValueChanged<SortState> onChanged;
-  final Color? sheetColor;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final sheet = sheetColor ?? t.colorScheme.surface;
-    final chips = <Widget>[];
-    for (final f in SortField.values) {
-      if (chips.isNotEmpty) chips.add(const SizedBox(width: 8));
-      chips.add(Expanded(
-        child: _SortChip(
-          field: f,
-          dir: state.dirOf(f),
-          selected: f == state.field,
-          sheetColor: sheet,
-          onTap: () => onChanged(state.tapInMenu(f)),
-        ),
-      ));
-    }
+    final label = sortLabel(state.field, state.reverse);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -452,10 +406,10 @@ class SortChips extends StatelessWidget {
           child: AnimatedSwitcher(
             duration: _anim,
             child: Align(
-              key: ValueKey(sortLabel(state.field, state.dir)),
+              key: ValueKey(label),
               alignment: Alignment.centerLeft,
               child: Text(
-                sortLabel(state.field, state.dir),
+                label,
                 style: t.textTheme.bodyMedium
                     ?.copyWith(color: t.colorScheme.primary),
               ),
@@ -463,100 +417,71 @@ class SortChips extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Row(children: chips),
+        Row(children: [
+          SizedBox(
+            width: 44,
+            child: _DirButton(
+              reversed: state.reverse,
+              onTap: () => onChanged(state.toggleReverse()),
+            ),
+          ),
+          for (final f in SortField.values) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              child: _FieldChip(
+                field: f,
+                reversed: state.isReversed(f),
+                selected: f == state.field,
+                onTap: () => onChanged(state.select(f)),
+              ),
+            ),
+          ],
+        ]),
       ],
     );
   }
 }
 
-class _SortChip extends StatelessWidget {
-  const _SortChip({
-    required this.field,
-    required this.dir,
-    required this.selected,
-    required this.sheetColor,
+/// Общая рамка кнопки: подсветка, обводка, Semantics и нажатие.
+class _Frame extends StatelessWidget {
+  const _Frame({
+    required this.active,
+    required this.label,
     required this.onTap,
+    required this.builder,
   });
 
-  final SortField field;
-  final SortDir dir;
-  final bool selected;
-  final Color sheetColor;
+  final bool active;
+  final String label;
   final VoidCallback onTap;
-
-  static const double _h = 60, _labelH = 28, _labelEdge = 6, _arrowEdge = 8;
+  final Widget Function(Color fg) builder;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final fg = selected ? cs.onSecondaryContainer : cs.onSurface;
-    final bg = selected ? cs.secondaryContainer : Colors.transparent;
-    final up = dir == SortDir.up;
+    final fg = active ? cs.onSecondaryContainer : cs.onSurface;
     final r = BorderRadius.circular(8);
-
-    final double labelTop = !selected
-        ? (_h - _labelH) / 2
-        : (up ? _h - _labelEdge - _labelH : _labelEdge);
-    final double arrowTop = (selected && !up)
-        ? _h - _arrowEdge - SortChevron.height
-        : _arrowEdge;
 
     return Semantics(
       button: true,
-      selected: selected,
-      label: sortLabel(field, dir),
+      selected: active,
+      label: label,
       onTap: onTap,
       excludeSemantics: true,
       child: AnimatedContainer(
         duration: _anim,
-        height: _h,
+        height: 60,
         decoration: BoxDecoration(
-          color: bg,
+          color: active ? cs.secondaryContainer : Colors.transparent,
           borderRadius: r,
-          border: Border.all(color: selected ? cs.primary : cs.outlineVariant),
+          border: Border.all(color: active ? cs.primary : cs.outlineVariant),
         ),
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
             borderRadius: r,
             onTap: onTap,
-            child: Stack(children: [
-              AnimatedPositioned(
-                duration: _anim,
-                curve: Curves.easeOut,
-                left: 0,
-                right: 0,
-                top: arrowTop,
-                height: SortChevron.height,
-                child: Center(
-                  child: AnimatedOpacity(
-                    duration: _anim,
-                    opacity: selected ? 1 : 0,
-                    child: AnimatedRotation(
-                      duration: _anim,
-                      turns: up ? 0.5 : 0,
-                      child: SortChevron(color: fg),
-                    ),
-                  ),
-                ),
-              ),
-              AnimatedPositioned(
-                duration: _anim,
-                curve: Curves.easeOut,
-                left: 0,
-                right: 0,
-                top: labelTop,
-                height: _labelH,
-                child: Center(
-                  child: SortGlyph(
-                    field: field,
-                    dir: dir,
-                    color: fg,
-                    badgeBg: selected ? cs.secondaryContainer : sheetColor,
-                  ),
-                ),
-              ),
-            ]),
+            child: builder(fg),
           ),
         ),
       ),
@@ -564,83 +489,165 @@ class _SortChip extends StatelessWidget {
   }
 }
 
+class _FieldChip extends StatelessWidget {
+  const _FieldChip({
+    required this.field,
+    required this.reversed,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final SortField field;
+  final bool reversed;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => _Frame(
+        active: selected,
+        label: sortLabel(field, reversed),
+        onTap: onTap,
+        builder: (fg) => Stack(children: [
+          AnimatedPositioned(
+            duration: _anim,
+            curve: Curves.easeOut,
+            left: 0,
+            right: 0,
+            top: selected ? 12 : 19,
+            height: 29,
+            child: Center(
+              child: SortGlyph(
+                field: field,
+                reversed: reversed,
+                color: fg,
+              ),
+            ),
+          ),
+        ]),
+      );
+}
+
+class _DirButton extends StatelessWidget {
+  const _DirButton({required this.reversed, required this.onTap});
+  final bool reversed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => _Frame(
+        active: reversed,
+        label: reversed
+            ? 'Обратный порядок: включён'
+            : 'Обратный порядок: выключен',
+        onTap: onTap,
+        builder: (fg) => Stack(children: [
+          AnimatedPositioned(
+            duration: _anim,
+            curve: Curves.easeOut,
+            left: 0,
+            right: 0,
+            top: reversed ? 16 : 23,
+            height: 26,
+            child: Center(
+              child: AnimatedRotation(
+                duration: _anim,
+                turns: reversed ? 0.5 : 0,
+                child: CustomPaint(
+                  size: const Size(22, 26),
+                  painter: _ArrowPainter(fg),
+                ),
+              ),
+            ),
+          ),
+        ]),
+      );
+}
+
+/// Классическая стрелка вниз.
+class _ArrowPainter extends CustomPainter {
+  _ArrowPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(
+      Path()
+        ..moveTo(11, 2.5)
+        ..lineTo(11, 23.5)
+        ..moveTo(3.5, 16.5)
+        ..lineTo(11, 24)
+        ..lineTo(18.5, 16.5),
+      p,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ArrowPainter old) => old.color != color;
+}
+
 // ───────────── Панель: кнопка 48×48 ─────────────
+// Короткий тап — следующее поле, долгий — меню. Направление не меняет.
 
 class SortToolbarButton extends StatelessWidget {
   const SortToolbarButton({
     super.key,
     required this.state,
     required this.onChanged,
-    this.barColor,
-    this.enabled = true,
-    this.onLongPress,
+    required this.onOpenMenu,
   });
 
   final SortState state;
   final ValueChanged<SortState> onChanged;
-  final Color? barColor;
-  final bool enabled;
-  final VoidCallback? onLongPress;
-
-  static const double _size = 48, _glyph = 24, _gap = 3, _edge = 5;
+  final VoidCallback onOpenMenu;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final up = state.dir == SortDir.up;
+    final label = sortLabel(state.field, state.reverse);
     final r = BorderRadius.circular(14);
-    final glyphTop = up ? _edge + SortChevron.height + _gap : _edge;
-    final arrowTop = up ? _edge : _edge + _glyph + _gap;
-    final label = sortLabel(state.field, state.dir);
 
-    return Semantics(
-      button: true,
-      label: label,
-      onTap: enabled ? () => onChanged(state.tapInBar()) : null,
-      excludeSemantics: true,
-      child: SizedBox(
-        width: _size,
-        height: _size,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: r,
-            onTap: enabled ? () => onChanged(state.tapInBar()) : null,
-            onLongPress: enabled ? onLongPress : null,
-            child: Stack(children: [
-              AnimatedPositioned(
-                duration: _anim,
-                curve: Curves.easeOut,
-                left: 0,
-                right: 0,
-                top: arrowTop,
-                height: SortChevron.height,
-                child: Center(
-                  child: AnimatedRotation(
-                    duration: _anim,
-                    turns: up ? 0.5 : 0,
-                    child: SortChevron(color: cs.onSurface),
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        onTap: () => onChanged(state.next()),
+        onLongPress: onOpenMenu,
+        excludeSemantics: true,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: r,
+              onTap: () => onChanged(state.next()),
+              onLongPress: onOpenMenu,
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: _anim,
+                  transitionBuilder: (child, a) => FadeTransition(
+                    opacity: a,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.8, end: 1).animate(a),
+                      child: child,
+                    ),
                   ),
-                ),
-              ),
-              AnimatedPositioned(
-                duration: _anim,
-                curve: Curves.easeOut,
-                left: 0,
-                right: 0,
-                top: glyphTop,
-                height: _glyph,
-                child: Center(
                   child: SortGlyph(
+                    key: ValueKey(state.field),
                     field: state.field,
-                    dir: state.dir,
+                    reversed: state.reverse,
                     color: cs.onSurface,
-                    badgeBg: barColor ?? cs.surface,
                     compact: true,
                   ),
                 ),
               ),
-            ]),
+            ),
           ),
         ),
       ),
