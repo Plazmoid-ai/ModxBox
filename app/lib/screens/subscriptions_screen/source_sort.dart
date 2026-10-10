@@ -86,7 +86,7 @@ class SourceSortSettings {
     ActiveFilter? activeFilter,
   }) {
     final nextState = sortState ??
-        (mode == null ? this.sortState : _sortStateFromLegacyMode(mode));
+        (mode == null ? effectiveSortState : _sortStateFromLegacyMode(mode));
     final nextMode = sortState != null
         ? _sortModeFromState(sortState)
         : (mode ?? _sortModeFromState(nextState));
