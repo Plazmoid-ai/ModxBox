@@ -105,8 +105,8 @@ void main() {
     });
 
     test('toolbar flips the active field and state round-trips through JSON', () {
-      final initial = const modern_sort.SortState()
-          .tapInMenu(modern_sort.SortField.created);
+      final base = const modern_sort.SortState();
+      final initial = base.tapInMenu(modern_sort.SortField.created);
       final flipped = initial.tapInBar();
       expect(flipped.dir, modern_sort.SortDir.up);
 
@@ -296,11 +296,13 @@ void main() {
     });
 
     test('persists independently remembered directions for every field', () {
-      final state = const modern_sort.SortState()
+      final base = const modern_sort.SortState();
+      final state = base
           .tapInMenu(modern_sort.SortField.modified)
           .tapInBar()
           .tapInMenu(modern_sort.SortField.created);
-      final source = const SourceSortSettings().copyWith(sortState: state);
+      final source =
+          const SourceSortSettings().copyWith(sortState: state);
       final restored =
           SourceSortSettings.fromJson(jsonEncode(source.toJson()));
 
