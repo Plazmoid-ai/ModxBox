@@ -62,6 +62,7 @@ class RoutingScreen extends StatefulWidget {
     this.initialPresetsTab = false,
     this.focusRuleId,
     this.initialRulesTab = false,
+    this.focusRouteFinal = false,
   });
 
   final SubscriptionController subController;
@@ -78,6 +79,7 @@ class RoutingScreen extends StatefulWidget {
   /// Journal navigation target: focus this rule on the Rules tab.
   final String? focusRuleId;
   final bool initialRulesTab;
+  final bool focusRouteFinal;
 
   @override
   State<RoutingScreen> createState() => _RoutingScreenState();
@@ -126,6 +128,8 @@ class _RoutingScreenState extends State<RoutingScreen>
   String? _highlightedDirectionTag;
   Timer? _directionHighlightTimer;
   final _ruleJournalKeys = <String, GlobalKey>{};
+  final _routeFinalJournalKey =
+      GlobalKey(debugLabel: 'journal-route-final');
 
   GlobalKey _ruleJournalKey(String id) => _ruleJournalKeys.putIfAbsent(
         id,
@@ -145,6 +149,7 @@ class _RoutingScreenState extends State<RoutingScreen>
       unawaited(_load().then((_) {
         _focusDirectionIfAny();
         _focusRuleFromJournal();
+        _focusRouteFinalFromJournal();
       }));
     } else {
       unawaited(_refetchTemplate());
@@ -244,19 +249,36 @@ class _RoutingScreenState extends State<RoutingScreen>
     }
   }
 
+  Future<void> _focusRouteFinalFromJournal() async {
+    if (!mounted || !widget.focusRouteFinal) return;
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+    final targetContext = _routeFinalJournalKey.currentContext;
+    if (targetContext != null) {
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+        alignment: 0.25,
+      );
+    }
+  }
+
   void _recordRoutingChange({
     required String title,
     required String beforeText,
     required String afterText,
     String? ruleId,
     String target = 'routing.rules',
+    String area = 'Rules',
+    String category = 'info',
   }) {
     unawaited(ChangeJournalService.record(
-      category: 'info',
+      category: category,
       title: getLocalText.s(title),
       beforeText: beforeText,
       afterText: afterText,
-      path: '${getLocalText.s("Routing")} › ${getLocalText.s("Rules")}',
+      path: '${getLocalText.s("Routing")} › ${getLocalText.s(area)}',
       target: ruleId == null ? target : 'routing.rule:$ruleId',
     ));
   }
@@ -969,13 +991,24 @@ class _RoutingScreenState extends State<RoutingScreen>
 
   Widget _buildRouteFinalTile() {
     return RouteFinalTile(
+      key: _routeFinalJournalKey,
       options: _outboundOptions(),
       routeFinal: _routeFinal,
       onChanged: (val) {
+        if (val == _routeFinal) return;
+        final previous = _routeFinal;
         setState(() {
           _routeFinal = val;
           _markDirty();
         });
+        _recordRoutingChange(
+          title: "Default route changed",
+          beforeText: previous,
+          afterText: val,
+          target: 'routing.routeFinal',
+          area: 'Directions',
+          category: 'important',
+        );
       },
     );
   }
