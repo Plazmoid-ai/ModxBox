@@ -32,6 +32,7 @@ class SubscriptionsTab extends StatelessWidget {
     required this.onEditDeviceOs,
     required this.onEditVerOs,
     required this.onEditDeviceModel,
+    required this.journalKeys,
   });
 
   final bool loaded;
@@ -63,6 +64,7 @@ class SubscriptionsTab extends StatelessWidget {
   final VoidCallback onEditDeviceOs;
   final VoidCallback onEditVerOs;
   final VoidCallback onEditDeviceModel;
+  final Map<String, GlobalKey> journalKeys;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +77,7 @@ class SubscriptionsTab extends StatelessWidget {
             style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         SwitchListTile(
+          key: journalKeys['autoUpdateSubs'],
           title: Text(getLocalText.s("Auto-update subscriptions")),
           subtitle: Text(getLocalText.s("Refresh on app start, after VPN connects, and periodically. Manual ⟳ works regardless.")),
           secondary: const Icon(Icons.cloud_sync_outlined),
@@ -82,6 +85,7 @@ class SubscriptionsTab extends StatelessWidget {
           onChanged: loaded ? onAutoUpdateSubsChanged : null,
         ),
         SwitchListTile(
+          key: journalKeys['autoUpdateDisabledSubs'],
           title: Text(getLocalText.s("Update disabled subscriptions")),
           subtitle: Text(getLocalText.s("Keep the node list of switched-off subscriptions fresh, so it is not stale when you switch one back on. Their nodes stay out of the config either way.")),
           secondary: const Icon(Icons.cloud_off_outlined),
