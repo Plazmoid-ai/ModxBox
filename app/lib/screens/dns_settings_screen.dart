@@ -559,7 +559,6 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
             unawaited(SettingsStorage.saveCustomRules(renamed));
           }
         }
-      }
       _markDirty();
     });
     final renamed = saved.tag != tag;
