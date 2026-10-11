@@ -64,7 +64,8 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     with
         WidgetsBindingObserver,
         LazyPersistMixin<DnsSettingsScreen>,
-        TemplateAwareState<DnsSettingsScreen> {
+        TemplateAwareState<DnsSettingsScreen>,
+        SingleTickerProviderStateMixin<DnsSettingsScreen> {
   @override
   SubscriptionController get lazyController => widget.subController;
 
@@ -160,8 +161,29 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
   Timer? _cacheJournalTimer;
   String? _cacheCapacityJournalBefore;
 
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    final int initialTabIndex;
+    if (widget.focusRuleIdentity != null) {
+      initialTabIndex = 2;
+    } else if (widget.focusServerTag != null) {
+      initialTabIndex = 1;
+    } else {
+      initialTabIndex = 0;
+    }
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: initialTabIndex,
+    );
+  }
+
   @override
   void dispose() {
+    _tabController.dispose();
     _cacheJournalTimer?.cancel();
     _flushCacheCapacityJournal();
     _cacheCapacityCtl.dispose();
@@ -799,6 +821,107 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     );
   }
 
+  void _selectStrategy(String value) {
+    if (value == _strategy) return;
+    final previous = _strategy;
+    setState(() {
+      _strategy = value;
+      _markDirty();
+    });
+    _recordDnsChange(
+      title: getLocalText.s("DNS strategy changed"),
+      beforeText: previous,
+      afterText: value,
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Strategy")}',
+      target: 'dns.strategy',
+    );
+  }
+
+  Widget _buildStrategySelector() {
+    const strategies = <String>[
+      'prefer_ipv4', // l10n-exempt: sing-box wire value
+      'prefer_ipv6', // l10n-exempt: sing-box wire value
+      'ipv4_only', // l10n-exempt: sing-box wire value
+      'ipv6_only', // l10n-exempt: sing-box wire value
+    ];
+    final colorScheme = Theme.of(context).colorScheme;
+    final selectedStrategy =
+        strategies.contains(_strategy) ? _strategy : 'ipv4_only';
+
+    return Card(
+      key: _journalKeys['strategy'],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              getLocalText.s("Strategy"),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            for (final strategy in strategies)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _selectStrategy(strategy),
+                  child: Builder(
+                    builder: (context) {
+                      final selected = strategy == selectedStrategy;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? colorScheme.secondaryContainer
+                              : null,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: selected
+                                ? colorScheme.primary
+                                : colorScheme.outlineVariant,
+                            width: selected ? 1 : 0.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selected
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_unchecked,
+                              size: 18,
+                              color: selected
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              strategy,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -828,280 +951,311 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     final mirrors = _ruleMirrors;
     final rows = _ruleDisplayRows;
 
+    final pagePadding = EdgeInsets.fromLTRB(
+      12,
+      12,
+      12,
+      MediaQuery.of(context).padding.bottom + 24,
+    );
+
     return Scaffold(
-      appBar: AppBar(title: Text(getLocalText.s("DNS Settings"))),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(12, 12, 12, MediaQuery.of(context).padding.bottom + 24),
+      appBar: AppBar(
+        title: Text(getLocalText.s("DNS Settings")),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: [
+            Tab(
+              key: const ValueKey('dns_tab_label_settings'),
+              text: getLocalText.s("DNS Settings"),
+            ),
+            Tab(
+              key: const ValueKey('dns_tab_label_servers'),
+              text: getLocalText.s("DNS Servers"),
+            ),
+            Tab(
+              key: const ValueKey('dns_tab_label_rules'),
+              text: getLocalText.s("DNS Rules"),
+            ),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // --- Servers ---
-          Row(
+          ListView(
+            key: const ValueKey('dns_tab_settings'),
+            padding: pagePadding,
             children: [
-              Text(getLocalText.s("DNS Servers"),
-                  style: theme.textTheme.titleMedium),
-              const Spacer(),
-              IconButton(icon: const Icon(Icons.add), onPressed: _addServer),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // §042: единый render через 3-tier merged list. §117 задача 4:
-          // тайл — только switch + тап→полноэкранный редактор.
-          ...displayed.map((entry) => MergedServerTile(
-                key: _serverJournalKey(entry.tag),
-                entry: entry,
-                onToggleEnabled: _toggleServerEnabled,
-                onTap: _editServer,
-                liveGroup: _liveDnsGroups[entry.tag], // §312
-              )),
-          const Divider(height: 32),
-
-          // --- Strategy ---
-          ListTile(
-            key: _journalKeys['strategy'],
-            contentPadding: EdgeInsets.zero,
-            title: Text(getLocalText.s("Strategy")),
-            trailing: DropdownButton<String>(
-              value: ['prefer_ipv4', 'prefer_ipv6', 'ipv4_only', 'ipv6_only'].contains(_strategy)
-                  ? _strategy : 'ipv4_only',
-              items: const [
-                DropdownMenuItem(value: 'prefer_ipv4', child: Text('prefer_ipv4')), // l10n-exempt: sing-box wire value
-                DropdownMenuItem(value: 'prefer_ipv6', child: Text('prefer_ipv6')), // l10n-exempt: sing-box wire value
-                DropdownMenuItem(value: 'ipv4_only', child: Text('ipv4_only')), // l10n-exempt: sing-box wire value
-                DropdownMenuItem(value: 'ipv6_only', child: Text('ipv6_only')), // l10n-exempt: sing-box wire value
-              ],
-              onChanged: (v) {
-                if (v == null || v == _strategy) return;
-                final previous = _strategy;
-                setState(() { _strategy = v; _markDirty(); });
-                _recordDnsChange(
-                  title: getLocalText.s("DNS strategy changed"),
-                  beforeText: previous,
-                  afterText: v,
-                  path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Strategy")}',
-                  target: 'dns.strategy',
-                );
-              },
-            ),
-          ),
-
-          const Divider(height: 32),
-
-          // --- DNS Rules (§061 dns-rules-refactor) ---
-          Row(
-            children: [
-              Text(getLocalText.s("DNS Rules"), style: theme.textTheme.titleMedium),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: _addUserRule,
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(getLocalText.s("Add user rule")),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          if (_rules.isEmpty && mirrors.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                getLocalText.s("No DNS rules. Add user rules manually, or enable presets / template defaults."),
-                style: const TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-            )
-          else
-            // §117 (решение №6): display-модель — standalone-записи +
-            // атомарная mirror-группа одним элементом (см. _ruleDisplayRows).
-            ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              itemCount: rows.length,
-              onReorderItem: _onReorderRules,
-              itemBuilder: (ctx, i) {
-                final row = rows[i];
-                if (row == -1) {
-                  // Группа draggable только при наличии preset-якорей —
-                  // иначе позицию не во что персистить.
-                  final draggable = _rules.any((e) => e is DnsRulePreset);
-                  return DnsMirrorGroupCard(
-                    key: const ValueKey('dns-mirror-group'),
-                    dragIndex: draggable ? i : null,
-                    children: _buildMirrorGroupChildren(),
+              // --- Final ---
+              // §048/§047 tooltip — `dns.final` — catch-all для app's DNS queries
+              // (когда не match'ит ни один rule). `local_dns_resolver` тут БЕЗОПАСЕН:
+              // app's queries не recurse через TUN потому что system resolver
+              // вызывается через protected JNI path для apps. Encrypted options
+              // (`google_doh`, `*_dot`) рекомендуем для privacy.
+              ResolverPicker(
+                key: _journalKeys['dnsFinal'],
+                title: getLocalText.s("DNS Final"),
+                subtitle: getLocalText.s("For apps · default fallback when no DNS rule matches"),
+                value: _dnsFinal,
+                serverTags: resolverTags,
+                onChanged: (v) {
+                  if (v == _dnsFinal) return;
+                  final previous = _dnsFinal;
+                  setState(() { _dnsFinal = v; _markDirty(); });
+                  _recordDnsChange(
+                    title: getLocalText.s("DNS Final changed"),
+                    beforeText: previous.isEmpty ? '—' : previous,
+                    afterText: v,
+                    path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Final")}',
+                    target: 'dns.final',
                   );
-                }
-                return DnsRuleTile(
-                  key: _dnsRuleJournalKey(_ruleIdentity(_rules[row])),
-                  index: row,
-                  dragIndex: i,
-                  entry: _rules[row],
-                  templateRulesByName: _templateRulesByName,
-                  presetRulesByPresetId: _presetRulesByPresetId,
-                  presetLabelByPresetId: _presetLabelByPresetId,
-                  onToggleEnabled: _toggleRuleEnabled,
-                  onEdit: _showUserRuleEditor,
-                  onDelete: _deleteRule,
-                  // The GlobalKey above is also the journal navigation target.
-                );
-              },
-            ),
-          const Divider(height: 32),
-
-          // --- Final ---
-          // §048/§047 tooltip — `dns.final` — catch-all для app's DNS queries
-          // (когда не match'ит ни один rule). `local_dns_resolver` тут БЕЗОПАСЕН:
-          // app's queries не recurse через TUN потому что system resolver
-          // вызывается через protected JNI path для apps. Encrypted options
-          // (`google_doh`, `*_dot`) рекомендуем для privacy.
-          ResolverPicker(
-            key: _journalKeys['dnsFinal'],
-            title: getLocalText.s("DNS Final"),
-            subtitle: getLocalText.s("For apps · default fallback when no DNS rule matches"),
-            value: _dnsFinal,
-            serverTags: resolverTags,
-            onChanged: (v) {
-              if (v == _dnsFinal) return;
-              final previous = _dnsFinal;
-              setState(() { _dnsFinal = v; _markDirty(); });
-              _recordDnsChange(
-                title: getLocalText.s("DNS Final changed"),
-                beforeText: previous.isEmpty ? '—' : previous,
-                afterText: v,
-                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Final")}',
-                target: 'dns.final',
-              );
-            },
-            tooltip: getLocalText.s("Default fallback DNS server. Used when an app makes a DNS query and no DNS rule above matches it. Every app DNS query that isn't routed by a rule ends up here.\n\nRecommended:\n  • dns_shield — default; races 6 encrypted providers, answers from whichever replies first\n  • google_doh — encrypted (DoH)\n  • cloudflare_dot / google_dot — encrypted (DoT)\n  • cloudflare_udp / google_udp — fast plain UDP\n\nlocal_dns_resolver works but reveals queries to your ISP. Encrypted options keep them private."),
-            warnIfLocal: false,
-          ),
-
-          // --- Default Resolver ---
-          // §047 tooltip — `route.default_domain_resolver` — internal sing-box
-          // DNS lookups (outbound endpoint hostname'ы, domain matching в routing
-          // rules). Здесь `local_dns_resolver` ОПАСЕН: на Android-VPN system
-          // resolver может recurse через TUN и накапливать stale kernel state
-          // → §047 deterioration через несколько часов uptime. Показываем
-          // жёлтый ⚠ если выбран local_dns_resolver.
-          ResolverPicker(
-            key: _journalKeys['defaultResolver'],
-            title: getLocalText.s("Default Domain Resolver"),
-            subtitle: getLocalText.s("For routing · resolves hostnames inside sing-box (outbound endpoints, routing rules)"),
-            value: _defaultResolver,
-            serverTags: resolverTags,
-            onChanged: (v) {
-              if (v == _defaultResolver) return;
-              final previous = _defaultResolver;
-              setState(() { _defaultResolver = v; _markDirty(); });
-              _recordDnsChange(
-                title: getLocalText.s("Default Domain Resolver changed"),
-                beforeText: previous.isEmpty ? '—' : previous,
-                afterText: v,
-                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Default Domain Resolver")}',
-                target: 'dns.defaultResolver',
-              );
-            },
-            tooltip: getLocalText.s("Used by routing engine to resolve hostnames internally (outbound endpoints, routing rules). Not the resolver apps use.\n\nRecommended:\n  • dns_shield — default; races 6 encrypted providers, answers from whichever replies first\n  • cloudflare_udp — UDP to 1.1.1.1 (fast)\n  • google_udp — UDP to 8.8.8.8 (fast)\n  • google_doh — encrypted\n\n⚠ local_dns_resolver here leaks lookups to your ISP — system DNS bypasses the VPN."),
-            warnIfLocal: true,
-          ),
-          if (_defaultResolver == 'local_dns_resolver')
-            LocalResolverWarningBanner(
-              hasCloudflareUdp:
-                  _servers.any((s) => s.tag == 'cloudflare_udp'),
-              onSwitchToCloudflareUdp: () {
-              if (_defaultResolver == 'cloudflare_udp') return;
-              final previous = _defaultResolver;
-              setState(() {
-                _defaultResolver = 'cloudflare_udp';
-                _markDirty();
-              });
-              _recordDnsChange(
-                title: getLocalText.s("Default Domain Resolver changed"),
-                beforeText: previous.isEmpty ? '—' : previous,
-                afterText: 'cloudflare_udp',
-                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Default Domain Resolver")}',
-                target: 'dns.defaultResolver',
-              );
-            },
-            ),
-
-          // §580 — кэш DNS ядра: размер, устаревшие ответы, хранение в
-          // cache.db. Изменение помечает конфиг к пересборке.
-          const Divider(height: 32),
-          KeyedSubtree(
-            key: _journalKeys['cacheCapacity'],
-            child: TextField(
-              key: const ValueKey('dns_cache_capacity'),
-              controller: _cacheCapacityCtl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                labelText: getLocalText.s("DNS cache size"),
-                helperText: getLocalText.s("Number of cached answers."),
-                errorText:
-                    _cacheCapacityError.isEmpty ? null : _cacheCapacityError,
-                isDense: true,
-                border: const OutlineInputBorder(),
+                },
+                tooltip: getLocalText.s("Default fallback DNS server. Used when an app makes a DNS query and no DNS rule above matches it. Every app DNS query that isn't routed by a rule ends up here.\n\nRecommended:\n  • dns_shield — default; races 6 encrypted providers, answers from whichever replies first\n  • google_doh — encrypted (DoH)\n  • cloudflare_dot / google_dot — encrypted (DoT)\n  • cloudflare_udp / google_udp — fast plain UDP\n\nlocal_dns_resolver works but reveals queries to your ISP. Encrypted options keep them private."),
+                warnIfLocal: false,
               ),
-              onChanged: _applyCacheCapacity,
-            ),
-          ),
-          KeyedSubtree(
-            key: _journalKeys['optimistic'],
-            child: SwitchListTile(
-              key: const ValueKey('dns_optimistic'),
-              contentPadding: EdgeInsets.zero,
-              title: Text(getLocalText.s("Serve stale answers")),
-              subtitle: Text(getLocalText.s(
-                  "Answer from cache at once and refresh in the background.")),
-              value: _optimistic,
-              onChanged: (v) {
-                if (_optimistic == v) return;
-                final previous = _optimistic;
-                setState(() {
-                  _optimistic = v;
-                  _markDirty();
-                });
-                _recordDnsChange(
-                  title: getLocalText.s("Serve stale answers"),
-                  beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
-                  afterText: getLocalText.s(v ? "Enabled" : "Off"),
-                  path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Serve stale answers")}',
-                  target: 'dns.optimistic',
-                );
-              },
-            ),
-          ),
-          KeyedSubtree(
-            key: _journalKeys['storeCache'],
-            child: SwitchListTile(
-              key: const ValueKey('dns_store_cache'),
-              contentPadding: EdgeInsets.zero,
-              title: Text(getLocalText.s("Keep DNS cache after restart")),
-              value: _storeCache,
-              onChanged: (v) {
-                if (_storeCache == v) return;
-                final previous = _storeCache;
-                setState(() {
-                  _storeCache = v;
-                  _markDirty();
-                });
-                _recordDnsChange(
-                  title: getLocalText.s("Keep DNS cache after restart"),
-                  beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
-                  afterText: getLocalText.s(v ? "Enabled" : "Off"),
-                  path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Keep DNS cache after restart")}',
-                  target: 'dns.storeCache',
-                );
-              },
-            ),
-          ),
 
-          // §263 — сброс DNS-кэша ядра (cache.db). Внизу экрана, отдельным
-          // блоком: это разовое действие, не настройка конфига (не в rebuild).
-          // §580: удаляется файл целиком — с ним и записи DNS (`store_dns`).
-          ListTile(
-            leading: Icon(Icons.cleaning_services_outlined,
-                color: Theme.of(context).colorScheme.error),
-            title: Text(getLocalText.s("Clear DNS cache")),
-            subtitle: Text(getLocalText.s("Flush FakeIP allocations and cached DNS responses. Reloads the VPN if running.")),
-            onTap: _confirmClearDnsCache,
+              // --- Default Resolver ---
+              // §047 tooltip — `route.default_domain_resolver` — internal sing-box
+              // DNS lookups (outbound endpoint hostname'ы, domain matching в routing
+              // rules). Здесь `local_dns_resolver` ОПАСЕН: на Android-VPN system
+              // resolver может recurse через TUN и накапливать stale kernel state
+              // → §047 deterioration через несколько часов uptime. Показываем
+              // жёлтый ⚠ если выбран local_dns_resolver.
+              ResolverPicker(
+                key: _journalKeys['defaultResolver'],
+                title: getLocalText.s("Default Domain Resolver"),
+                subtitle: getLocalText.s("For routing · resolves hostnames inside sing-box (outbound endpoints, routing rules)"),
+                value: _defaultResolver,
+                serverTags: resolverTags,
+                onChanged: (v) {
+                  if (v == _defaultResolver) return;
+                  final previous = _defaultResolver;
+                  setState(() { _defaultResolver = v; _markDirty(); });
+                  _recordDnsChange(
+                    title: getLocalText.s("Default Domain Resolver changed"),
+                    beforeText: previous.isEmpty ? '—' : previous,
+                    afterText: v,
+                    path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Default Domain Resolver")}',
+                    target: 'dns.defaultResolver',
+                  );
+                },
+                tooltip: getLocalText.s("Used by routing engine to resolve hostnames internally (outbound endpoints, routing rules). Not the resolver apps use.\n\nRecommended:\n  • dns_shield — default; races 6 encrypted providers, answers from whichever replies first\n  • cloudflare_udp — UDP to 1.1.1.1 (fast)\n  • google_udp — UDP to 8.8.8.8 (fast)\n  • google_doh — encrypted\n\n⚠ local_dns_resolver here leaks lookups to your ISP — system DNS bypasses the VPN."),
+                warnIfLocal: true,
+              ),
+              if (_defaultResolver == 'local_dns_resolver')
+                LocalResolverWarningBanner(
+                  hasCloudflareUdp:
+                      _servers.any((s) => s.tag == 'cloudflare_udp'),
+                  onSwitchToCloudflareUdp: () {
+                  if (_defaultResolver == 'cloudflare_udp') return;
+                  final previous = _defaultResolver;
+                  setState(() {
+                    _defaultResolver = 'cloudflare_udp';
+                    _markDirty();
+                  });
+                  _recordDnsChange(
+                    title: getLocalText.s("Default Domain Resolver changed"),
+                    beforeText: previous.isEmpty ? '—' : previous,
+                    afterText: 'cloudflare_udp',
+                    path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Default Domain Resolver")}',
+                    target: 'dns.defaultResolver',
+                  );
+                },
+                ),
+
+              // §580 — кэш DNS ядра: размер, устаревшие ответы, хранение в
+              // cache.db. Изменение помечает конфиг к пересборке.
+              const Divider(height: 32),
+              KeyedSubtree(
+                key: _journalKeys['cacheCapacity'],
+                child: TextField(
+                  key: const ValueKey('dns_cache_capacity'),
+                  controller: _cacheCapacityCtl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    labelText: getLocalText.s("DNS cache size"),
+                    helperText: getLocalText.s("Number of cached answers."),
+                    errorText:
+                        _cacheCapacityError.isEmpty ? null : _cacheCapacityError,
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: _applyCacheCapacity,
+                ),
+              ),
+              KeyedSubtree(
+                key: _journalKeys['optimistic'],
+                child: SwitchListTile(
+                  key: const ValueKey('dns_optimistic'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(getLocalText.s("Serve stale answers")),
+                  subtitle: Text(getLocalText.s(
+                      "Answer from cache at once and refresh in the background.")),
+                  value: _optimistic,
+                  onChanged: (v) {
+                    if (_optimistic == v) return;
+                    final previous = _optimistic;
+                    setState(() {
+                      _optimistic = v;
+                      _markDirty();
+                    });
+                    _recordDnsChange(
+                      title: getLocalText.s("Serve stale answers"),
+                      beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
+                      afterText: getLocalText.s(v ? "Enabled" : "Off"),
+                      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Serve stale answers")}',
+                      target: 'dns.optimistic',
+                    );
+                  },
+                ),
+              ),
+              KeyedSubtree(
+                key: _journalKeys['storeCache'],
+                child: SwitchListTile(
+                  key: const ValueKey('dns_store_cache'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(getLocalText.s("Keep DNS cache after restart")),
+                  value: _storeCache,
+                  onChanged: (v) {
+                    if (_storeCache == v) return;
+                    final previous = _storeCache;
+                    setState(() {
+                      _storeCache = v;
+                      _markDirty();
+                    });
+                    _recordDnsChange(
+                      title: getLocalText.s("Keep DNS cache after restart"),
+                      beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
+                      afterText: getLocalText.s(v ? "Enabled" : "Off"),
+                      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Keep DNS cache after restart")}',
+                      target: 'dns.storeCache',
+                    );
+                  },
+                ),
+              ),
+
+              // §263 — сброс DNS-кэша ядра (cache.db). Внизу экрана, отдельным
+              // блоком: это разовое действие, не настройка конфига (не в rebuild).
+              // §580: удаляется файл целиком — с ним и записи DNS (`store_dns`).
+              ListTile(
+                leading: Icon(Icons.cleaning_services_outlined,
+                    color: Theme.of(context).colorScheme.error),
+                title: Text(getLocalText.s("Clear DNS cache")),
+                subtitle: Text(getLocalText.s("Flush FakeIP allocations and cached DNS responses. Reloads the VPN if running.")),
+                onTap: _confirmClearDnsCache,
+              ),
+              const Divider(height: 32),
+              _buildStrategySelector(),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    key: const ValueKey('dns_add_server_from_settings'),
+                    onPressed: _addServer,
+                    icon: const Icon(Icons.add),
+                    label: Text(getLocalText.s("Add DNS Server")),
+                  ),
+                  OutlinedButton.icon(
+                    key: const ValueKey('dns_add_rule_from_settings'),
+                    onPressed: _addUserRule,
+                    icon: const Icon(Icons.add),
+                    label: Text(getLocalText.s("Add DNS Rule")),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          ListView(
+            key: const ValueKey('dns_tab_servers'),
+            padding: pagePadding,
+            children: [
+              // --- Servers ---
+              Row(
+                children: [
+                  Text(getLocalText.s("DNS Servers"),
+                      style: theme.textTheme.titleMedium),
+                  const Spacer(),
+                  IconButton(icon: const Icon(Icons.add), onPressed: _addServer),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // §042: единый render через 3-tier merged list. §117 задача 4:
+              // тайл — только switch + тап→полноэкранный редактор.
+              ...displayed.map((entry) => MergedServerTile(
+                    key: _serverJournalKey(entry.tag),
+                    entry: entry,
+                    onToggleEnabled: _toggleServerEnabled,
+                    onTap: _editServer,
+                    liveGroup: _liveDnsGroups[entry.tag], // §312
+                  )),
+            ],
+          ),
+          ListView(
+            key: const ValueKey('dns_tab_rules'),
+            padding: pagePadding,
+            children: [
+              // --- DNS Rules (§061 dns-rules-refactor) ---
+              Row(
+                children: [
+                  Text(getLocalText.s("DNS Rules"), style: theme.textTheme.titleMedium),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _addUserRule,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(getLocalText.s("Add user rule")),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              if (_rules.isEmpty && mirrors.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    getLocalText.s("No DNS rules. Add user rules manually, or enable presets / template defaults."),
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                )
+              else
+                // §117 (решение №6): display-модель — standalone-записи +
+                // атомарная mirror-группа одним элементом (см. _ruleDisplayRows).
+                ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  itemCount: rows.length,
+                  onReorderItem: _onReorderRules,
+                  itemBuilder: (ctx, i) {
+                    final row = rows[i];
+                    if (row == -1) {
+                      // Группа draggable только при наличии preset-якорей —
+                      // иначе позицию не во что персистить.
+                      final draggable = _rules.any((e) => e is DnsRulePreset);
+                      return DnsMirrorGroupCard(
+                        key: const ValueKey('dns-mirror-group'),
+                        dragIndex: draggable ? i : null,
+                        children: _buildMirrorGroupChildren(),
+                      );
+                    }
+                    return DnsRuleTile(
+                      key: _dnsRuleJournalKey(_ruleIdentity(_rules[row])),
+                      index: row,
+                      dragIndex: i,
+                      entry: _rules[row],
+                      templateRulesByName: _templateRulesByName,
+                      presetRulesByPresetId: _presetRulesByPresetId,
+                      presetLabelByPresetId: _presetLabelByPresetId,
+                      onToggleEnabled: _toggleRuleEnabled,
+                      onEdit: _showUserRuleEditor,
+                      onDelete: _deleteRule,
+                      // The GlobalKey above is also the journal navigation target.
+                    );
+                  },
+                ),
+            ],
           ),
         ],
       ),

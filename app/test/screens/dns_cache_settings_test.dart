@@ -106,6 +106,27 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   }
 
+  testWidgets('вкладки DNS: настройки открываются по умолчанию', (tester) async {
+    await openScreen(tester);
+
+    final tabBarFinder = find.byType(TabBar);
+    expect(tabBarFinder, findsOneWidget);
+    var tabBar = tester.widget<TabBar>(tabBarFinder);
+    expect(tabBar.tabs, hasLength(3));
+    expect(tabBar.controller?.index, 0);
+
+    await tester.tap(find.byKey(const ValueKey('dns_tab_label_servers')));
+    await tester.pumpAndSettle();
+    tabBar = tester.widget<TabBar>(tabBarFinder);
+    expect(tabBar.controller?.index, 1);
+
+    await tester.tap(find.byKey(const ValueKey('dns_tab_label_rules')));
+    await tester.pumpAndSettle();
+    tabBar = tester.widget<TabBar>(tabBarFinder);
+    expect(tabBar.controller?.index, 2);
+    await close(tester);
+  });
+
   Future<void> settle(WidgetTester tester) async {
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 50)));
