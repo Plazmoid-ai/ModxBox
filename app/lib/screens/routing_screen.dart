@@ -697,6 +697,12 @@ class _RoutingScreenState extends State<RoutingScreen>
     if (cr is CustomRulePreset) {
       unawaited(applyPresetOnChange(rule, cr));
     }
+    _recordRoutingChange(
+      title: "Routing rule created",
+      beforeText: '—',
+      afterText: ruleDisplayName(cr, _customRules, _template),
+      ruleId: cr.id,
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -1024,7 +1030,8 @@ class _RoutingScreenState extends State<RoutingScreen>
     if (newIndex < 0 || newIndex > _customRules.length - 1) return;
     final moved = _customRules[oldIndex];
     if (!_isSortable(moved)) return;
-    final previousPosition = oldIndex + 1; // несортируемое не двигаем
+    final previousPosition = oldIndex + 1;
+    final movedName = ruleDisplayName(moved, _customRules, _template);
     setState(() {
       // Приходит из `onReorderItem` (RoutingTabs) — newIndex уже приведён к
       // списку БЕЗ перетаскиваемого элемента, ручного сдвига «-1 при move
@@ -1046,8 +1053,8 @@ class _RoutingScreenState extends State<RoutingScreen>
     if (newPosition != previousPosition) {
       _recordRoutingChange(
         title: "Routing rule reordered",
-        beforeText: '#$previousPosition',
-        afterText: '#$newPosition',
+        beforeText: '$movedName · #$previousPosition',
+        afterText: '$movedName · #$newPosition',
         ruleId: moved.id,
       );
     }
@@ -1314,7 +1321,7 @@ class _RoutingScreenState extends State<RoutingScreen>
       });
       _recordRoutingChange(
         title: "Routing rule created",
-        beforeText: '',
+        beforeText: '—',
         afterText: ruleDisplayName(saved, _customRules, _template),
         ruleId: saved.id,
       );
