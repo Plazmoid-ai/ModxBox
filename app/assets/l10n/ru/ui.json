@@ -5924,5 +5924,35 @@
   },
   "Node list in two columns": {
     "value": "Два столбца в списке узлов"
+  },
+  "Open DNS navigation from the main screen to jump directly to a DNS setting.": {
+    "value": "Откройте журнал из главного меню, чтобы перейти прямо к настройке DNS."
+  },
+  "DNS server added": {
+    "value": "DNS-сервер добавлен"
+  },
+  "DNS server changed": {
+    "value": "DNS-сервер изменён"
+  },
+  "DNS server deleted": {
+    "value": "DNS-сервер удалён"
+  },
+  "Deleted": {
+    "value": "Удалён"
+  },
+  "DNS strategy changed": {
+    "value": "Стратегия DNS изменена"
+  },
+  "DNS Final changed": {
+    "value": "Изменён DNS Final"
+  },
+  "Default Domain Resolver changed": {
+    "value": "Изменён Default Domain Resolver"
+  },
+  "DNS server enabled": {
+    "value": "DNS-сервер включён"
+  },
+  "DNS server disabled": {
+    "value": "DNS-сервер выключен"
   }
 }
