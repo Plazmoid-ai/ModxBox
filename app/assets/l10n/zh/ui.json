@@ -5631,20 +5631,8 @@
   "Undo change": {
     "value": "撤销"
   },
-  "Change redone": {
-    "value": "已重做更改"
-  },
-  "Lock config": {
-    "value": "锁定配置"
-  },
   "Debug API port": {
     "value": "Debug API 端口"
-  },
-  "Auto-record Wi-Fi": {
-    "value": "自动记录 Wi-Fi"
-  },
-  "Node list in two columns": {
-    "value": "节点列表双列显示"
   },
   "Open DNS navigation from the main screen to jump directly to a DNS setting.": {
     "value": "请从主界面的菜单打开日志，以直接跳转到 DNS 设置。"
