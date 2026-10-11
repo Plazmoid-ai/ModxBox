@@ -418,7 +418,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     if (keyName == null) return;
 
     await Future<void>.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
+    if (!context.mounted) return;
     final itemContext = _journalKeys[keyName]?.currentContext;
     if (itemContext != null) {
       await Scrollable.ensureVisible(
