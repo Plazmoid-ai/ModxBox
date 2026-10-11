@@ -46,7 +46,7 @@ class AppSettingsScreen extends StatefulWidget {
   });
 
   /// 0 = General, 1 = Appearance (§541), 2 = Subscriptions, 3 = Diagnostics,
-  /// 4 = Automation.
+  /// 4 = Automation, 5 = History.
   /// Used by deep-links.
   final int initialTab;
 
