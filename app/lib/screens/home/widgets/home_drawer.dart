@@ -96,7 +96,13 @@ class HomeDrawer extends StatelessWidget {
               leading: const Icon(Icons.settings_outlined),
               title: Text(getLocalText.s("App Settings")),
               subtitle: Text(getLocalText.s("General, appearance, diagnostics, automation")),
-              onTap: () => _go(context, const AppSettingsScreen()),
+              onTap: () => _go(
+                context,
+                AppSettingsScreen(
+                  homeController: controller,
+                  subController: subController,
+                ),
+              ),
             ),
             const Divider(),
             ListTile(
