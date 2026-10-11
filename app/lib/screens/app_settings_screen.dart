@@ -370,6 +370,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     if (target == 'subscriptions.autoUpdate') keyName = 'autoUpdateSubs';
     if (target == 'subscriptions.autoUpdateDisabled') keyName = 'autoUpdateDisabledSubs';
     if (target == 'diagnostics.debugApi') keyName = 'debugApi';
+    if (target == 'diagnostics.debugPort') keyName = 'debugPort';
     if (target == 'diagnostics.configLock') keyName = 'configLocked';
     if (target == 'diagnostics.coreLogs') keyName = 'coreLogs';
     if (target == 'diagnostics.autoRecordWifi') keyName = 'autoRecordWifi';
@@ -444,7 +445,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       title: getLocalText.s("Lock config (debug)"),
       beforeText: _journalBoolLabel(previous),
       afterText: _journalBoolLabel(locked),
-      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Lock config")}',
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Lock config (debug)")}',
       target: 'diagnostics.configLock',
     );
     if (!mounted) return;
@@ -535,7 +536,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       beforeText: previousPort.toString(),
       afterText: port.toString(),
       path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Debug API port")}',
-      target: 'diagnostics.debugApi',
+      target: 'diagnostics.debugPort',
     );
     await applyDebugApiSettings();
   }
@@ -986,7 +987,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
           title: getLocalText.s("Two columns on wide screens"),
           beforeText: _journalBoolLabel(previous),
           afterText: _journalBoolLabel(val),
-          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Appearance")} › ${getLocalText.s("Node list in two columns")}',
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Appearance")} › ${getLocalText.s("Two columns on wide screens")}',
           target: 'appearance.nodeListTwoColumns',
         );
       },
@@ -1227,7 +1228,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       title: getLocalText.s("Auto-record visited Wi-Fi networks"),
       beforeText: _journalBoolLabel(previous),
       afterText: _journalBoolLabel(enabled),
-      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Auto-record Wi-Fi")}',
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Auto-record visited Wi-Fi networks")}',
       target: 'diagnostics.autoRecordWifi',
     );
     await WifiHistoryListener.I.setEnabled(enabled);
