@@ -41,13 +41,13 @@ class AppearanceTab extends StatelessWidget {
         ThemeMode.dark => "Dark",
       });
 
-  String _localeLabel(String locale) => getLocalText.s(switch (locale) {
-        'system' => "System default",
-        'en' => "English",
-        'ru' => "Русский",
-        'zh' => "中文（简体）",
+  String _localeLabel(String locale) => switch (locale) {
+        'system' => getLocalText.s("System default"),
+        'en' => 'English',
+        'ru' => 'Русский',
+        'zh' => '中文（简体）',
         _ => locale,
-      });
+      };
 
   @override
   Widget build(BuildContext context) {
