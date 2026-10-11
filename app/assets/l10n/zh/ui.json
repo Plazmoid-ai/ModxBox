@@ -5744,5 +5744,8 @@
   },
   "Language changed": {
     "value": "语言已更改"
+  },
+  "Default route changed": {
+    "value": "默认路由已更改"
   }
 }
