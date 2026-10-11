@@ -5717,5 +5717,23 @@
   },
   "Open the journal from the main menu to jump to a routing rule.": {
     "value": "请从主菜单打开日志，以跳转到对应路由规则。"
+  },
+  "DNS rule reordered": {
+    "value": "DNS 规则顺序已更改"
+  },
+  "DNS rule created": {
+    "value": "已创建 DNS 规则"
+  },
+  "DNS rule edited": {
+    "value": "DNS 规则已更改"
+  },
+  "DNS rule enabled": {
+    "value": "已启用 DNS 规则"
+  },
+  "DNS rule disabled": {
+    "value": "已禁用 DNS 规则"
+  },
+  "DNS rule deleted": {
+    "value": "已删除 DNS 规则"
   }
 }
