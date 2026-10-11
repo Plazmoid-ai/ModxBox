@@ -20,6 +20,8 @@ import '../models/subscription_meta.dart';
 import '../models/tunnel_status.dart';
 import '../models/validation.dart';
 import '../services/app_log.dart';
+import '../services/change_journal.dart';
+import '../services/l10n/locale_controller.dart';
 import 'subscription_controller/core_reject_ops.dart';
 import '../services/core_reject/core_reject_guard.dart';
 import '../services/automation/event_emitter.dart';
@@ -3341,6 +3343,23 @@ class SubscriptionController extends ChangeNotifier {
       // restore-варианта была гонка с правками юзера во время fetch'а).
       await _persist(keepDirtyFlag: sameComposition || !affectsConfig);
       compositionChanged = !sameComposition;
+      if (!sameComposition) {
+        final previousTags = current.nodes.map((node) => node.tag).toSet();
+        final freshTags = result.nodes.map((node) => node.tag).toSet();
+        final added = freshTags.difference(previousTags).length;
+        final removed = previousTags.difference(freshTags).length;
+        unawaited(ChangeJournalService.record(
+          category: 'info',
+          title: getLocalText.s("Subscription updated"),
+          beforeText: getLocalText.s("Nodes: %d", current.nodes.length),
+          afterText: added + removed == 0
+              ? getLocalText.s("Node details changed · %d total", result.nodes.length)
+              : getLocalText.s("Added %d, removed %d · total %d",
+                  added, removed, result.nodes.length),
+          path: '${getLocalText.s("Servers")} › ${current.name}',
+          target: 'subscriptions.entry:${current.id}',
+        ));
+      }
       if (sameComposition) {
         AppLog.I.debug('§331: composition unchanged for $shortUrl');
       }
