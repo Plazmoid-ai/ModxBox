@@ -275,7 +275,7 @@ class _RoutingScreenState extends State<RoutingScreen>
   }) {
     unawaited(ChangeJournalService.record(
       category: category,
-      title: getLocalText.s(title),
+      title: title,
       beforeText: beforeText,
       afterText: afterText,
       path: '${getLocalText.s("Routing")} › ${getLocalText.s(area)}',
@@ -698,7 +698,7 @@ class _RoutingScreenState extends State<RoutingScreen>
       unawaited(applyPresetOnChange(rule, cr));
     }
     _recordRoutingChange(
-      title: "Routing rule created",
+      title: getLocalText.s("Routing rule created"),
       beforeText: '—',
       afterText: ruleDisplayName(cr, _customRules, _template),
       ruleId: cr.id,
@@ -1008,7 +1008,7 @@ class _RoutingScreenState extends State<RoutingScreen>
           _markDirty();
         });
         _recordRoutingChange(
-          title: "Default route changed",
+          title: getLocalText.s("Default route changed"),
           beforeText: previous,
           afterText: val,
           target: 'routing.routeFinal',
@@ -1052,7 +1052,7 @@ class _RoutingScreenState extends State<RoutingScreen>
         _customRules.indexWhere((rule) => rule.id == moved.id) + 1;
     if (newPosition != previousPosition) {
       _recordRoutingChange(
-        title: "Routing rule reordered",
+        title: getLocalText.s("Routing rule reordered"),
         beforeText: '$movedName · #$previousPosition',
         afterText: '$movedName · #$newPosition',
         ruleId: moved.id,
@@ -1144,7 +1144,9 @@ class _RoutingScreenState extends State<RoutingScreen>
           _markDirty();
         });
         _recordRoutingChange(
-          title: v ? "Routing rule enabled" : "Routing rule disabled",
+          title: v
+              ? getLocalText.s("Routing rule enabled")
+              : getLocalText.s("Routing rule disabled"),
           beforeText: '${ruleDisplayName(rule, _customRules, _template)} · ${getLocalText.s(rule.enabled ? "Enabled" : "Off")}',
           afterText: '${ruleDisplayName(rule, _customRules, _template)} · ${getLocalText.s(v ? "Enabled" : "Off")}',
           ruleId: rule.id,
@@ -1163,7 +1165,7 @@ class _RoutingScreenState extends State<RoutingScreen>
           _markDirty();
         });
         _recordRoutingChange(
-          title: "Routing rule changed",
+          title: getLocalText.s("Routing rule changed"),
           beforeText: '${ruleDisplayName(rule, _customRules, _template)} · $pickerValue',
           afterText: '${ruleDisplayName(rule, _customRules, _template)} · $val',
           ruleId: rule.id,
@@ -1265,7 +1267,7 @@ class _RoutingScreenState extends State<RoutingScreen>
       _markDirty();
     });
     _recordRoutingChange(
-      title: "Routing rule deleted",
+      title: getLocalText.s("Routing rule deleted"),
       beforeText: ruleName,
       afterText: getLocalText.s("Deleted"),
     );
@@ -1320,7 +1322,7 @@ class _RoutingScreenState extends State<RoutingScreen>
         _markDirty();
       });
       _recordRoutingChange(
-        title: "Routing rule created",
+        title: getLocalText.s("Routing rule created"),
         beforeText: '—',
         afterText: ruleDisplayName(saved, _customRules, _template),
         ruleId: saved.id,
@@ -1365,7 +1367,7 @@ class _RoutingScreenState extends State<RoutingScreen>
         _markDirty();
       });
       _recordRoutingChange(
-        title: "Routing rule deleted",
+        title: getLocalText.s("Routing rule deleted"),
         beforeText: ruleName,
         afterText: getLocalText.s("Deleted"),
       );
@@ -1386,7 +1388,7 @@ class _RoutingScreenState extends State<RoutingScreen>
         _markDirty();
       });
       _recordRoutingChange(
-        title: "Routing rule edited",
+        title: getLocalText.s("Routing rule edited"),
         beforeText: '${ruleDisplayName(current, _customRules, _template)} · ${current.summary()}',
         afterText: '${ruleDisplayName(_customRules[index], _customRules, _template)} · ${_customRules[index].summary()}',
         ruleId: saved.id,
