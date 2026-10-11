@@ -153,6 +153,7 @@ class _ChangeJournalTabState extends State<ChangeJournalTab> {
 
 class _JournalEntryCard extends StatefulWidget {
   const _JournalEntryCard({
+    super.key,
     required this.entry,
     required this.timeLabel,
     required this.onNavigate,
