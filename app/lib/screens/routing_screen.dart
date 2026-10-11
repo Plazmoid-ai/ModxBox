@@ -237,7 +237,7 @@ class _RoutingScreenState extends State<RoutingScreen>
     if (!mounted || id == null) return;
     if (!_customRules.any((rule) => rule.id == id)) return;
     await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!mounted) return;
+    if (!context.mounted) return;
     final targetContext = _ruleJournalKeys[id]?.currentContext;
     if (targetContext != null) {
       await Scrollable.ensureVisible(
@@ -252,7 +252,7 @@ class _RoutingScreenState extends State<RoutingScreen>
   Future<void> _focusRouteFinalFromJournal() async {
     if (!mounted || !widget.focusRouteFinal) return;
     await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!mounted) return;
+    if (!context.mounted) return;
     final targetContext = _routeFinalJournalKey.currentContext;
     if (targetContext != null) {
       await Scrollable.ensureVisible(
