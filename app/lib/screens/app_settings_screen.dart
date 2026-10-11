@@ -291,7 +291,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     ChangeJournalEntry entry,
   ) async {
     final target = entry.target;
-    if (target.startsWith('routing.rule:') || target == 'routing.rules') {
+    if (target.startsWith('routing.')) {
       final homeController = widget.homeController;
       final subController = widget.subController;
       if (homeController == null || subController == null) {
@@ -312,7 +312,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
           subController: subController,
           homeController: homeController,
           focusRuleId: ruleId,
-          initialRulesTab: true,
+          initialRulesTab:
+              target.startsWith('routing.rule:') || target == 'routing.rules',
+          focusRouteFinal: target == 'routing.routeFinal',
         ),
       ));
       return;
