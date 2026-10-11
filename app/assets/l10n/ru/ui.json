@@ -5910,20 +5910,8 @@
   "Undo change": {
     "value": "Отменить"
   },
-  "Change redone": {
-    "value": "Изменение повторено"
-  },
-  "Lock config": {
-    "value": "Закрепить конфигурацию"
-  },
   "Debug API port": {
     "value": "Порт Debug API"
-  },
-  "Auto-record Wi-Fi": {
-    "value": "Автоматическая запись Wi-Fi"
-  },
-  "Node list in two columns": {
-    "value": "Два столбца в списке узлов"
   },
   "Open DNS navigation from the main screen to jump directly to a DNS setting.": {
     "value": "Откройте журнал из главного меню, чтобы перейти прямо к настройке DNS."
