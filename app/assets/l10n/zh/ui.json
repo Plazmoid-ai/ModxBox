@@ -5675,5 +5675,23 @@
   },
   "DNS server disabled": {
     "value": "已禁用 DNS 服务器"
+  },
+  "Folder renamed": {
+    "value": "文件夹已重命名"
+  },
+  "Subscription updated": {
+    "value": "订阅已更新"
+  },
+  "Nodes: %d": {
+    "value": "节点数：%d"
+  },
+  "Added %d, removed %d · total %d": {
+    "value": "新增 %d，移除 %d · 共 %d"
+  },
+  "Node details changed · %d total": {
+    "value": "节点内容已更改 · 共 %d"
+  },
+  "Open the journal from the main menu to jump to a server list entry.": {
+    "value": "请从主菜单打开日志，以跳转到服务器列表中的对应条目。"
   }
 }
