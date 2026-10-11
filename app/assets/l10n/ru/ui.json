@@ -6023,5 +6023,8 @@
   },
   "Language changed": {
     "value": "Язык изменён"
+  },
+  "Default route changed": {
+    "value": "Маршрут по умолчанию изменён"
   }
 }
