@@ -8,6 +8,7 @@ import '../controllers/subscription_controller.dart';
 import '../models/custom_rule.dart';
 import '../models/dns_ref.dart';
 import '../services/builder/build_config.dart' show varIntInBounds;
+import '../services/change_journal.dart';
 import '../services/builder/post_steps.dart';
 import '../services/dns/dns_controller.dart';
 import '../services/dns/tailscale_endpoint_options.dart';
@@ -42,10 +43,16 @@ class DnsSettingsScreen extends StatefulWidget {
     super.key,
     required this.subController,
     required this.homeController,
+    this.focusServerTag,
+    this.focusField,
   });
 
   final SubscriptionController subController;
   final HomeController homeController;
+
+  /// Optional target used by the settings-change journal to open a specific row.
+  final String? focusServerTag;
+  final String? focusField;
 
   @override
   State<DnsSettingsScreen> createState() => _DnsSettingsScreenState();
@@ -135,6 +142,13 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
   String _cacheCapacity = '';
   bool _optimistic = true;
   bool _storeCache = true;
+  final Map<String, GlobalKey> _journalKeys = {
+    'strategy': GlobalKey(debugLabel: 'journal-dns-strategy'),
+    'dnsFinal': GlobalKey(debugLabel: 'journal-dns-final'),
+    'defaultResolver': GlobalKey(debugLabel: 'journal-dns-default-resolver'),
+  };
+  final Map<String, GlobalKey> _serverKeys = {};
+  bool _focusHandled = false;
   String _cacheCapacityError = '';
   final TextEditingController _cacheCapacityCtl = TextEditingController();
 
@@ -217,6 +231,90 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     });
     // §121: исчезнувший resolver-tag сброшен → persist (config dirty).
     if (s.resolverReset) _markDirty();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusJournalTarget();
+    });
+  }
+
+  GlobalKey _serverJournalKey(String tag) => _serverKeys.putIfAbsent(
+        tag,
+        () => GlobalKey(debugLabel: 'journal-dns-server-$tag'),
+      );
+
+  void _focusJournalTarget() {
+    if (!mounted || _focusHandled) return;
+    final String? targetKey = switch (widget.focusField) {
+      'strategy' => 'strategy',
+      'dnsFinal' => 'dnsFinal',
+      'defaultResolver' => 'defaultResolver',
+      _ => null,
+    };
+    final BuildContext? targetContext = widget.focusServerTag != null
+        ? _serverJournalKey(widget.focusServerTag!).currentContext
+        : targetKey == null
+            ? null
+            : _journalKeys[targetKey]?.currentContext;
+    if (targetContext == null) return;
+    _focusHandled = true;
+    unawaited(Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      alignment: 0.2,
+    ));
+  }
+
+  String _dnsServerValue(ResolvedServer? server) {
+    if (server == null) return getLocalText.s("Unknown");
+    final body = server.body;
+    final type = body['type']?.toString() ?? '';
+    final address = (body['server'] ??
+            body['address'] ??
+            body['endpoint'] ??
+            '')
+        .toString()
+        .trim();
+    final rawPort = body['server_port'] ?? body['port'];
+    final port = rawPort == null ? '' : rawPort.toString();
+    if (address.isNotEmpty) {
+      final hasPort = port.isNotEmpty &&
+          !address.contains('://') &&
+          !(address.startsWith('[') && address.contains(']:'));
+      return hasPort ? '$address:$port' : address;
+    }
+    if (type == 'group') {
+      final members = body['servers'];
+      return '${getLocalText.s("Group")} · ${members is List ? members.length : 0}';
+    }
+    return type.isEmpty ? server.tag : '${server.tag} · $type';
+  }
+
+  ResolvedServer? _resolveDnsRef(DnsServerRef ref) {
+    final resolved = resolveDisplayedServers(
+      [ref],
+      _templateByTag,
+      _presetServersByTag,
+      ruleRefsByTag: _ruleRefsByTag,
+    );
+    return resolved.isEmpty ? null : resolved.first;
+  }
+
+  void _recordDnsChange({
+    required String title,
+    required String beforeText,
+    required String afterText,
+    required String path,
+    required String target,
+    String category = 'important',
+  }) {
+    unawaited(ChangeJournalService.record(
+      category: category,
+      title: title,
+      beforeText: beforeText,
+      afterText: afterText,
+      path: path,
+      target: target,
+    ));
   }
 
   /// §107: staging — буфер экрана в `_cache` на каждую мутацию; дисковый
@@ -305,12 +403,29 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     if (result == null || !mounted) return;
     final saved = result.saved;
     if (saved == null) return;
+    final replacedRef = _servers.cast<DnsServerRef?>().firstWhere(
+          (server) => server?.tag == saved.tag,
+          orElse: () => null,
+        );
+    final beforeValue = replacedRef == null
+        ? '—'
+        : _dnsServerValue(_resolveDnsRef(replacedRef));
+    final afterValue = _dnsServerValue(_resolveDnsRef(saved));
     setState(() {
       // Tag conflict: replace existing (юзер подтвердил в редакторе).
       _servers.removeWhere((s) => s.tag == saved.tag);
       _servers.add(saved);
       _markDirty();
     });
+    _recordDnsChange(
+      title: replacedRef == null
+          ? getLocalText.s("DNS server added")
+          : getLocalText.s("DNS server changed"),
+      beforeText: beforeValue,
+      afterText: afterValue,
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Servers")} › ${saved.tag}',
+      target: 'dns.server:${saved.tag}',
+    );
   }
 
   /// §117 задача 4: тап по тайлу → полноэкранный редактор (Params/JSON).
@@ -355,14 +470,30 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       },
     );
     if (result == null || !mounted) return;
-    setState(() {
-      if (result.wasDeleted) {
+    final beforeValue = _dnsServerValue(resolved);
+    if (result.wasDeleted) {
+      setState(() {
         _servers.removeAt(idx);
-      } else if (result.saved != null) {
-        _servers[idx] = result.saved!;
+        _markDirty();
+      });
+      _recordDnsChange(
+        title: getLocalText.s("DNS server deleted"),
+        beforeText: beforeValue,
+        afterText: getLocalText.s("Deleted"),
+        path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Servers")} › $tag',
+        target: 'dns.settings',
+      );
+      return;
+    }
+    final saved = result.saved;
+    if (saved == null) return;
+    final afterValue = _dnsServerValue(_resolveDnsRef(saved));
+    setState(() {
+      if (saved != null) {
+        _servers[idx] = saved;
         // §117 задача 4b: rename → каскад по ссылкам, чтобы не орфанить
         // (DNS-правила, resolvers, domain_resolver'ы, DNS-опции правил).
-        final newTag = result.saved!.tag;
+        final newTag = saved.tag;
         if (newTag.isNotEmpty && newTag != tag) {
           final updated = renameDnsServerTagRefs(
             servers: _servers,
@@ -383,11 +514,19 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
             unawaited(SettingsStorage.saveCustomRules(renamed));
           }
         }
-      } else {
-        return;
       }
       _markDirty();
     });
+    final renamed = saved.tag != tag;
+    _recordDnsChange(
+      title: renamed
+          ? getLocalText.s("DNS server changed")
+          : getLocalText.s("DNS server changed"),
+      beforeText: beforeValue,
+      afterText: afterValue,
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Servers")} › ${renamed ? "$tag → ${saved.tag}" : saved.tag}',
+      target: 'dns.server:${saved.tag}',
+    );
   }
 
   void _addUserRule() => _showUserRuleEditor(-1);
@@ -633,6 +772,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           // §042: единый render через 3-tier merged list. §117 задача 4:
           // тайл — только switch + тап→полноэкранный редактор.
           ...displayed.map((entry) => MergedServerTile(
+                key: _serverJournalKey(entry.tag),
                 entry: entry,
                 onToggleEnabled: _toggleServerEnabled,
                 onTap: _editServer,
@@ -642,6 +782,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
 
           // --- Strategy ---
           ListTile(
+            key: _journalKeys['strategy'],
             contentPadding: EdgeInsets.zero,
             title: Text(getLocalText.s("Strategy")),
             trailing: DropdownButton<String>(
@@ -653,7 +794,18 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
                 DropdownMenuItem(value: 'ipv4_only', child: Text('ipv4_only')), // l10n-exempt: sing-box wire value
                 DropdownMenuItem(value: 'ipv6_only', child: Text('ipv6_only')), // l10n-exempt: sing-box wire value
               ],
-              onChanged: (v) { if (v != null) setState(() { _strategy = v; _markDirty(); }); },
+              onChanged: (v) {
+                if (v == null || v == _strategy) return;
+                final previous = _strategy;
+                setState(() { _strategy = v; _markDirty(); });
+                _recordDnsChange(
+                  title: getLocalText.s("DNS strategy changed"),
+                  beforeText: previous,
+                  afterText: v,
+                  path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Strategy")}',
+                  target: 'dns.strategy',
+                );
+              },
             ),
           ),
 
@@ -728,11 +880,23 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           // вызывается через protected JNI path для apps. Encrypted options
           // (`google_doh`, `*_dot`) рекомендуем для privacy.
           ResolverPicker(
+            key: _journalKeys['dnsFinal'],
             title: getLocalText.s("DNS Final"),
             subtitle: getLocalText.s("For apps · default fallback when no DNS rule matches"),
             value: _dnsFinal,
             serverTags: resolverTags,
-            onChanged: (v) => setState(() { _dnsFinal = v; _markDirty(); }),
+            onChanged: (v) {
+              if (v == _dnsFinal) return;
+              final previous = _dnsFinal;
+              setState(() { _dnsFinal = v; _markDirty(); });
+              _recordDnsChange(
+                title: getLocalText.s("DNS Final changed"),
+                beforeText: previous.isEmpty ? '—' : previous,
+                afterText: v,
+                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Final")}',
+                target: 'dns.final',
+              );
+            },
             tooltip: getLocalText.s("Default fallback DNS server. Used when an app makes a DNS query and no DNS rule above matches it. Every app DNS query that isn't routed by a rule ends up here.\n\nRecommended:\n  • dns_shield — default; races 6 encrypted providers, answers from whichever replies first\n  • google_doh — encrypted (DoH)\n  • cloudflare_dot / google_dot — encrypted (DoT)\n  • cloudflare_udp / google_udp — fast plain UDP\n\nlocal_dns_resolver works but reveals queries to your ISP. Encrypted options keep them private."),
             warnIfLocal: false,
           ),
@@ -745,11 +909,23 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           // → §047 deterioration через несколько часов uptime. Показываем
           // жёлтый ⚠ если выбран local_dns_resolver.
           ResolverPicker(
+            key: _journalKeys['defaultResolver'],
             title: getLocalText.s("Default Domain Resolver"),
             subtitle: getLocalText.s("For routing · resolves hostnames inside sing-box (outbound endpoints, routing rules)"),
             value: _defaultResolver,
             serverTags: resolverTags,
-            onChanged: (v) => setState(() { _defaultResolver = v; _markDirty(); }),
+            onChanged: (v) {
+              if (v == _defaultResolver) return;
+              final previous = _defaultResolver;
+              setState(() { _defaultResolver = v; _markDirty(); });
+              _recordDnsChange(
+                title: getLocalText.s("Default Domain Resolver changed"),
+                beforeText: previous.isEmpty ? '—' : previous,
+                afterText: v,
+                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Default Domain Resolver")}',
+                target: 'dns.defaultResolver',
+              );
+            },
             tooltip: getLocalText.s("Used by routing engine to resolve hostnames internally (outbound endpoints, routing rules). Not the resolver apps use.\n\nRecommended:\n  • dns_shield — default; races 6 encrypted providers, answers from whichever replies first\n  • cloudflare_udp — UDP to 1.1.1.1 (fast)\n  • google_udp — UDP to 8.8.8.8 (fast)\n  • google_doh — encrypted\n\n⚠ local_dns_resolver here leaks lookups to your ISP — system DNS bypasses the VPN."),
             warnIfLocal: true,
           ),
@@ -863,10 +1039,21 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
   void _toggleServerEnabled(String tag, bool value) {
     final idx = _servers.indexWhere((s) => s.tag == tag);
     if (idx < 0) return;
+    final previous = _servers[idx].enabled;
+    if (previous == value) return;
     setState(() {
       _servers[idx] = _servers[idx].withEnabled(value);
       _markDirty();
     });
+    _recordDnsChange(
+      title: value
+          ? getLocalText.s("DNS server enabled")
+          : getLocalText.s("DNS server disabled"),
+      beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
+      afterText: getLocalText.s(value ? "Enabled" : "Off"),
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Servers")} › $tag',
+      target: 'dns.server:$tag',
+    );
   }
 
   /// §033: Toggle enabled на rule-entry (kind не меняется).
