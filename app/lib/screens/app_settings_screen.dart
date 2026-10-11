@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../main.dart';
+import '../services/change_journal.dart';
 import '../services/debug/bootstrap.dart';
 import '../services/debug/transport/server.dart';
 import '../services/haptic_service.dart';
@@ -21,6 +22,7 @@ import '../vpn/box_vpn_client.dart';
 import 'app_settings_screen/app_settings_dialogs.dart';
 import 'app_settings_screen/widgets/appearance_tab.dart';
 import 'app_settings_screen/widgets/automation_tab.dart';
+import 'app_settings_screen/widgets/change_journal_tab.dart';
 import 'app_settings_screen/widgets/diagnostics_tab.dart';
 import 'app_settings_screen/widgets/general_tab.dart';
 import 'app_settings_screen/widgets/subscriptions_tab.dart';
@@ -85,6 +87,16 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
   Timer? _coreLogsHighlightTimer;
   // §051 Phase 3 — auto-record visited Wi-Fi networks (default off).
   bool _autoRecordWifi = false;
+
+  // Stable targets used by the change journal to reveal the exact setting.
+  final Map<String, GlobalKey> _journalKeys = {
+    'usageRegion': GlobalKey(debugLabel: 'journal-usage-region'),
+    'autoStart': GlobalKey(debugLabel: 'journal-auto-start'),
+    'autoReload': GlobalKey(debugLabel: 'journal-auto-reload'),
+    'autoCheckUpdates': GlobalKey(debugLabel: 'journal-auto-check-updates'),
+    'autoPing': GlobalKey(debugLabel: 'journal-auto-ping'),
+    'haptic': GlobalKey(debugLabel: 'journal-haptic'),
+  };
 
   // §118 — subscription fetch identity (UA override + HWID + device-meta).
   // _deviceOs/_verOs/_deviceModel — OVERRIDE-значения (пусто = device-дефолт).
@@ -222,13 +234,130 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     }
   }
 
+  String _journalBoolLabel(bool value) =>
+      getLocalText.s(value ? "Enabled" : "Off");
+
+  void _recordSettingChange({
+    required String title,
+    required String beforeText,
+    required String afterText,
+    required String path,
+    required String target,
+    String category = 'important',
+    String? actionKey,
+    String? beforeValue,
+    String? afterValue,
+  }) {
+    unawaited(ChangeJournalService.record(
+      category: category,
+      title: title,
+      beforeText: beforeText,
+      afterText: afterText,
+      path: path,
+      target: target,
+      actionKey: actionKey,
+      beforeValue: beforeValue,
+      afterValue: afterValue,
+    ));
+  }
+
+  Future<void> _navigateToJournalEntry(
+    BuildContext context,
+    ChangeJournalEntry entry,
+  ) async {
+    final target = entry.target;
+    final tabIndex = target.startsWith('appearance.')
+        ? 1
+        : target.startsWith('subscriptions.')
+            ? 2
+            : target.startsWith('diagnostics.')
+                ? 3
+                : target.startsWith('automation.')
+                    ? 4
+                    : 0;
+    DefaultTabController.of(context).animateTo(tabIndex);
+
+    String? keyName;
+    if (target == 'general.usageRegion') keyName = 'usageRegion';
+    if (target == 'general.autoStart') keyName = 'autoStart';
+    if (target == 'general.autoReload') keyName = 'autoReload';
+    if (target == 'general.autoCheckUpdates') keyName = 'autoCheckUpdates';
+    if (target == 'general.autoPing') keyName = 'autoPing';
+    if (target == 'general.haptic') keyName = 'haptic';
+    if (keyName == null) return;
+
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    final itemContext = _journalKeys[keyName]?.currentContext;
+    if (itemContext != null) {
+      await Scrollable.ensureVisible(
+        itemContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        alignment: 0.25,
+      );
+    }
+  }
+
+  Future<void> _applyJournalAction(
+    ChangeJournalEntry entry,
+    bool redo,
+  ) async {
+    final actionKey = entry.actionKey;
+    if (actionKey == null) return;
+    final targetValue = (redo ? entry.afterValue : entry.beforeValue) == 'true';
+    late final bool currentValue;
+
+    if (actionKey == 'auto_start_vpn') {
+      currentValue =
+          await SettingsStorage.getNativeBool(NativePrefsKeys.autoStart);
+      if (currentValue != targetValue) {
+        if (mounted) setState(() => _autoStart = targetValue);
+        await SettingsStorage.setNativeBool(
+          NativePrefsKeys.autoStart,
+          targetValue,
+        );
+      }
+    } else if (actionKey == 'auto_check_updates') {
+      currentValue = await SettingsStorage.getAutoCheckUpdates();
+      if (currentValue != targetValue) {
+        if (mounted) setState(() => _autoCheckUpdates = targetValue);
+        await SettingsStorage.setAutoCheckUpdates(targetValue);
+      }
+    } else {
+      return;
+    }
+
+    await ChangeJournalService.setUndone(entry.id, !redo);
+    if (currentValue != targetValue) {
+      await ChangeJournalService.record(
+        category: 'info',
+        title:
+            '${getLocalText.s(redo ? "Change redone" : "Change undone")}: ${entry.title}',
+        beforeText: _journalBoolLabel(currentValue),
+        afterText: _journalBoolLabel(targetValue),
+        path: entry.path,
+        target: entry.target,
+      );
+    }
+  }
+
   /// §037 — toggle config_locked_for_debug.
   /// Когда true — `SubscriptionController.generateConfig()` тихо skip'ает
   /// rebuild при UI-действиях, и pinned config.json (например, отправленный
   /// через Debug API `PUT /config`) остаётся в живых.
   Future<void> _toggleConfigLocked(bool locked) async {
+    final previous = _configLocked;
+    if (previous == locked) return;
     setState(() => _configLocked = locked);
     await SettingsStorage.setConfigLockedForDebug(locked);
+    _recordSettingChange(
+      title: getLocalText.s("Lock config"),
+      beforeText: _journalBoolLabel(previous),
+      afterText: _journalBoolLabel(locked),
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Lock config")}',
+      target: 'diagnostics.configLock',
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -248,8 +377,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
   // ---------------------------------------------------------------------------
 
   Future<void> _toggleDebugApi(bool enable) async {
+    final previous = _debugEnabled;
+    if (previous == enable) return;
     setState(() => _debugEnabled = enable);
     await SettingsStorage.setDebugEnabled(enable);
+    _recordSettingChange(
+      title: getLocalText.s("Debug API"),
+      beforeText: _journalBoolLabel(previous),
+      afterText: _journalBoolLabel(enable),
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Debug API")}',
+      target: 'diagnostics.debugApi',
+    );
     if (enable && _debugToken.isEmpty) {
       final token = DebugServer.generateToken();
       await SettingsStorage.setDebugToken(token);
@@ -297,11 +435,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       setState(() => _debugPortError = '');
       return;
     }
+    final previousPort = _debugPort;
     setState(() {
       _debugPort = port;
       _debugPortError = '';
     });
     await SettingsStorage.setDebugPort(port);
+    _recordSettingChange(
+      title: getLocalText.s("Debug API port"),
+      beforeText: previousPort.toString(),
+      afterText: port.toString(),
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Debug API port")}',
+      target: 'diagnostics.debugApi',
+    );
     await applyDebugApiSettings();
   }
 
@@ -313,10 +459,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
   /// рядом с toggle делает это вызовом `quitApp()` (finishAffinity + killProcess
   /// в Kotlin); юзер сам тапает иконку и получает свежий процесс.
   Future<void> _toggleCoreLogs(bool enable) async {
+    final previous = _coreLogsEnabled;
+    if (previous == enable) return;
     setState(() => _coreLogsEnabled = enable);
     // §189 — через NativePrefs (JSON-истина + зеркало в native).
     await SettingsStorage.setNativeBool(
         NativePrefsKeys.coreLogsEnabled, enable);
+    _recordSettingChange(
+      title: getLocalText.s("Forward sing-box logs"),
+      beforeText: _journalBoolLabel(previous),
+      afterText: _journalBoolLabel(enable),
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Forward sing-box logs")}',
+      target: 'diagnostics.coreLogs',
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -338,8 +493,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
   /// §220 — toggle «Allow rotation». Применяется мгновенно (helper дёргает
   /// SystemChrome.setPreferredOrientations), рестарт не нужен.
   Future<void> _toggleAllowRotation(bool allow) async {
+    final previous = _allowRotation;
+    if (previous == allow) return;
     setState(() => _allowRotation = allow);
     await SettingsStorage.setAllowRotation(allow);
+    _recordSettingChange(
+      title: getLocalText.s("Allow rotation"),
+      beforeText: _journalBoolLabel(previous),
+      afterText: _journalBoolLabel(allow),
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Appearance")} › ${getLocalText.s("Allow rotation")}',
+      target: 'appearance.allowRotation',
+    );
     await applyAllowRotationSetting();
   }
 
@@ -500,8 +664,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       animation: Listenable.merge([themeNotifier, LocaleController.I]),
       builder: (context, _) {
         return DefaultTabController(
-          length: 5,
-          initialIndex: widget.initialTab.clamp(0, 4),
+          length: 6,
+          initialIndex: widget.initialTab.clamp(0, 5),
           child: Scaffold(
             appBar: AppBar(
               title: Text(getLocalText.s("App Settings")),
@@ -512,6 +676,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
                   Tab(text: getLocalText.s("Subscriptions")),
                   Tab(text: getLocalText.s("Diagnostics")),
                   Tab(text: getLocalText.s("Automation")),
+                  Tab(text: getLocalText.s("History")),
                 ],
               ),
             ),
@@ -522,6 +687,15 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
                 _buildSubscriptionsTab(context),
                 _buildDiagnosticsTab(context),
                 AutomationTab(padding: _tabPadding(context)),
+                Builder(
+                  builder: (journalContext) => ChangeJournalTab(
+                    padding: _tabPadding(journalContext),
+                    onNavigate: (entry) => unawaited(
+                      _navigateToJournalEntry(journalContext, entry),
+                    ),
+                    onApplyAction: _applyJournalAction,
+                  ),
+                ),
               ],
             ),
           ),
@@ -662,13 +836,31 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       padding: _tabPadding(context),
       autoUpdateSubs: _autoUpdateSubs,
       onAutoUpdateSubsChanged: (val) {
+        final previous = _autoUpdateSubs;
+        if (previous == val) return;
         setState(() => _autoUpdateSubs = val);
         unawaited(SettingsStorage.setAutoUpdateSubs(val));
+        _recordSettingChange(
+          title: getLocalText.s("Auto-update subscriptions"),
+          beforeText: _journalBoolLabel(previous),
+          afterText: _journalBoolLabel(val),
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Subscriptions")} › ${getLocalText.s("Auto-update subscriptions")}',
+          target: 'subscriptions.autoUpdate',
+        );
       },
       autoUpdateDisabledSubs: _autoUpdateDisabledSubs,
       onAutoUpdateDisabledSubsChanged: (val) {
+        final previous = _autoUpdateDisabledSubs;
+        if (previous == val) return;
         setState(() => _autoUpdateDisabledSubs = val);
         unawaited(SettingsStorage.setAutoUpdateDisabledSubs(val));
+        _recordSettingChange(
+          title: getLocalText.s("Update disabled subscriptions"),
+          beforeText: _journalBoolLabel(previous),
+          afterText: _journalBoolLabel(val),
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Subscriptions")} › ${getLocalText.s("Update disabled subscriptions")}',
+          target: 'subscriptions.autoUpdateDisabled',
+        );
       },
       userAgent: _userAgent,
       defaultUserAgent: resolveSubscriptionUserAgent(),
@@ -695,8 +887,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       padding: _tabPadding(context),
       onAllowRotationChanged: (val) => unawaited(_toggleAllowRotation(val)),
       onNodeListTwoColumnsChanged: (val) {
+        final previous = _nodeListTwoColumns;
+        if (previous == val) return;
         setState(() => _nodeListTwoColumns = val);
         unawaited(SettingsStorage.setNodeListTwoColumns(val));
+        _recordSettingChange(
+          title: getLocalText.s("Node list in two columns"),
+          beforeText: _journalBoolLabel(previous),
+          afterText: _journalBoolLabel(val),
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Appearance")} › ${getLocalText.s("Node list in two columns")}',
+          target: 'appearance.nodeListTwoColumns',
+        );
       },
     );
   }
@@ -710,30 +911,82 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       haptic: _haptic,
       autoReloadOnChange: _autoReloadOnChange, // §338
       padding: _tabPadding(context),
+      journalKeys: _journalKeys,
       onAutoStartChanged: (val) {
+        final previous = _autoStart;
+        if (previous == val) return;
         setState(() => _autoStart = val);
         // §189 — через NativePrefs (JSON-истина + зеркало в native).
         unawaited(
             SettingsStorage.setNativeBool(NativePrefsKeys.autoStart, val));
+        _recordSettingChange(
+          title: getLocalText.s("Auto-start on boot"),
+          beforeText: _journalBoolLabel(previous),
+          afterText: _journalBoolLabel(val),
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("General")} › ${getLocalText.s("Auto-start on boot")}',
+          target: 'general.autoStart',
+          actionKey: 'auto_start_vpn',
+          beforeValue: previous.toString(),
+          afterValue: val.toString(),
+        );
       },
       // §338 — автоприменение изменений конфига (любой источник, не подписки).
       onAutoReloadOnChangeChanged: (val) {
+        final previous = _autoReloadOnChange;
+        if (previous == val) return;
         setState(() => _autoReloadOnChange = val);
         unawaited(SettingsStorage.setAutoReloadOnChange(val));
+        _recordSettingChange(
+          title: getLocalText.s("Auto-restart VPN on settings change"),
+          beforeText: _journalBoolLabel(previous),
+          afterText: _journalBoolLabel(val),
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("General")} › ${getLocalText.s("Auto-restart VPN on settings change")}',
+          target: 'general.autoReload',
+        );
       },
       onAutoCheckUpdatesChanged: (val) {
+        final previous = _autoCheckUpdates;
+        if (previous == val) return;
         setState(() => _autoCheckUpdates = val);
         unawaited(SettingsStorage.setAutoCheckUpdates(val));
+        _recordSettingChange(
+          title: getLocalText.s("Check for updates on launch"),
+          beforeText: _journalBoolLabel(previous),
+          afterText: _journalBoolLabel(val),
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("General")} › ${getLocalText.s("Check for updates on launch")}',
+          target: 'general.autoCheckUpdates',
+          actionKey: 'auto_check_updates',
+          beforeValue: previous.toString(),
+          afterValue: val.toString(),
+        );
       },
       onAutoPingChanged: (val) {
+        final previous = _autoPing;
+        if (previous == val) return;
         setState(() => _autoPing = val);
         unawaited(SettingsStorage.setVar(
             'auto_ping_on_start', val.toString()));
+        _recordSettingChange(
+          title: getLocalText.s("Auto-ping after connect"),
+          beforeText: _journalBoolLabel(previous),
+          afterText: _journalBoolLabel(val),
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("General")} › ${getLocalText.s("Auto-ping after connect")}',
+          target: 'general.autoPing',
+        );
       },
       onHapticChanged: (val) {
+        final previous = _haptic;
+        if (previous == val) return;
         setState(() => _haptic = val);
         HapticService.I.enabled = val;
         unawaited(SettingsStorage.setVar(HapticService.prefsKey, val.toString()));
+        _recordSettingChange(
+          title: getLocalText.s("Haptic feedback"),
+          beforeText: _journalBoolLabel(previous),
+          afterText: _journalBoolLabel(val),
+          path: '${getLocalText.s("App Settings")} › ${getLocalText.s("General")} › ${getLocalText.s("Haptic feedback")}',
+          target: 'general.haptic',
+        );
         if (val) {
           HapticService.I.onConnectTap();
         }
@@ -819,9 +1072,18 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       }
     }
     if (picked == null || !mounted) return;
+    final previous = _region;
     final norm = SettingsStorage.normalizeRegion(picked);
+    if (previous == norm) return;
     setState(() => _region = norm);
     await SettingsStorage.setRegion(norm);
+    _recordSettingChange(
+      title: getLocalText.s("Usage region"),
+      beforeText: GeneralTab.regionLabel(previous, _detectedRegion),
+      afterText: GeneralTab.regionLabel(norm, _detectedRegion),
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("General")} › ${getLocalText.s("Usage region")}',
+      target: 'general.usageRegion',
+    );
   }
 
   Widget _buildDiagnosticsTab(BuildContext context) {
@@ -865,8 +1127,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
   /// observer (start/stop NetworkCallback). Существующая история не
   /// чистится при OFF — это user data, явный поход в Pick saved.
   Future<void> _toggleAutoRecordWifi(bool enabled) async {
+    final previous = _autoRecordWifi;
+    if (previous == enabled) return;
     setState(() => _autoRecordWifi = enabled);
     await SettingsStorage.setAutoRecordWifi(enabled);
+    _recordSettingChange(
+      title: getLocalText.s("Auto-record Wi-Fi"),
+      beforeText: _journalBoolLabel(previous),
+      afterText: _journalBoolLabel(enabled),
+      path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Auto-record Wi-Fi")}',
+      target: 'diagnostics.autoRecordWifi',
+    );
     await WifiHistoryListener.I.setEnabled(enabled);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
