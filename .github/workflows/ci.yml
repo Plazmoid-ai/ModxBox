@@ -521,14 +521,14 @@ jobs:
         run: |
           mkdir -p docs
           NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          BASE="https://github.com/Leadaxe/LxBox/releases/download/${TAG}"
+          BASE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG}"
           cat > docs/latest.json <<EOF
           {
-            "\$schema": "https://github.com/Leadaxe/LxBox/blob/main/docs/latest.json",
+            "\$schema": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/latest.json",
             "tag": "${TAG}",
             "name": "L×Box ${VERSION}",
             "published_at": "${NOW}",
-            "html_url": "https://github.com/Leadaxe/LxBox/releases/tag/${TAG}",
+            "html_url": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}",
             "apk_url": "${BASE}/LxBox-${VERSION}-arm64-v8a.apk",
             "apk_urls": {
               "arm64-v8a": "${BASE}/LxBox-${VERSION}-arm64-v8a.apk"
