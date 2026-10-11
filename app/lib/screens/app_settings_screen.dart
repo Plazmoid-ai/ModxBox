@@ -383,6 +383,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
           focusRuleIdentity: focusRuleIdentity,
         ),
       ));
+      if (!mounted) return;
       return;
     }
     final tabIndex = target.startsWith('appearance.')
@@ -442,7 +443,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       currentValue =
           await SettingsStorage.getNativeBool(NativePrefsKeys.autoStart);
       if (currentValue != targetValue) {
-        if (mounted) setState(() => _autoStart = targetValue);
+        if (!mounted) return;
+        setState(() => _autoStart = targetValue);
         await SettingsStorage.setNativeBool(
           NativePrefsKeys.autoStart,
           targetValue,
@@ -451,7 +453,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     } else if (actionKey == 'auto_check_updates') {
       currentValue = await SettingsStorage.getAutoCheckUpdates();
       if (currentValue != targetValue) {
-        if (mounted) setState(() => _autoCheckUpdates = targetValue);
+        if (!mounted) return;
+        setState(() => _autoCheckUpdates = targetValue);
         await SettingsStorage.setAutoCheckUpdates(targetValue);
       }
     } else {
@@ -461,6 +464,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     final expectedCurrentValue =
         (redo ? entry.beforeValue : entry.afterValue) == 'true';
     if (currentValue != expectedCurrentValue) {
+      if (!mounted) return;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
