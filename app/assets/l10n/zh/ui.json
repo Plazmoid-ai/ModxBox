@@ -5693,5 +5693,29 @@
   },
   "Open the journal from the main menu to jump to a server list entry.": {
     "value": "请从主菜单打开日志，以跳转到服务器列表中的对应条目。"
+  },
+  "Routing rule reordered": {
+    "value": "路由规则顺序已更改"
+  },
+  "Routing rule enabled": {
+    "value": "已启用路由规则"
+  },
+  "Routing rule disabled": {
+    "value": "已禁用路由规则"
+  },
+  "Routing rule changed": {
+    "value": "路由规则已更改"
+  },
+  "Routing rule deleted": {
+    "value": "路由规则已删除"
+  },
+  "Routing rule created": {
+    "value": "已创建路由规则"
+  },
+  "Routing rule edited": {
+    "value": "路由规则已编辑"
+  },
+  "Open the journal from the main menu to jump to a routing rule.": {
+    "value": "请从主菜单打开日志，以跳转到对应路由规则。"
   }
 }
