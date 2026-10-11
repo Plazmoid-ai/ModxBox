@@ -903,11 +903,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
                   onToggleEnabled: _toggleRuleEnabled,
                   onEdit: _showUserRuleEditor,
                   onDelete: _deleteRule,
-                  // §033: identity для reorder — name (inline/template/srs)
-                  // или presetId (preset). Нужно стабильное непустое значение.
-                  key: ValueKey(
-                    'dns-rule-$row-${_ruleIdentity(_rules[row])}',
-                  ),
+                  // The GlobalKey above is also the journal navigation target.
                 );
               },
             ),
