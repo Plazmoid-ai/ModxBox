@@ -358,6 +358,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       final focusServerTag = target.startsWith('dns.server:')
           ? target.substring('dns.server:'.length)
           : null;
+      final focusRuleIdentity = target.startsWith('dns.rule:')
+          ? target.substring('dns.rule:'.length)
+          : null;
       final focusField = switch (target) {
         'dns.strategy' => 'strategy',
         'dns.final' => 'dnsFinal',
@@ -370,6 +373,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
           homeController: homeController,
           focusServerTag: focusServerTag,
           focusField: focusField,
+          focusRuleIdentity: focusRuleIdentity,
         ),
       ));
       return;
