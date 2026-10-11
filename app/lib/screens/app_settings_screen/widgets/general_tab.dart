@@ -29,6 +29,7 @@ class GeneralTab extends StatelessWidget {
     required this.region,
     required this.detectedRegion,
     required this.onEditRegion,
+    required this.journalKeys,
   });
 
   final bool loaded;
@@ -56,17 +57,23 @@ class GeneralTab extends StatelessWidget {
   final String detectedRegion;
   final VoidCallback onEditRegion;
 
+  /// Keys used by the change journal to reveal a setting in this tab.
+  final Map<String, GlobalKey> journalKeys;
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return SingleChildScrollView(
       padding: padding,
-      children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         // §425 — регион использования: общая настройка, потребители — пулы
         // WARP (loc.<cc>), дальше региональные дефолты правил.
         Text(getLocalText.s("Region"),
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         ListTile(
+          key: journalKeys['usageRegion'],
           leading: const Icon(Icons.public_outlined),
           title: Text(getLocalText.s("Usage region")),
           subtitle: Text(regionLabel(region, detectedRegion)),
@@ -87,6 +94,7 @@ class GeneralTab extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SwitchListTile(
+          key: journalKeys['autoStart'],
           title: Text(getLocalText.s("Auto-start on boot")),
           subtitle: Text(getLocalText.s("Start VPN when device turns on")),
           secondary: const Icon(Icons.power_settings_new),
@@ -97,6 +105,7 @@ class GeneralTab extends StatelessWidget {
         // не про подписки: источник изменения любой (узел, detour, DNS,
         // routing, per-app), поэтому живёт в Behavior, а не в Subscriptions.
         SwitchListTile(
+          key: journalKeys['autoReload'],
           title: Text(getLocalText.s("Auto-restart VPN on settings change")),
           subtitle: Text(getLocalText.s("Apply every config change to the running tunnel by itself, so no banner is left to tap. Each apply drops the tunnel for about 3 seconds and kills open connections.")),
           secondary: const Icon(Icons.restart_alt),
@@ -136,6 +145,7 @@ class GeneralTab extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SwitchListTile(
+          key: journalKeys['autoCheckUpdates'],
           title: Text(getLocalText.s("Check for updates on launch")),
           subtitle: Text(getLocalText.s("Pings github.com once a day to check for new releases. \"View\" opens the release page in browser; install is manual.")),
           secondary: const Icon(Icons.system_update_alt),
@@ -148,6 +158,7 @@ class GeneralTab extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SwitchListTile(
+          key: journalKeys['autoPing'],
           title: Text(getLocalText.s("Auto-ping after connect")),
           subtitle: Text(getLocalText.s("Ping nodes of active group 5s after VPN starts (once per connect)")),
           secondary: const Icon(Icons.network_ping),
@@ -155,6 +166,7 @@ class GeneralTab extends StatelessWidget {
           onChanged: loaded ? onAutoPingChanged : null,
         ),
         SwitchListTile(
+          key: journalKeys['haptic'],
           title: Text(getLocalText.s("Haptic feedback")),
           subtitle: Text(getLocalText.s("Vibrate on connect, disconnect and errors. Respects system \"Touch feedback\" setting")),
           secondary: const Icon(Icons.vibration),
@@ -173,7 +185,8 @@ class GeneralTab extends StatelessWidget {
           contentPadding: EdgeInsets.zero,
           onTap: onOpenBackup,
         ),
-      ],
+        ],
+      ),
     );
   }
 
