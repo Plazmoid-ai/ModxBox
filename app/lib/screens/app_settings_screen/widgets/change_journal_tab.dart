@@ -319,7 +319,9 @@ class _JournalEntryCardState extends State<_JournalEntryCard> {
             child: TextButton.icon(
               onPressed: _saveComment,
               icon: Icon(_commentSaved ? Icons.check : Icons.save_outlined),
-              label: Text(getLocalText.s(_commentSaved ? "Comment saved" : "Save comment")),
+              label: Text(_commentSaved
+                  ? getLocalText.s("Comment saved")
+                  : getLocalText.s("Save comment")),
             ),
           ),
           Wrap(
@@ -335,7 +337,9 @@ class _JournalEntryCardState extends State<_JournalEntryCard> {
                 OutlinedButton.icon(
                   onPressed: () => widget.onApplyAction(entry.isUndone),
                   icon: Icon(entry.isUndone ? Icons.redo : Icons.undo),
-                  label: Text(getLocalText.s(entry.isUndone ? "Redo change" : "Undo change")),
+                  label: Text(entry.isUndone
+                      ? getLocalText.s("Redo change")
+                      : getLocalText.s("Undo change")),
                 ),
             ],
           ),
