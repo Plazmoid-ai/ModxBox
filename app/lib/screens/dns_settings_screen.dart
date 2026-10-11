@@ -1024,9 +1024,11 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           // §580 — кэш DNS ядра: размер, устаревшие ответы, хранение в
           // cache.db. Изменение помечает конфиг к пересборке.
           const Divider(height: 32),
-          TextField(
+          KeyedSubtree(
             key: _journalKeys['cacheCapacity'],
-            controller: _cacheCapacityCtl,
+            child: TextField(
+              key: const ValueKey('dns_cache_capacity'),
+              controller: _cacheCapacityCtl,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
@@ -1037,11 +1039,14 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
               isDense: true,
               border: const OutlineInputBorder(),
             ),
-            onChanged: _applyCacheCapacity,
+              onChanged: _applyCacheCapacity,
+            ),
           ),
-          SwitchListTile(
+          KeyedSubtree(
             key: _journalKeys['optimistic'],
-            contentPadding: EdgeInsets.zero,
+            child: SwitchListTile(
+              key: const ValueKey('dns_optimistic'),
+              contentPadding: EdgeInsets.zero,
             title: Text(getLocalText.s("Serve stale answers")),
             subtitle: Text(getLocalText.s(
                 "Answer from cache at once and refresh in the background.")),
@@ -1062,9 +1067,13 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
               );
             },
           ),
-          SwitchListTile(
+            ),
+          ),
+          KeyedSubtree(
             key: _journalKeys['storeCache'],
-            contentPadding: EdgeInsets.zero,
+            child: SwitchListTile(
+              key: const ValueKey('dns_store_cache'),
+              contentPadding: EdgeInsets.zero,
             title: Text(getLocalText.s("Keep DNS cache after restart")),
             value: _storeCache,
             onChanged: (v) {
@@ -1082,6 +1091,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
                 target: 'dns.storeCache',
               );
             },
+            ),
           ),
 
           // §263 — сброс DNS-кэша ядра (cache.db). Внизу экрана, отдельным
