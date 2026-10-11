@@ -18,6 +18,7 @@ class AppearanceTab extends StatelessWidget {
     required this.padding,
     required this.onAllowRotationChanged,
     required this.onNodeListTwoColumnsChanged,
+    required this.journalKeys,
   });
 
   final bool loaded;
@@ -29,6 +30,7 @@ class AppearanceTab extends StatelessWidget {
 
   final ValueChanged<bool> onAllowRotationChanged;
   final ValueChanged<bool> onNodeListTwoColumnsChanged;
+  final Map<String, GlobalKey> journalKeys;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +71,7 @@ class AppearanceTab extends StatelessWidget {
         // §220 — снятие портретной фиксации (планшетный фидбэк). Применяется
         // сразу, без рестарта; уважает системный auto-rotate.
         SwitchListTile(
+          key: journalKeys['allowRotation'],
           title: Text(getLocalText.s("Allow rotation")),
           subtitle: Text(getLocalText.s("Rotate to landscape when the device turns — handy on tablets. Follows the system auto-rotate setting.")),
           secondary: const Icon(Icons.screen_rotation),
@@ -78,6 +81,7 @@ class AppearanceTab extends StatelessWidget {
         // §541 — гейт двухколоночной раскладки §537; применяется сразу через
         // SettingsStorage.nodeListTwoColumns.
         SwitchListTile(
+          key: journalKeys['nodeListTwoColumns'],
           title: Text(getLocalText.s("Two columns on wide screens")),
           subtitle: Text(getLocalText.s("Show the node list in two columns when the window is at least 600 dp wide (tablets, landscape, split-screen).")),
           secondary: const Icon(Icons.view_column_outlined),
