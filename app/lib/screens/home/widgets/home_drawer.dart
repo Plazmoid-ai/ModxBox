@@ -101,6 +101,7 @@ class HomeDrawer extends StatelessWidget {
                 AppSettingsScreen(
                   homeController: controller,
                   subController: subController,
+                  autoUpdater: autoUpdater,
                 ),
               ),
             ),
