@@ -6038,5 +6038,17 @@
   },
   "Current value: %s. Expected value: %s. Continue anyway?": {
     "value": "Текущее значение: %s. Ожидалось: %s. Всё равно продолжить?"
+  },
+  "Routing rule DNS option enabled": {
+    "value": "DNS-настройка правила маршрутизации включена"
+  },
+  "Routing rule DNS option disabled": {
+    "value": "DNS-настройка правила маршрутизации выключена"
+  },
+  "Routing rule Force IPv4 enabled": {
+    "value": "Force IPv4 в правиле маршрутизации включён"
+  },
+  "Routing rule Force IPv4 disabled": {
+    "value": "Force IPv4 в правиле маршрутизации выключен"
   }
 }
