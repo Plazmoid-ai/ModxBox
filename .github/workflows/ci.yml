@@ -86,8 +86,8 @@ jobs:
             # релизному тегу: `X.Y.Z-dev.<коммитов с тега>` (та же схема, что в
             # scripts/build-local-apk.sh, §186). Раньше здесь был `dev-<sha>`,
             # который не semver — шаг инъекции откатывался на `0.0.0`, и сборка
-            # уезжала как `0.0.0-dev-<sha>` с versionCode 500. В Play такой
-            # выпуск не опознать, а код 500 занимается в аккаунте навсегда.
+            # уезжала как `0.0.0-dev-<sha>` с versionCode 500. Такой fallback
+            # теряет привязку версии к последнему релизному тегу.
             #
             # versionCode считается от версии ТЕГА (суффикс -dev.N формула
             # срезает), поэтому dev-сборка получает ровно код своего релиза и не
@@ -111,11 +111,10 @@ jobs:
             echo "tag=" >> "$GITHUB_OUTPUT"
             echo "is_release=false" >> "$GITHUB_OUTPUT"
           fi
-          # §436 — релиз-кандидат (vX.Y.Z-rc.N) до пользователей не доходит:
-          # GitHub-релиз помечается pre-release (/releases/latest, куда ходит
-          # UpdateChecker, его не видит), docs/latest.json не обновляется, в
-          # Google Play не уходит. Hotfix (vX.Y.Z-hotfixN) — полноценный релиз,
-          # флаг false.
+          # Релиз-кандидат (vX.Y.Z-rc.N) не становится Latest на GitHub
+          # (/releases/latest, куда ходит UpdateChecker, его не видит), а
+          # docs/latest.json не обновляется. Hotfix (vX.Y.Z-hotfixN) — обычный
+          # стабильный релиз, флаг false.
           # Других суффиксов не бывает: version-code.sh падает на неизвестном.
           if [[ "$VERSION" == *-rc.* ]]; then
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
@@ -212,30 +211,6 @@ jobs:
         if: ${{ github.event.inputs.test_path == '' }}
         working-directory: app
         run: dart run tool/docs/parity_check.dart --strict
-
-      # §436 — описание выпуска для Google Play берётся из тех же
-      # fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt, что
-      # читает F-Droid. Play режет описание на 500 символах и отвергает
-      # загрузку целиком. Ловим на push, а не на теге: тег неподвижен, чинить
-      # файл после него уже некуда. Считаем символы, не байты (кириллица).
-      - name: Fastlane changelogs ≤ 500 chars
-        if: ${{ github.event.inputs.test_path == '' }}
-        working-directory: ${{ github.workspace }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          FAIL=0
-          for F in fastlane/metadata/android/*/changelogs/*.txt; do
-            N=$(python3 -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read().rstrip("\n")))' "$F")
-            if [ "$N" -gt 500 ]; then
-              echo "::error file=$F::$N символов, лимит описания выпуска в Google Play — 500."
-              FAIL=1
-            fi
-          done
-          if [ "$FAIL" -eq 0 ]; then
-            echo "OK: все changelogs ≤ 500 символов."
-          fi
-          exit "$FAIL"
 
       # SPEC 103 фаза 5 — общий контракт с лаунчером. Источник живёт в его
       # репозитории, здесь лежит копия; править её руками нельзя — правка
