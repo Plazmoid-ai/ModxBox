@@ -5861,5 +5861,68 @@
   },
   "Needs a saved exit node.": {
     "value": "Нужен сохранённый выходной узел."
+  },
+  "History": {
+    "value": "История"
+  },
+  "Record settings changes": {
+    "value": "Записывать изменения настроек"
+  },
+  "New events will be added to this history.": {
+    "value": "Новые события будут добавляться в эту историю."
+  },
+  "Logging is disabled. Existing entries are kept.": {
+    "value": "Журналирование отключено. Существующие записи сохранены."
+  },
+  "No changes recorded yet": {
+    "value": "Изменений пока нет"
+  },
+  "Today": {
+    "value": "Сегодня"
+  },
+  "Yesterday": {
+    "value": "Вчера"
+  },
+  "Change undone": {
+    "value": "Изменение отменено"
+  },
+  "Previous value": {
+    "value": "Было"
+  },
+  "Comment": {
+    "value": "Комментарий"
+  },
+  "Add a comment for this entry": {
+    "value": "Добавить комментарий к записи"
+  },
+  "Comment saved": {
+    "value": "Комментарий сохранён"
+  },
+  "Save comment": {
+    "value": "Сохранить комментарий"
+  },
+  "Go to setting": {
+    "value": "К настройке"
+  },
+  "Redo change": {
+    "value": "Повторить"
+  },
+  "Undo change": {
+    "value": "Отменить"
+  },
+  "Change redone": {
+    "value": "Изменение повторено"
+  },
+  "Lock config": {
+    "value": "Закрепить конфигурацию"
+  },
+  "Debug API port": {
+    "value": "Порт Debug API"
+  },
+  "Auto-record Wi-Fi": {
+    "value": "Автоматическая запись Wi-Fi"
+  },
+  "Node list in two columns": {
+    "value": "Два столбца в списке узлов"
   }
 }
