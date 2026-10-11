@@ -132,6 +132,7 @@ class _ChangeJournalTabState extends State<ChangeJournalTab> {
               previousHeading = heading;
             }
             children.add(_JournalEntryCard(
+              key: ValueKey(entry.id),
               entry: entry,
               timeLabel: _timeLabel(entry.timestamp),
               onNavigate: () => widget.onNavigate(entry),
