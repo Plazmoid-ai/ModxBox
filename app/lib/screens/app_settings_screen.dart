@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../controllers/home_controller.dart';
 import '../controllers/subscription_controller.dart';
+import '../services/subscription/auto_updater.dart';
 import '../main.dart';
 import '../services/change_journal.dart';
 import '../services/debug/bootstrap.dart';
@@ -23,6 +24,7 @@ import '../widgets/user_agent_dialog.dart';
 import '../vpn/box_vpn_client.dart';
 import 'app_settings_screen/app_settings_dialogs.dart';
 import 'dns_settings_screen.dart';
+import 'subscriptions_screen.dart';
 import 'app_settings_screen/widgets/appearance_tab.dart';
 import 'app_settings_screen/widgets/automation_tab.dart';
 import 'app_settings_screen/widgets/change_journal_tab.dart';
@@ -38,6 +40,7 @@ class AppSettingsScreen extends StatefulWidget {
     this.highlightCoreLogs = false,
     this.homeController,
     this.subController,
+    this.autoUpdater,
   });
 
   /// 0 = General, 1 = Appearance (§541), 2 = Subscriptions, 3 = Diagnostics,
@@ -53,6 +56,7 @@ class AppSettingsScreen extends StatefulWidget {
   /// Optional navigation context for journal links to DNS settings.
   final HomeController? homeController;
   final SubscriptionController? subController;
+  final AutoUpdater? autoUpdater;
 
   @override
   State<AppSettingsScreen> createState() => _AppSettingsScreenState();
@@ -275,6 +279,33 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     ChangeJournalEntry entry,
   ) async {
     final target = entry.target;
+    if (target.startsWith('subscriptions.entry:')) {
+      final homeController = widget.homeController;
+      final subController = widget.subController;
+      final autoUpdater = widget.autoUpdater;
+      if (homeController == null ||
+          subController == null ||
+          autoUpdater == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(getLocalText.s(
+              "Open the journal from the main menu to jump to a server list entry.",
+            )),
+          ),
+        );
+        return;
+      }
+      final entryId = target.substring('subscriptions.entry:'.length);
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => SubscriptionsScreen(
+          subController: subController,
+          homeController: homeController,
+          autoUpdater: autoUpdater,
+          focusEntryId: entryId,
+        ),
+      ));
+      return;
+    }
     if (target.startsWith('dns.')) {
       final homeController = widget.homeController;
       final subController = widget.subController;
