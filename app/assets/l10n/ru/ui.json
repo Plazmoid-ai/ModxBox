@@ -5996,5 +5996,23 @@
   },
   "Open the journal from the main menu to jump to a routing rule.": {
     "value": "Откройте журнал через главное меню, чтобы перейти к правилу маршрутизации."
+  },
+  "DNS rule reordered": {
+    "value": "Порядок DNS-правила изменён"
+  },
+  "DNS rule created": {
+    "value": "DNS-правило создано"
+  },
+  "DNS rule edited": {
+    "value": "DNS-правило изменено"
+  },
+  "DNS rule enabled": {
+    "value": "DNS-правило включено"
+  },
+  "DNS rule disabled": {
+    "value": "DNS-правило выключено"
+  },
+  "DNS rule deleted": {
+    "value": "DNS-правило удалено"
   }
 }
