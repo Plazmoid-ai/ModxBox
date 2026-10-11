@@ -17,6 +17,7 @@ import '../models/parser_config.dart';
 import '../services/builder/preset_expand.dart' show PresetNode;
 import '../services/builder/rule_order.dart';
 import '../services/direction_mutations.dart';
+import '../services/change_journal.dart';
 import '../services/error_format.dart';
 import '../services/file_export.dart';
 import '../services/file_import.dart';
@@ -59,6 +60,8 @@ class RoutingScreen extends StatefulWidget {
     required this.homeController,
     this.focusDirectionTag,
     this.initialPresetsTab = false,
+    this.focusRuleId,
+    this.initialRulesTab = false,
   });
 
   final SubscriptionController subController;
@@ -71,6 +74,10 @@ class RoutingScreen extends StatefulWidget {
   /// §262 — открыть сразу на табе Presets (каталог пресетов). Навигация из
   /// листа DNS-health «Enable FakeIP» → юзер видит каталог, находит FakeIP.
   final bool initialPresetsTab;
+
+  /// Journal navigation target: focus this rule on the Rules tab.
+  final String? focusRuleId;
+  final bool initialRulesTab;
 
   @override
   State<RoutingScreen> createState() => _RoutingScreenState();
@@ -118,6 +125,12 @@ class _RoutingScreenState extends State<RoutingScreen>
   final _directionKeys = <String, GlobalKey>{};
   String? _highlightedDirectionTag;
   Timer? _directionHighlightTimer;
+  final _ruleJournalKeys = <String, GlobalKey>{};
+
+  GlobalKey _ruleJournalKey(String id) => _ruleJournalKeys.putIfAbsent(
+        id,
+        () => GlobalKey(debugLabel: 'journal-routing-rule-$id'),
+      );
 
   @override
   SubscriptionController get lazyController => widget.subController;
@@ -129,7 +142,10 @@ class _RoutingScreenState extends State<RoutingScreen>
   @override
   void onLocaleTemplateFetch({required bool first}) {
     if (first) {
-      unawaited(_load().then((_) => _focusDirectionIfAny()));
+      unawaited(_load().then((_) {
+        _focusDirectionIfAny();
+        _focusRuleFromJournal();
+      }));
     } else {
       unawaited(_refetchTemplate());
     }
@@ -211,6 +227,40 @@ class _RoutingScreenState extends State<RoutingScreen>
     });
   }
 
+  Future<void> _focusRuleFromJournal() async {
+    final id = widget.focusRuleId;
+    if (!mounted || id == null) return;
+    if (!_customRules.any((rule) => rule.id == id)) return;
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+    final targetContext = _ruleJournalKeys[id]?.currentContext;
+    if (targetContext != null) {
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+        alignment: 0.25,
+      );
+    }
+  }
+
+  void _recordRoutingChange({
+    required String title,
+    required String beforeText,
+    required String afterText,
+    String? ruleId,
+    String target = 'routing.rules',
+  }) {
+    unawaited(ChangeJournalService.record(
+      category: 'info',
+      title: getLocalText.s(title),
+      beforeText: beforeText,
+      afterText: afterText,
+      path: '${getLocalText.s("Routing")} › ${getLocalText.s("Rules")}',
+      target: ruleId == null ? target : 'routing.rule:$ruleId',
+    ));
+  }
+
   // §085 R4 — alias: сохраняет существующие call-sites `_markDirty()`.
   @override
   void _markDirty() => markDirty();
@@ -259,7 +309,11 @@ class _RoutingScreenState extends State<RoutingScreen>
     return DefaultTabController(
       length: 4,
       // §262 — таб Presets (index 1) первым при навигации из DNS-health листа.
-      initialIndex: widget.initialPresetsTab ? 1 : 0,
+      initialIndex: (widget.focusRuleId != null || widget.initialRulesTab)
+          ? 2
+          : widget.initialPresetsTab
+              ? 1
+              : 0,
       child: Builder(
         builder: (tabCtx) => Scaffold(
           appBar: AppBar(
@@ -936,7 +990,8 @@ class _RoutingScreenState extends State<RoutingScreen>
     if (oldIndex < 0 || oldIndex >= _customRules.length) return;
     if (newIndex < 0 || newIndex > _customRules.length - 1) return;
     final moved = _customRules[oldIndex];
-    if (!_isSortable(moved)) return; // несортируемое не двигаем
+    if (!_isSortable(moved)) return;
+    final previousPosition = oldIndex + 1; // несортируемое не двигаем
     setState(() {
       // Приходит из `onReorderItem` (RoutingTabs) — newIndex уже приведён к
       // списку БЕЗ перетаскиваемого элемента, ручного сдвига «-1 при move
@@ -953,6 +1008,16 @@ class _RoutingScreenState extends State<RoutingScreen>
         ..addAll(sorted);
       _markDirty();
     });
+    final newPosition =
+        _customRules.indexWhere((rule) => rule.id == moved.id) + 1;
+    if (newPosition != previousPosition) {
+      _recordRoutingChange(
+        title: "Routing rule reordered",
+        beforeText: '#$previousPosition',
+        afterText: '#$newPosition',
+        ruleId: moved.id,
+      );
+    }
   }
 
   /// §370 — можно ли двигать правило drag'ом. Несортируемые
@@ -1001,6 +1066,7 @@ class _RoutingScreenState extends State<RoutingScreen>
     }
 
     return CustomRuleTile(
+      key: _ruleJournalKey(rule.id),
       index: index,
       rule: rule,
       // §279 (§3.5.1) — live display-имя: label пресета из локализованного
@@ -1037,6 +1103,12 @@ class _RoutingScreenState extends State<RoutingScreen>
           _customRules[index] = rule.withEnabled(v);
           _markDirty();
         });
+        _recordRoutingChange(
+          title: v ? "Routing rule enabled" : "Routing rule disabled",
+          beforeText: getLocalText.s(rule.enabled ? "Enabled" : "Off"),
+          afterText: getLocalText.s(v ? "Enabled" : "Off"),
+          ruleId: rule.id,
+        );
         // §266 — toggle пресета меняет @rule_enable → каскад on_change
         // (напр. FakeIP вкл → resolve_enabled off).
         final updated = _customRules[index];
@@ -1045,10 +1117,17 @@ class _RoutingScreenState extends State<RoutingScreen>
         }
       },
       onOutboundChanged: (val) {
+        if (val == pickerValue) return;
         setState(() {
           _customRules[index] = rule.withOutbound(val);
           _markDirty();
         });
+        _recordRoutingChange(
+          title: "Routing rule changed",
+          beforeText: pickerValue,
+          afterText: val,
+          ruleId: rule.id,
+        );
       },
     );
   }
@@ -1144,6 +1223,10 @@ class _RoutingScreenState extends State<RoutingScreen>
       _srsCached.remove(rule.id);
       _markDirty();
     });
+    _recordRoutingChange(
+      title: "Routing rule deleted",
+      beforeText: ruleDisplayName(rule, _customRules, _template),
+    );
     // Подчищаем cached-файлы: SRS — один файл по `id`, preset — по каждому
     // remote rule_set'у пресета + убираем composite-ключи из _srsCached.
     if (rule is CustomRuleSrs) {
@@ -1194,6 +1277,12 @@ class _RoutingScreenState extends State<RoutingScreen>
           ..addAll(sorted);
         _markDirty();
       });
+      _recordRoutingChange(
+        title: "Routing rule created",
+        beforeText: '',
+        afterText: ruleDisplayName(saved, _customRules, _template),
+        ruleId: saved.id,
+      );
     }
   }
 
@@ -1232,6 +1321,10 @@ class _RoutingScreenState extends State<RoutingScreen>
         _customRules.removeAt(index);
         _markDirty();
       });
+      _recordRoutingChange(
+        title: "Routing rule deleted",
+        beforeText: ruleDisplayName(current, _customRules, _template),
+      );
     } else if (result.saved != null) {
       final saved = result.saved!;
       final urlChanged =
@@ -1248,6 +1341,12 @@ class _RoutingScreenState extends State<RoutingScreen>
         if (urlChanged || kindChanged) _srsCached.remove(current.id);
         _markDirty();
       });
+      _recordRoutingChange(
+        title: "Routing rule edited",
+        beforeText: '${ruleDisplayName(current, _customRules, _template)} · ${current.kind.name}',
+        afterText: '${ruleDisplayName(_customRules[index], _customRules, _template)} · ${_customRules[index].kind.name}',
+        ruleId: saved.id,
+      );
       if (urlChanged || kindChanged) {
         // ## 12 — старые файлы всех наборов прежнего правила.
         for (final cacheId in current is CustomRuleSrs
