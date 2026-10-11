@@ -6038,5 +6038,11 @@
   },
   "Routing rule Force IPv4 disabled": {
     "value": "Force IPv4 в правиле маршрутизации выключен"
+  },
+  "Release to open tabs": {
+    "value": "Отпусти — вкладки"
+  },
+  "Tap outside tiles or swipe up to close": {
+    "value": "Нажми вне плиток или смахни вверх, чтобы закрыть"
   }
 }
