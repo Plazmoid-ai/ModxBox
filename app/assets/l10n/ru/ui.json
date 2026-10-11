@@ -6014,5 +6014,8 @@
   },
   "DNS rule deleted": {
     "value": "DNS-правило удалено"
+  },
+  "DNS cache size changed": {
+    "value": "Размер DNS-кэша изменён"
   }
 }
