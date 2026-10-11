@@ -109,6 +109,15 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     'autoCheckUpdates': GlobalKey(debugLabel: 'journal-auto-check-updates'),
     'autoPing': GlobalKey(debugLabel: 'journal-auto-ping'),
     'haptic': GlobalKey(debugLabel: 'journal-haptic'),
+    'allowRotation': GlobalKey(debugLabel: 'journal-allow-rotation'),
+    'nodeListTwoColumns': GlobalKey(debugLabel: 'journal-two-columns'),
+    'autoUpdateSubs': GlobalKey(debugLabel: 'journal-auto-update-subs'),
+    'autoUpdateDisabledSubs': GlobalKey(debugLabel: 'journal-auto-update-disabled-subs'),
+    'debugApi': GlobalKey(debugLabel: 'journal-debug-api'),
+    'debugPort': GlobalKey(debugLabel: 'journal-debug-port'),
+    'configLocked': GlobalKey(debugLabel: 'journal-config-locked'),
+    'coreLogs': GlobalKey(debugLabel: 'journal-core-logs'),
+    'autoRecordWifi': GlobalKey(debugLabel: 'journal-auto-record-wifi'),
   };
 
   // §118 — subscription fetch identity (UA override + HWID + device-meta).
@@ -356,6 +365,14 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     if (target == 'general.autoCheckUpdates') keyName = 'autoCheckUpdates';
     if (target == 'general.autoPing') keyName = 'autoPing';
     if (target == 'general.haptic') keyName = 'haptic';
+    if (target == 'appearance.allowRotation') keyName = 'allowRotation';
+    if (target == 'appearance.nodeListTwoColumns') keyName = 'nodeListTwoColumns';
+    if (target == 'subscriptions.autoUpdate') keyName = 'autoUpdateSubs';
+    if (target == 'subscriptions.autoUpdateDisabled') keyName = 'autoUpdateDisabledSubs';
+    if (target == 'diagnostics.debugApi') keyName = 'debugApi';
+    if (target == 'diagnostics.configLock') keyName = 'configLocked';
+    if (target == 'diagnostics.coreLogs') keyName = 'coreLogs';
+    if (target == 'diagnostics.autoRecordWifi') keyName = 'autoRecordWifi';
     if (keyName == null) return;
 
     await Future<void>.delayed(const Duration(milliseconds: 400));
@@ -424,7 +441,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     setState(() => _configLocked = locked);
     await SettingsStorage.setConfigLockedForDebug(locked);
     _recordSettingChange(
-      title: getLocalText.s("Lock config"),
+      title: getLocalText.s("Lock config (debug)"),
       beforeText: _journalBoolLabel(previous),
       afterText: _journalBoolLabel(locked),
       path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Lock config")}',
@@ -906,6 +923,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     return SubscriptionsTab(
       loaded: _loaded,
       padding: _tabPadding(context),
+      journalKeys: _journalKeys,
       autoUpdateSubs: _autoUpdateSubs,
       onAutoUpdateSubsChanged: (val) {
         final previous = _autoUpdateSubs;
@@ -957,6 +975,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       allowRotation: _allowRotation,
       nodeListTwoColumns: _nodeListTwoColumns,
       padding: _tabPadding(context),
+      journalKeys: _journalKeys,
       onAllowRotationChanged: (val) => unawaited(_toggleAllowRotation(val)),
       onNodeListTwoColumnsChanged: (val) {
         final previous = _nodeListTwoColumns;
@@ -964,7 +983,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
         setState(() => _nodeListTwoColumns = val);
         unawaited(SettingsStorage.setNodeListTwoColumns(val));
         _recordSettingChange(
-          title: getLocalText.s("Node list in two columns"),
+          title: getLocalText.s("Two columns on wide screens"),
           beforeText: _journalBoolLabel(previous),
           afterText: _journalBoolLabel(val),
           path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Appearance")} › ${getLocalText.s("Node list in two columns")}',
@@ -1176,6 +1195,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       coreLogsEnabled: _coreLogsEnabled,
       coreLogsHighlighted: _coreLogsHighlighted,
       coreLogsTileKey: _coreLogsTileKey,
+      journalKeys: _journalKeys,
       autoRecordWifi: _autoRecordWifi,
       onBatteryTap: () async {
         await _vpn.openBatteryOptimizationSettings();
@@ -1204,7 +1224,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     setState(() => _autoRecordWifi = enabled);
     await SettingsStorage.setAutoRecordWifi(enabled);
     _recordSettingChange(
-      title: getLocalText.s("Auto-record Wi-Fi"),
+      title: getLocalText.s("Auto-record visited Wi-Fi networks"),
       beforeText: _journalBoolLabel(previous),
       afterText: _journalBoolLabel(enabled),
       path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Diagnostics")} › ${getLocalText.s("Auto-record Wi-Fi")}',
