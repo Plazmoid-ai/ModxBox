@@ -365,6 +365,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
         'dns.strategy' => 'strategy',
         'dns.final' => 'dnsFinal',
         'dns.defaultResolver' => 'defaultResolver',
+        'dns.cacheCapacity' => 'cacheCapacity',
+        'dns.optimistic' => 'optimistic',
+        'dns.storeCache' => 'storeCache',
         _ => null,
       };
       await Navigator.of(context).push(MaterialPageRoute<void>(
