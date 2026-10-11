@@ -5645,5 +5645,35 @@
   },
   "Node list in two columns": {
     "value": "节点列表双列显示"
+  },
+  "Open DNS navigation from the main screen to jump directly to a DNS setting.": {
+    "value": "请从主界面的菜单打开日志，以直接跳转到 DNS 设置。"
+  },
+  "DNS server added": {
+    "value": "已添加 DNS 服务器"
+  },
+  "DNS server changed": {
+    "value": "DNS 服务器已更改"
+  },
+  "DNS server deleted": {
+    "value": "DNS 服务器已删除"
+  },
+  "Deleted": {
+    "value": "已删除"
+  },
+  "DNS strategy changed": {
+    "value": "DNS 策略已更改"
+  },
+  "DNS Final changed": {
+    "value": "DNS Final 已更改"
+  },
+  "Default Domain Resolver changed": {
+    "value": "Default Domain Resolver 已更改"
+  },
+  "DNS server enabled": {
+    "value": "已启用 DNS 服务器"
+  },
+  "DNS server disabled": {
+    "value": "已禁用 DNS 服务器"
   }
 }
