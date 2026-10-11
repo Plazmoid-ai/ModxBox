@@ -5759,5 +5759,17 @@
   },
   "Current value: %s. Expected value: %s. Continue anyway?": {
     "value": "当前值：%s。预期值：%s。仍要继续吗？"
+  },
+  "Routing rule DNS option enabled": {
+    "value": "已启用路由规则的 DNS 选项"
+  },
+  "Routing rule DNS option disabled": {
+    "value": "已禁用路由规则的 DNS 选项"
+  },
+  "Routing rule Force IPv4 enabled": {
+    "value": "已启用路由规则的 Force IPv4"
+  },
+  "Routing rule Force IPv4 disabled": {
+    "value": "已禁用路由规则的 Force IPv4"
   }
 }
