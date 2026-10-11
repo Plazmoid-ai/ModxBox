@@ -45,6 +45,7 @@ class DnsSettingsScreen extends StatefulWidget {
     required this.homeController,
     this.focusServerTag,
     this.focusField,
+    this.focusRuleIdentity,
   });
 
   final SubscriptionController subController;
@@ -53,6 +54,7 @@ class DnsSettingsScreen extends StatefulWidget {
   /// Optional target used by the settings-change journal to open a specific row.
   final String? focusServerTag;
   final String? focusField;
+  final String? focusRuleIdentity;
 
   @override
   State<DnsSettingsScreen> createState() => _DnsSettingsScreenState();
@@ -148,6 +150,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     'defaultResolver': GlobalKey(debugLabel: 'journal-dns-default-resolver'),
   };
   final Map<String, GlobalKey> _serverKeys = {};
+  final Map<String, GlobalKey> _dnsRuleKeys = {};
   bool _focusHandled = false;
   String _cacheCapacityError = '';
   final TextEditingController _cacheCapacityCtl = TextEditingController();
@@ -241,6 +244,12 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
         () => GlobalKey(debugLabel: 'journal-dns-server-$tag'),
       );
 
+  GlobalKey _dnsRuleJournalKey(String identity) =>
+      _dnsRuleKeys.putIfAbsent(
+        identity,
+        () => GlobalKey(debugLabel: 'journal-dns-rule-$identity'),
+      );
+
   void _focusJournalTarget() {
     if (!mounted || _focusHandled) return;
     final String? targetKey = switch (widget.focusField) {
@@ -249,11 +258,13 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       'defaultResolver' => 'defaultResolver',
       _ => null,
     };
-    final BuildContext? targetContext = widget.focusServerTag != null
-        ? _serverJournalKey(widget.focusServerTag!).currentContext
-        : targetKey == null
-            ? null
-            : _journalKeys[targetKey]?.currentContext;
+    final BuildContext? targetContext = widget.focusRuleIdentity != null
+        ? _dnsRuleJournalKey(widget.focusRuleIdentity!).currentContext
+        : widget.focusServerTag != null
+            ? _serverJournalKey(widget.focusServerTag!).currentContext
+            : targetKey == null
+                ? null
+                : _journalKeys[targetKey]?.currentContext;
     if (targetContext == null) return;
     _focusHandled = true;
     unawaited(Scrollable.ensureVisible(
@@ -692,6 +703,10 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       for (final r in rows) r == -1 ? presetBlock : [_rules[r]],
     ];
     final moved = units.removeAt(oldIndex);
+    final movedIdentity = rows[oldIndex] >= 0
+        ? _ruleIdentity(_rules[rows[oldIndex]])
+        : null;
+    final previousPosition = oldIndex + 1;
     units.insert(newIndex.clamp(0, units.length), moved);
     setState(() {
       _rules
@@ -699,12 +714,28 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
         ..addAll([for (final u in units) ...u]);
       _markDirty();
     });
+    final newPosition = movedIdentity == null
+        ? newIndex + 1
+        : _ruleDisplayRows.indexWhere((row) =>
+                row >= 0 && _ruleIdentity(_rules[row]) == movedIdentity) +
+            1;
+    if (newPosition != previousPosition) {
+      _recordDnsChange(
+        title: getLocalText.s("DNS rule reordered"),
+        beforeText: '#$previousPosition',
+        afterText: '#$newPosition',
+        path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")}',
+        target: movedIdentity == null ? 'dns.settings' : 'dns.rule:$movedIdentity',
+        category: 'info',
+      );
+    }
   }
 
   void _showUserRuleEditor(int index) {
     final isNew = index < 0;
     // Редактор открывается только у inline-тайла (DnsRuleTile).
     final existing = isNew ? null : _rules[index] as DnsRuleInline;
+    final previousName = existing?.name ?? '';
     showUserRuleEditor(
       context,
       isNew: isNew,
@@ -721,6 +752,14 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           }
           _markDirty();
         });
+        _recordDnsChange(
+          title: getLocalText.s(isNew ? "DNS rule created" : "DNS rule edited"),
+          beforeText: previousName,
+          afterText: entry.name,
+          path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › ${entry.name}',
+          target: 'dns.rule:${_ruleIdentity(entry)}',
+          category: 'info',
+        );
       },
     );
   }
@@ -854,6 +893,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
                   );
                 }
                 return DnsRuleTile(
+                  key: _dnsRuleJournalKey(_ruleIdentity(_rules[row])),
                   index: row,
                   dragIndex: i,
                   entry: _rules[row],
@@ -1058,10 +1098,21 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
 
   /// §033: Toggle enabled на rule-entry (kind не меняется).
   void _toggleRuleEnabled(int index, bool value) {
+    final rule = _rules[index];
+    if (rule.enabled == value) return;
+    final identity = _ruleIdentity(rule);
     setState(() {
-      _rules[index] = _rules[index].withEnabled(value);
+      _rules[index] = rule.withEnabled(value);
       _markDirty();
     });
+    _recordDnsChange(
+      title: getLocalText.s(value ? "DNS rule enabled" : "DNS rule disabled"),
+      beforeText: getLocalText.s(rule.enabled ? "Enabled" : "Off"),
+      afterText: getLocalText.s(value ? "Enabled" : "Off"),
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › $identity',
+      target: 'dns.rule:$identity',
+      category: 'info',
+    );
   }
 
   /// §117: тоггл DNS-аспекта rule-источника mirror-группы — пишет
@@ -1154,6 +1205,14 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       if (index < _rules.length) _rules.removeAt(index);
       _markDirty();
     });
+    _recordDnsChange(
+      title: getLocalText.s("DNS rule deleted"),
+      beforeText: name,
+      afterText: getLocalText.s("Deleted"),
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › $name',
+      target: 'dns.settings',
+      category: 'info',
+    );
   }
 
 }
