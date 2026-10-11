@@ -1212,6 +1212,7 @@ class _RoutingScreenState extends State<RoutingScreen>
 
   Future<void> _confirmDeleteCustomRule(int index) async {
     final rule = _customRules[index];
+    final ruleName = ruleDisplayName(rule, _customRules, _template);
     final ok = await showDeleteCustomRuleDialog(
       context,
       rule,
@@ -1225,7 +1226,7 @@ class _RoutingScreenState extends State<RoutingScreen>
     });
     _recordRoutingChange(
       title: "Routing rule deleted",
-      beforeText: ruleDisplayName(rule, _customRules, _template),
+      beforeText: ruleName,
     );
     // Подчищаем cached-файлы: SRS — один файл по `id`, preset — по каждому
     // remote rule_set'у пресета + убираем composite-ключи из _srsCached.
@@ -1317,13 +1318,14 @@ class _RoutingScreenState extends State<RoutingScreen>
     );
     if (result == null || !mounted) return;
     if (result.wasDeleted) {
+      final ruleName = ruleDisplayName(current, _customRules, _template);
       setState(() {
         _customRules.removeAt(index);
         _markDirty();
       });
       _recordRoutingChange(
         title: "Routing rule deleted",
-        beforeText: ruleDisplayName(current, _customRules, _template),
+        beforeText: ruleName,
       );
     } else if (result.saved != null) {
       final saved = result.saved!;
