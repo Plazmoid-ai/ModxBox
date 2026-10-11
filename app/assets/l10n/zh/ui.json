@@ -5753,5 +5753,11 @@
   },
   "Folder": {
     "value": "文件夹"
+  },
+  "Setting changed since this entry": {
+    "value": "此记录之后设置已更改"
+  },
+  "Current value: %s. Expected value: %s. Continue anyway?": {
+    "value": "当前值：%s。预期值：%s。仍要继续吗？"
   }
 }
