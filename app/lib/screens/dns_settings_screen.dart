@@ -148,15 +148,22 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     'strategy': GlobalKey(debugLabel: 'journal-dns-strategy'),
     'dnsFinal': GlobalKey(debugLabel: 'journal-dns-final'),
     'defaultResolver': GlobalKey(debugLabel: 'journal-dns-default-resolver'),
+    'cacheCapacity': GlobalKey(debugLabel: 'journal-dns-cache-capacity'),
+    'optimistic': GlobalKey(debugLabel: 'journal-dns-optimistic'),
+    'storeCache': GlobalKey(debugLabel: 'journal-dns-store-cache'),
   };
   final Map<String, GlobalKey> _serverKeys = {};
   final Map<String, GlobalKey> _dnsRuleKeys = {};
   bool _focusHandled = false;
   String _cacheCapacityError = '';
   final TextEditingController _cacheCapacityCtl = TextEditingController();
+  Timer? _cacheJournalTimer;
+  String? _cacheCapacityJournalBefore;
 
   @override
   void dispose() {
+    _cacheJournalTimer?.cancel();
+    _flushCacheCapacityJournal();
     _cacheCapacityCtl.dispose();
     super.dispose();
   }
@@ -170,12 +177,37 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           getLocalText.s("Range 1024..65535"));
       return;
     }
+    if (v == _cacheCapacity) {
+      if (_cacheCapacityJournalBefore != null) {
+        _cacheJournalTimer?.cancel();
+        _cacheJournalTimer =
+            Timer(const Duration(milliseconds: 650), _flushCacheCapacityJournal);
+      }
+      return;
+    }
     setState(() {
       _cacheCapacityError = '';
-      if (v == _cacheCapacity) return;
+      _cacheCapacityJournalBefore ??= _cacheCapacity;
       _cacheCapacity = v;
       _markDirty();
     });
+    _cacheJournalTimer?.cancel();
+    _cacheJournalTimer =
+        Timer(const Duration(milliseconds: 650), _flushCacheCapacityJournal);
+  }
+
+  void _flushCacheCapacityJournal() {
+    _cacheJournalTimer = null;
+    final before = _cacheCapacityJournalBefore;
+    _cacheCapacityJournalBefore = null;
+    if (before == null || before == _cacheCapacity) return;
+    _recordDnsChange(
+      title: getLocalText.s("DNS cache size changed"),
+      beforeText: before.isEmpty ? '—' : before,
+      afterText: _cacheCapacity,
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS cache size")}',
+      target: 'dns.cacheCapacity',
+    );
   }
 
   // §279 — _load() стартует из onLocaleTemplateFetch (TemplateAwareState):
@@ -256,6 +288,9 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       'strategy' => 'strategy',
       'dnsFinal' => 'dnsFinal',
       'defaultResolver' => 'defaultResolver',
+      'cacheCapacity' => 'cacheCapacity',
+      'optimistic' => 'optimistic',
+      'storeCache' => 'storeCache',
       _ => null,
     };
     final BuildContext? targetContext = widget.focusRuleIdentity != null
@@ -969,17 +1004,28 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
             LocalResolverWarningBanner(
               hasCloudflareUdp:
                   _servers.any((s) => s.tag == 'cloudflare_udp'),
-              onSwitchToCloudflareUdp: () => setState(() {
+              onSwitchToCloudflareUdp: () {
+              if (_defaultResolver == 'cloudflare_udp') return;
+              final previous = _defaultResolver;
+              setState(() {
                 _defaultResolver = 'cloudflare_udp';
                 _markDirty();
-              }),
+              });
+              _recordDnsChange(
+                title: getLocalText.s("Default Domain Resolver changed"),
+                beforeText: previous.isEmpty ? '—' : previous,
+                afterText: 'cloudflare_udp',
+                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Default Domain Resolver")}',
+                target: 'dns.defaultResolver',
+              );
+            },
             ),
 
           // §580 — кэш DNS ядра: размер, устаревшие ответы, хранение в
           // cache.db. Изменение помечает конфиг к пересборке.
           const Divider(height: 32),
           TextField(
-            key: const ValueKey('dns_cache_capacity'),
+            key: _journalKeys['cacheCapacity'],
             controller: _cacheCapacityCtl,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -994,26 +1040,48 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
             onChanged: _applyCacheCapacity,
           ),
           SwitchListTile(
-            key: const ValueKey('dns_optimistic'),
+            key: _journalKeys['optimistic'],
             contentPadding: EdgeInsets.zero,
             title: Text(getLocalText.s("Serve stale answers")),
             subtitle: Text(getLocalText.s(
                 "Answer from cache at once and refresh in the background.")),
             value: _optimistic,
-            onChanged: (v) => setState(() {
-              _optimistic = v;
-              _markDirty();
-            }),
+            onChanged: (v) {
+              if (_optimistic == v) return;
+              final previous = _optimistic;
+              setState(() {
+                _optimistic = v;
+                _markDirty();
+              });
+              _recordDnsChange(
+                title: getLocalText.s("Serve stale answers"),
+                beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
+                afterText: getLocalText.s(v ? "Enabled" : "Off"),
+                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Serve stale answers")}',
+                target: 'dns.optimistic',
+              );
+            },
           ),
           SwitchListTile(
-            key: const ValueKey('dns_store_cache'),
+            key: _journalKeys['storeCache'],
             contentPadding: EdgeInsets.zero,
             title: Text(getLocalText.s("Keep DNS cache after restart")),
             value: _storeCache,
-            onChanged: (v) => setState(() {
-              _storeCache = v;
-              _markDirty();
-            }),
+            onChanged: (v) {
+              if (_storeCache == v) return;
+              final previous = _storeCache;
+              setState(() {
+                _storeCache = v;
+                _markDirty();
+              });
+              _recordDnsChange(
+                title: getLocalText.s("Keep DNS cache after restart"),
+                beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
+                afterText: getLocalText.s(v ? "Enabled" : "Off"),
+                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Keep DNS cache after restart")}',
+                target: 'dns.storeCache',
+              );
+            },
           ),
 
           // §263 — сброс DNS-кэша ядра (cache.db). Внизу экрана, отдельным
