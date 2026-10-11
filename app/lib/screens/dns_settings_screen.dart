@@ -786,7 +786,9 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           _markDirty();
         });
         _recordDnsChange(
-          title: getLocalText.s(isNew ? "DNS rule created" : "DNS rule edited"),
+          title: isNew
+              ? getLocalText.s("DNS rule created")
+              : getLocalText.s("DNS rule edited"),
           beforeText: previousName,
           afterText: entry.name,
           path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › ${entry.name}',
@@ -1168,7 +1170,9 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       _markDirty();
     });
     _recordDnsChange(
-      title: getLocalText.s(value ? "DNS rule enabled" : "DNS rule disabled"),
+      title: value
+            ? getLocalText.s("DNS rule enabled")
+            : getLocalText.s("DNS rule disabled"),
       beforeText: getLocalText.s(rule.enabled ? "Enabled" : "Off"),
       afterText: getLocalText.s(value ? "Enabled" : "Off"),
       path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › $identity',
@@ -1197,7 +1201,9 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     });
     unawaited(SettingsStorage.saveCustomRules(_customRules));
     _recordDnsChange(
-      title: getLocalText.s(value ? "Routing rule DNS option enabled" : "Routing rule DNS option disabled"),
+      title: value
+            ? getLocalText.s("Routing rule DNS option enabled")
+            : getLocalText.s("Routing rule DNS option disabled"),
       beforeText: '${cr.name} · ${getLocalText.s(previous ? "Enabled" : "Off")}',
       afterText: '${cr.name} · ${getLocalText.s(value ? "Enabled" : "Off")}',
       path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › ${cr.name}',
@@ -1232,7 +1238,9 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     });
     unawaited(SettingsStorage.saveCustomRules(_customRules));
     _recordDnsChange(
-      title: getLocalText.s(value ? "Routing rule Force IPv4 enabled" : "Routing rule Force IPv4 disabled"),
+      title: value
+            ? getLocalText.s("Routing rule Force IPv4 enabled")
+            : getLocalText.s("Routing rule Force IPv4 disabled"),
       beforeText: '${cr.name} · ${getLocalText.s(previous ? "Enabled" : "Off")}',
       afterText: '${cr.name} · ${getLocalText.s(value ? "Enabled" : "Off")}',
       path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › ${cr.name}',
@@ -1264,7 +1272,9 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     // §266 — dns_enable-тумблер входит в формулу on_change (@rule_enable AND
     // @dns_enable) → каскад (FakeIP DNS off → resolve_enabled возвращается).
     _recordDnsChange(
-      title: getLocalText.s(value ? "Routing rule DNS option enabled" : "Routing rule DNS option disabled"),
+      title: value
+            ? getLocalText.s("Routing rule DNS option enabled")
+            : getLocalText.s("Routing rule DNS option disabled"),
       beforeText: '${cr.name} · ${getLocalText.s(previous ? "Enabled" : "Off")}',
       afterText: '${cr.name} · ${getLocalText.s(value ? "Enabled" : "Off")}',
       path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › ${cr.name}',
