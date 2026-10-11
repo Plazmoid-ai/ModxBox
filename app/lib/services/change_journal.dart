@@ -160,32 +160,38 @@ class ChangeJournalService {
     String comment = '',
   }) =>
       _exclusive(() async {
-        final prefs = await SharedPreferences.getInstance();
-        if (!(prefs.getBool(_enabledKey) ?? true)) return;
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          if (!(prefs.getBool(_enabledKey) ?? true)) return;
 
-        final entries = _readEntries(prefs);
-        entries.insert(
-          0,
-          ChangeJournalEntry(
-            id: DateTime.now().microsecondsSinceEpoch.toString(),
-            timestamp: DateTime.now(),
-            category: category,
-            title: title,
-            beforeText: beforeText,
-            afterText: afterText,
-            path: path,
-            target: target,
-            actionKey: actionKey,
-            beforeValue: beforeValue,
-            afterValue: afterValue,
-            comment: comment,
-          ),
-        );
-        if (entries.length > _maxEntries) {
-          entries.removeRange(_maxEntries, entries.length);
+          final entries = _readEntries(prefs);
+          entries.insert(
+            0,
+            ChangeJournalEntry(
+              id: DateTime.now().microsecondsSinceEpoch.toString(),
+              timestamp: DateTime.now(),
+              category: category,
+              title: title,
+              beforeText: beforeText,
+              afterText: afterText,
+              path: path,
+              target: target,
+              actionKey: actionKey,
+              beforeValue: beforeValue,
+              afterValue: afterValue,
+              comment: comment,
+            ),
+          );
+          if (entries.length > _maxEntries) {
+            entries.removeRange(_maxEntries, entries.length);
+          }
+          await _writeEntries(prefs, entries);
+          revision.value++;
+        } catch (_) {
+          // The journal is best-effort: unavailable platform storage (for
+          // example in a pure Dart/Flutter test) must never break the feature
+          // that emitted the event, such as a subscription refresh.
         }
-        await _writeEntries(prefs, entries);
-        revision.value++;
       });
 
   static Future<void> setComment(String id, String comment) =>
