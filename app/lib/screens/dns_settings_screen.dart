@@ -535,8 +535,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     if (saved == null) return;
     final afterValue = _dnsServerValue(_resolveDnsRef(saved));
     setState(() {
-      if (saved != null) {
-        _servers[idx] = saved;
+      _servers[idx] = saved;
         // §117 задача 4b: rename → каскад по ссылкам, чтобы не орфанить
         // (DNS-правила, resolvers, domain_resolver'ы, DNS-опции правил).
         final newTag = saved.tag;
