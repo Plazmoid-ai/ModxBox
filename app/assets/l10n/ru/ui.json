@@ -6026,5 +6026,8 @@
   },
   "Default route changed": {
     "value": "Маршрут по умолчанию изменён"
+  },
+  "Theme": {
+    "value": "Тема"
   }
 }
