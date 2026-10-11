@@ -5759,5 +5759,11 @@
   },
   "Routing rule Force IPv4 disabled": {
     "value": "已禁用路由规则的 Force IPv4"
+  },
+  "Release to open tabs": {
+    "value": "松开以打开标签页"
+  },
+  "Tap outside tiles or swipe up to close": {
+    "value": "点击卡片外部或向上滑动关闭"
   }
 }
