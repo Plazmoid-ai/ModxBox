@@ -1029,16 +1029,16 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
             child: TextField(
               key: const ValueKey('dns_cache_capacity'),
               controller: _cacheCapacityCtl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: getLocalText.s("DNS cache size"),
-              helperText: getLocalText.s("Number of cached answers."),
-              errorText:
-                  _cacheCapacityError.isEmpty ? null : _cacheCapacityError,
-              isDense: true,
-              border: const OutlineInputBorder(),
-            ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: getLocalText.s("DNS cache size"),
+                helperText: getLocalText.s("Number of cached answers."),
+                errorText:
+                    _cacheCapacityError.isEmpty ? null : _cacheCapacityError,
+                isDense: true,
+                border: const OutlineInputBorder(),
+              ),
               onChanged: _applyCacheCapacity,
             ),
           ),
@@ -1047,25 +1047,25 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
             child: SwitchListTile(
               key: const ValueKey('dns_optimistic'),
               contentPadding: EdgeInsets.zero,
-            title: Text(getLocalText.s("Serve stale answers")),
-            subtitle: Text(getLocalText.s(
-                "Answer from cache at once and refresh in the background.")),
-            value: _optimistic,
-            onChanged: (v) {
-              if (_optimistic == v) return;
-              final previous = _optimistic;
-              setState(() {
-                _optimistic = v;
-                _markDirty();
-              });
-              _recordDnsChange(
-                title: getLocalText.s("Serve stale answers"),
-                beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
-                afterText: getLocalText.s(v ? "Enabled" : "Off"),
-                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Serve stale answers")}',
-                target: 'dns.optimistic',
-              );
-            },
+              title: Text(getLocalText.s("Serve stale answers")),
+              subtitle: Text(getLocalText.s(
+                  "Answer from cache at once and refresh in the background.")),
+              value: _optimistic,
+              onChanged: (v) {
+                if (_optimistic == v) return;
+                final previous = _optimistic;
+                setState(() {
+                  _optimistic = v;
+                  _markDirty();
+                });
+                _recordDnsChange(
+                  title: getLocalText.s("Serve stale answers"),
+                  beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
+                  afterText: getLocalText.s(v ? "Enabled" : "Off"),
+                  path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Serve stale answers")}',
+                  target: 'dns.optimistic',
+                );
+              },
             ),
           ),
           KeyedSubtree(
@@ -1073,23 +1073,23 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
             child: SwitchListTile(
               key: const ValueKey('dns_store_cache'),
               contentPadding: EdgeInsets.zero,
-            title: Text(getLocalText.s("Keep DNS cache after restart")),
-            value: _storeCache,
-            onChanged: (v) {
-              if (_storeCache == v) return;
-              final previous = _storeCache;
-              setState(() {
-                _storeCache = v;
-                _markDirty();
-              });
-              _recordDnsChange(
-                title: getLocalText.s("Keep DNS cache after restart"),
-                beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
-                afterText: getLocalText.s(v ? "Enabled" : "Off"),
-                path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Keep DNS cache after restart")}',
-                target: 'dns.storeCache',
-              );
-            },
+              title: Text(getLocalText.s("Keep DNS cache after restart")),
+              value: _storeCache,
+              onChanged: (v) {
+                if (_storeCache == v) return;
+                final previous = _storeCache;
+                setState(() {
+                  _storeCache = v;
+                  _markDirty();
+                });
+                _recordDnsChange(
+                  title: getLocalText.s("Keep DNS cache after restart"),
+                  beforeText: getLocalText.s(previous ? "Enabled" : "Off"),
+                  afterText: getLocalText.s(v ? "Enabled" : "Off"),
+                  path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("Keep DNS cache after restart")}',
+                  target: 'dns.storeCache',
+                );
+              },
             ),
           ),
 
