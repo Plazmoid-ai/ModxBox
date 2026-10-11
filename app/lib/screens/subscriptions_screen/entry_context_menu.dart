@@ -8,6 +8,7 @@ import '../../controllers/subscription_controller.dart';
 import '../../models/server_list.dart';
 import '../../models/ui_msg.dart';
 import '../../services/subscription/auto_updater.dart';
+import '../../services/change_journal.dart';
 import '../../services/subscription/input_helpers.dart';
 import 'entry_delete_title.dart';
 import 'folder_picker.dart';
@@ -181,7 +182,17 @@ void _showFolderContextMenu(
               final name = await showFolderNameDialog(context,
                   initial: entry.name, title: getLocalText.s("Rename folder"));
               if (name == null) return;
+              final previousName = folder.name;
+              if (name.trim() == previousName) return;
               await subController.renameAt(index, name);
+              unawaited(ChangeJournalService.record(
+                category: 'info',
+                title: getLocalText.s("Folder renamed"),
+                beforeText: previousName,
+                afterText: name.trim(),
+                path: '${getLocalText.s("Servers")} › ${getLocalText.s("Folder")}',
+                target: 'subscriptions.entry:${entry.id}',
+              ));
             },
           ),
           ListTile(
