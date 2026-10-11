@@ -1186,7 +1186,8 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
   /// (`_ruleRefsByTag`) пересчитаются на rebuild от обновлённого `_customRules`.
   void _toggleRuleDns(CustomRule cr, bool value) {
     final idx = _customRules.indexWhere((r) => r.id == cr.id);
-    if (idx < 0 || cr.dns == null) return;
+    if (idx < 0 || cr.dns == null || cr.dns!.enabled == value) return;
+    final previous = cr.dns!.enabled;
     final updated = switch (cr) {
       CustomRuleInline() => cr.copyWith(dns: cr.dns!.copyWith(enabled: value)),
       CustomRuleSrs() => cr.copyWith(dns: cr.dns!.copyWith(enabled: value)),
@@ -1197,6 +1198,14 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       _markDirty();
     });
     unawaited(SettingsStorage.saveCustomRules(_customRules));
+    _recordDnsChange(
+      title: getLocalText.s(value ? "Routing rule DNS option enabled" : "Routing rule DNS option disabled"),
+      beforeText: '${cr.name} · ${getLocalText.s(previous ? "Enabled" : "Off")}',
+      afterText: '${cr.name} · ${getLocalText.s(value ? "Enabled" : "Off")}',
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › ${cr.name}',
+      target: 'routing.rule:${cr.id}',
+      category: 'info',
+    );
   }
 
   /// §257: свитч Force IPv4 в DNS-блоке правила — пишет `RuleDns.forceIpv4`
@@ -1206,6 +1215,8 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
   void _toggleRuleForceIpv4(CustomRule cr, bool value) {
     final idx = _customRules.indexWhere((r) => r.id == cr.id);
     if (idx < 0) return;
+    final previous = cr.dns?.forceIpv4 ?? false;
+    if (previous == value) return;
     final next = (cr.dns ?? const RuleDns()).copyWith(forceIpv4: value);
     final clear =
         !next.forceIpv4 && !next.enabled && next.serverTag.isEmpty;
@@ -1222,6 +1233,14 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       _markDirty();
     });
     unawaited(SettingsStorage.saveCustomRules(_customRules));
+    _recordDnsChange(
+      title: getLocalText.s(value ? "Routing rule Force IPv4 enabled" : "Routing rule Force IPv4 disabled"),
+      beforeText: '${cr.name} · ${getLocalText.s(previous ? "Enabled" : "Off")}',
+      afterText: '${cr.name} · ${getLocalText.s(value ? "Enabled" : "Off")}',
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › ${cr.name}',
+      target: 'routing.rule:${cr.id}',
+      category: 'info',
+    );
   }
 
   /// §257: свитч DNS-блока пресета — пишет магическую var `dns_enable` в
@@ -1233,6 +1252,8 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
         (r) => r is CustomRulePreset && r.presetId == presetId);
     if (idx < 0) return;
     final cr = _customRules[idx] as CustomRulePreset;
+    final previous = _presetDnsEnable[presetId] ?? true;
+    if (previous == value) return;
     final updated = cr.copyWith(
       varsValues: {...cr.varsValues, 'dns_enable': value ? 'true' : 'false'},
     );
@@ -1244,6 +1265,14 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     unawaited(SettingsStorage.saveCustomRules(_customRules));
     // §266 — dns_enable-тумблер входит в формулу on_change (@rule_enable AND
     // @dns_enable) → каскад (FakeIP DNS off → resolve_enabled возвращается).
+    _recordDnsChange(
+      title: getLocalText.s(value ? "Routing rule DNS option enabled" : "Routing rule DNS option disabled"),
+      beforeText: '${cr.name} · ${getLocalText.s(previous ? "Enabled" : "Off")}',
+      afterText: '${cr.name} · ${getLocalText.s(value ? "Enabled" : "Off")}',
+      path: '${getLocalText.s("DNS Settings")} › ${getLocalText.s("DNS Rules")} › ${cr.name}',
+      target: 'routing.rule:${cr.id}',
+      category: 'info',
+    );
     unawaited(() async {
       final template = await TemplateLoader.load();
       final match = template.selectableRules
