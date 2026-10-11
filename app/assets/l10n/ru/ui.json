@@ -6032,5 +6032,11 @@
   },
   "Folder": {
     "value": "Папка"
+  },
+  "Setting changed since this entry": {
+    "value": "Настройка изменена после этой записи"
+  },
+  "Current value: %s. Expected value: %s. Continue anyway?": {
+    "value": "Текущее значение: %s. Ожидалось: %s. Всё равно продолжить?"
   }
 }
