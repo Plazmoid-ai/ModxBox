@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../controllers/home_controller.dart';
+import '../controllers/subscription_controller.dart';
 import '../main.dart';
 import '../services/change_journal.dart';
 import '../services/debug/bootstrap.dart';
@@ -20,6 +22,7 @@ import '../widgets/wifi_permission_dialog.dart';
 import '../widgets/user_agent_dialog.dart';
 import '../vpn/box_vpn_client.dart';
 import 'app_settings_screen/app_settings_dialogs.dart';
+import 'dns_settings_screen.dart';
 import 'app_settings_screen/widgets/appearance_tab.dart';
 import 'app_settings_screen/widgets/automation_tab.dart';
 import 'app_settings_screen/widgets/change_journal_tab.dart';
@@ -33,6 +36,8 @@ class AppSettingsScreen extends StatefulWidget {
     super.key,
     this.initialTab = 0,
     this.highlightCoreLogs = false,
+    this.homeController,
+    this.subController,
   });
 
   /// 0 = General, 1 = Appearance (§541), 2 = Subscriptions, 3 = Diagnostics,
@@ -44,6 +49,10 @@ class AppSettingsScreen extends StatefulWidget {
   /// SwitchListTile и пульсируем подсветку 2.5s. Используется banner'ом
   /// в Live tab чтобы юзер сразу увидел нужный toggle.
   final bool highlightCoreLogs;
+
+  /// Optional navigation context for journal links to DNS settings.
+  final HomeController? homeController;
+  final SubscriptionController? subController;
 
   @override
   State<AppSettingsScreen> createState() => _AppSettingsScreenState();
@@ -266,6 +275,38 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     ChangeJournalEntry entry,
   ) async {
     final target = entry.target;
+    if (target.startsWith('dns.')) {
+      final homeController = widget.homeController;
+      final subController = widget.subController;
+      if (homeController == null || subController == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(getLocalText.s(
+              "Open DNS navigation from the main screen to jump directly to a DNS setting.",
+            )),
+          ),
+        );
+        return;
+      }
+      final focusServerTag = target.startsWith('dns.server:')
+          ? target.substring('dns.server:'.length)
+          : null;
+      final focusField = switch (target) {
+        'dns.strategy' => 'strategy',
+        'dns.final' => 'dnsFinal',
+        'dns.defaultResolver' => 'defaultResolver',
+        _ => null,
+      };
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => DnsSettingsScreen(
+          subController: subController,
+          homeController: homeController,
+          focusServerTag: focusServerTag,
+          focusField: focusField,
+        ),
+      ));
+      return;
+    }
     final tabIndex = target.startsWith('appearance.')
         ? 1
         : target.startsWith('subscriptions.')
