@@ -264,7 +264,7 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
           child: IgnorePointer(
             child: ValueListenableBuilder<_PullHint>(
               valueListenable: _hint,
-              builder: (_, hint, __) => _PullHintView(hint: hint),
+              builder: (context, hint, child) => _PullHintView(hint: hint),
             ),
           ),
         ),
