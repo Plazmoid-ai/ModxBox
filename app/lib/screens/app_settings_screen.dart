@@ -111,6 +111,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     'autoPing': GlobalKey(debugLabel: 'journal-auto-ping'),
     'haptic': GlobalKey(debugLabel: 'journal-haptic'),
     'allowRotation': GlobalKey(debugLabel: 'journal-allow-rotation'),
+    'theme': GlobalKey(debugLabel: 'journal-theme'),
+    'language': GlobalKey(debugLabel: 'journal-language'),
     'nodeListTwoColumns': GlobalKey(debugLabel: 'journal-two-columns'),
     'autoUpdateSubs': GlobalKey(debugLabel: 'journal-auto-update-subs'),
     'autoUpdateDisabledSubs': GlobalKey(debugLabel: 'journal-auto-update-disabled-subs'),
@@ -400,6 +402,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     if (target == 'general.autoPing') keyName = 'autoPing';
     if (target == 'general.haptic') keyName = 'haptic';
     if (target == 'appearance.allowRotation') keyName = 'allowRotation';
+    if (target == 'appearance.theme') keyName = 'theme';
+    if (target == 'appearance.language') keyName = 'language';
     if (target == 'appearance.nodeListTwoColumns') keyName = 'nodeListTwoColumns';
     if (target == 'subscriptions.autoUpdate') keyName = 'autoUpdateSubs';
     if (target == 'subscriptions.autoUpdateDisabled') keyName = 'autoUpdateDisabledSubs';
