@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../main.dart';
+import '../../../services/change_journal.dart';
 import '../../../services/l10n/locale_controller.dart';
 
 /// §541 — Appearance tab для App Settings: всё про внешний вид (тема,
@@ -32,6 +33,20 @@ class AppearanceTab extends StatelessWidget {
   final ValueChanged<bool> onNodeListTwoColumnsChanged;
   final Map<String, GlobalKey> journalKeys;
 
+  String _themeLabel(ThemeMode mode) => getLocalText.s(switch (mode) {
+        ThemeMode.system => "System",
+        ThemeMode.light => "Light",
+        ThemeMode.dark => "Dark",
+      });
+
+  String _localeLabel(String locale) => getLocalText.s(switch (locale) {
+        'system' => "System default",
+        'en' => "English",
+        'ru' => "Русский",
+        'zh' => "中文（简体）",
+        _ => locale,
+      });
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -41,8 +56,21 @@ class AppearanceTab extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         RadioGroup<ThemeMode>(
+          key: journalKeys['theme'],
           groupValue: themeNotifier.mode,
-          onChanged: (v) { if (v != null) themeNotifier.setMode(v); },
+          onChanged: (v) {
+            if (v == null || v == themeNotifier.mode) return;
+            final previous = themeNotifier.mode;
+            unawaited(ChangeJournalService.record(
+              category: 'important',
+              title: getLocalText.s("Theme changed"),
+              beforeText: _themeLabel(previous),
+              afterText: _themeLabel(v),
+              path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Appearance")} › ${getLocalText.s("Theme")}',
+              target: 'appearance.theme',
+            ));
+            themeNotifier.setMode(v);
+          },
           child: Column(
             children: ThemeMode.values.map((mode) {
               final label = switch (mode) {
@@ -95,8 +123,21 @@ class AppearanceTab extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         RadioGroup<String>(
+          key: journalKeys['language'],
           groupValue: LocaleController.I.setting,
-          onChanged: (v) { if (v != null) LocaleController.I.set(v); },
+          onChanged: (v) {
+            if (v == null || v == LocaleController.I.setting) return;
+            final previous = LocaleController.I.setting;
+            unawaited(ChangeJournalService.record(
+              category: 'important',
+              title: getLocalText.s("Language changed"),
+              beforeText: _localeLabel(previous),
+              afterText: _localeLabel(v),
+              path: '${getLocalText.s("App Settings")} › ${getLocalText.s("Appearance")} › ${getLocalText.s("Language")}',
+              target: 'appearance.language',
+            ));
+            LocaleController.I.set(v);
+          },
           child: Column(
             children: [
               RadioListTile<String>(
