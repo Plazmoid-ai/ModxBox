@@ -82,7 +82,7 @@ class ChangeJournalEntry {
     String text(String key) => json[key]?.toString() ?? '';
     String? nullableText(String key) {
       final value = json[key];
-      return value == null ? null : value.toString();
+      return value?.toString();
     }
 
     return ChangeJournalEntry(
