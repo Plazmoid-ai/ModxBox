@@ -552,6 +552,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         initialTab: 2,
         homeController: widget.homeController,
         subController: widget.subController,
+        autoUpdater: widget.autoUpdater,
       ),
     ));
   }
