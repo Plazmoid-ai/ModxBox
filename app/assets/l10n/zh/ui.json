@@ -5582,5 +5582,68 @@
   },
   "Needs a saved exit node.": {
     "value": "需要已保存的出口节点。"
+  },
+  "History": {
+    "value": "历史记录"
+  },
+  "Record settings changes": {
+    "value": "记录设置更改"
+  },
+  "New events will be added to this history.": {
+    "value": "新事件将添加到此历史记录中。"
+  },
+  "Logging is disabled. Existing entries are kept.": {
+    "value": "记录已关闭，现有条目会保留。"
+  },
+  "No changes recorded yet": {
+    "value": "暂时没有更改记录"
+  },
+  "Today": {
+    "value": "今天"
+  },
+  "Yesterday": {
+    "value": "昨天"
+  },
+  "Change undone": {
+    "value": "已撤销更改"
+  },
+  "Previous value": {
+    "value": "原值"
+  },
+  "Comment": {
+    "value": "备注"
+  },
+  "Add a comment for this entry": {
+    "value": "为此条目添加备注"
+  },
+  "Comment saved": {
+    "value": "备注已保存"
+  },
+  "Save comment": {
+    "value": "保存备注"
+  },
+  "Go to setting": {
+    "value": "前往设置"
+  },
+  "Redo change": {
+    "value": "重做"
+  },
+  "Undo change": {
+    "value": "撤销"
+  },
+  "Change redone": {
+    "value": "已重做更改"
+  },
+  "Lock config": {
+    "value": "锁定配置"
+  },
+  "Debug API port": {
+    "value": "Debug API 端口"
+  },
+  "Auto-record Wi-Fi": {
+    "value": "自动记录 Wi-Fi"
+  },
+  "Node list in two columns": {
+    "value": "节点列表双列显示"
   }
 }
