@@ -5735,5 +5735,8 @@
   },
   "DNS rule deleted": {
     "value": "已删除 DNS 规则"
+  },
+  "DNS cache size changed": {
+    "value": "DNS 缓存大小已更改"
   }
 }
