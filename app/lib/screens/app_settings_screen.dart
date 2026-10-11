@@ -458,6 +458,33 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       return;
     }
 
+    final expectedCurrentValue =
+        (redo ? entry.beforeValue : entry.afterValue) == 'true';
+    if (currentValue != expectedCurrentValue) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(getLocalText.s("Setting changed since this entry")),
+          content: Text(getLocalText.s(
+            "Current value: %s. Expected value: %s. Continue anyway?",
+            _journalBoolLabel(currentValue),
+            _journalBoolLabel(expectedCurrentValue),
+          )),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(getLocalText.s("Cancel")),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(getLocalText.s("Continue")),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
     await ChangeJournalService.setUndone(entry.id, !redo);
     if (currentValue != targetValue) {
       await ChangeJournalService.record(
