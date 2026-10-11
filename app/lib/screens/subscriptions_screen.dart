@@ -548,7 +548,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   /// Открыть App Settings сразу на табе «Subscriptions» (initialTab: 2).
   void _openSubscriptionSettings() {
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => const AppSettingsScreen(initialTab: 2),
+      builder: (_) => AppSettingsScreen(
+        initialTab: 2,
+        homeController: widget.homeController,
+        subController: widget.subController,
+      ),
     ));
   }
 
