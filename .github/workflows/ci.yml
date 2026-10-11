@@ -415,7 +415,7 @@ jobs:
           LXBOX_ABI_FILTER=arm64-v8a flutter build apk --release \
             --target-platform android-arm64 \
             --build-name "$VERSION_NAME" --build-number "$CODE"
-          mv "$OUT/app-${VARIANT}-release.apk" "$OUT/app-arm64-v8a-release.apk"
+          mv "$OUT/app-release.apk" "$OUT/app-arm64-v8a-release.apk"
           echo "::endgroup::"
           ls -la "$OUT/app-arm64-v8a-release.apk"
 
