@@ -28,6 +28,7 @@ class DiagnosticsTab extends StatelessWidget {
     required this.coreLogsEnabled,
     required this.coreLogsHighlighted,
     required this.coreLogsTileKey,
+    required this.journalKeys,
     required this.autoRecordWifi,
     required this.onBatteryTap,
     required this.onNotificationsTap,
@@ -67,6 +68,7 @@ class DiagnosticsTab extends StatelessWidget {
   final bool coreLogsEnabled;
   final bool coreLogsHighlighted;
   final GlobalKey coreLogsTileKey;
+  final Map<String, GlobalKey> journalKeys;
 
   final bool autoRecordWifi;
 
@@ -177,6 +179,7 @@ class DiagnosticsTab extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SwitchListTile(
+          key: journalKeys['debugApi'],
           title: Text(getLocalText.s("Debug API")),
           subtitle: Text(
             debugEnabled
@@ -224,6 +227,7 @@ class DiagnosticsTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 TextField(
+                  key: journalKeys['debugPort'],
                   controller: debugPortCtl,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
@@ -251,6 +255,7 @@ class DiagnosticsTab extends StatelessWidget {
         // toggle'ом). При выключении Debug API toggle выше — lock auto-снимется.
         if (debugEnabled)
           SwitchListTile(
+            key: journalKeys['configLocked'],
             title: Text(getLocalText.s("Lock config (debug)")),
             subtitle: Text(
               configLocked
@@ -275,6 +280,7 @@ class DiagnosticsTab extends StatelessWidget {
               ? Theme.of(context).colorScheme.tertiaryContainer
               : Colors.transparent,
           child: SwitchListTile(
+            key: journalKeys['coreLogs'],
             title: Text(getLocalText.s("Forward sing-box logs")),
             subtitle: Text(
               coreLogsEnabled
@@ -318,6 +324,7 @@ class DiagnosticsTab extends StatelessWidget {
         // сети (магазин/проход). Toggle для тех кто не хочет logging.
         const Divider(height: 8),
         SwitchListTile(
+          key: journalKeys['autoRecordWifi'],
           title: Text(getLocalText.s("Auto-record visited Wi-Fi networks")),
           subtitle: Text(
             autoRecordWifi
