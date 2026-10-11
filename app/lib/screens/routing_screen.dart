@@ -1105,8 +1105,8 @@ class _RoutingScreenState extends State<RoutingScreen>
         });
         _recordRoutingChange(
           title: v ? "Routing rule enabled" : "Routing rule disabled",
-          beforeText: getLocalText.s(rule.enabled ? "Enabled" : "Off"),
-          afterText: getLocalText.s(v ? "Enabled" : "Off"),
+          beforeText: '${ruleDisplayName(rule, _customRules, _template)} · ${getLocalText.s(rule.enabled ? "Enabled" : "Off")}',
+          afterText: '${ruleDisplayName(rule, _customRules, _template)} · ${getLocalText.s(v ? "Enabled" : "Off")}',
           ruleId: rule.id,
         );
         // §266 — toggle пресета меняет @rule_enable → каскад on_change
@@ -1124,8 +1124,8 @@ class _RoutingScreenState extends State<RoutingScreen>
         });
         _recordRoutingChange(
           title: "Routing rule changed",
-          beforeText: pickerValue,
-          afterText: val,
+          beforeText: '${ruleDisplayName(rule, _customRules, _template)} · $pickerValue',
+          afterText: '${ruleDisplayName(rule, _customRules, _template)} · $val',
           ruleId: rule.id,
         );
       },
@@ -1227,6 +1227,7 @@ class _RoutingScreenState extends State<RoutingScreen>
     _recordRoutingChange(
       title: "Routing rule deleted",
       beforeText: ruleName,
+      afterText: getLocalText.s("Deleted"),
     );
     // Подчищаем cached-файлы: SRS — один файл по `id`, preset — по каждому
     // remote rule_set'у пресета + убираем composite-ключи из _srsCached.
@@ -1326,6 +1327,7 @@ class _RoutingScreenState extends State<RoutingScreen>
       _recordRoutingChange(
         title: "Routing rule deleted",
         beforeText: ruleName,
+        afterText: getLocalText.s("Deleted"),
       );
     } else if (result.saved != null) {
       final saved = result.saved!;
@@ -1345,8 +1347,8 @@ class _RoutingScreenState extends State<RoutingScreen>
       });
       _recordRoutingChange(
         title: "Routing rule edited",
-        beforeText: '${ruleDisplayName(current, _customRules, _template)} · ${current.kind.name}',
-        afterText: '${ruleDisplayName(_customRules[index], _customRules, _template)} · ${_customRules[index].kind.name}',
+        beforeText: '${ruleDisplayName(current, _customRules, _template)} · ${current.summary()}',
+        afterText: '${ruleDisplayName(_customRules[index], _customRules, _template)} · ${_customRules[index].summary()}',
         ruleId: saved.id,
       );
       if (urlChanged || kindChanged) {
