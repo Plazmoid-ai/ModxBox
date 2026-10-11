@@ -160,7 +160,6 @@ class ChangeJournalService {
     String comment = '',
   }) =>
       _exclusive(() async {
-        if (beforeText == afterText && beforeValue == afterValue) return;
         final prefs = await SharedPreferences.getInstance();
         if (!(prefs.getBool(_enabledKey) ?? true)) return;
 
