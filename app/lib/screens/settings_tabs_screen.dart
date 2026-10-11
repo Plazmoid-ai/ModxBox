@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/l10n/locale_controller.dart';
+
 /// Описание вкладки: название и значок (значок показывается в плитках).
 class SettingsTabSpec {
   const SettingsTabSpec(this.title, this.icon);
@@ -397,7 +399,7 @@ class _PullHintView extends StatelessWidget {
         opacity: hint.armed ? 1 : 0,
         duration: const Duration(milliseconds: 120),
         child: Text(
-          'Отпусти — вкладки',
+          getLocalText.s("Release to open tabs"),
           style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
         ),
       ),
@@ -486,7 +488,7 @@ class _TabTilesOverlay extends StatelessWidget {
                         ],
                         const SizedBox(height: 6),
                         Text(
-                          'Нажми вне плиток или смахни вверх, чтобы закрыть',
+                          getLocalText.s("Tap outside tiles or swipe up to close"),
                           textAlign: TextAlign.center,
                           style: tt.bodySmall?.copyWith(
                             color: cs.onSurfaceVariant,
