@@ -5972,5 +5972,29 @@
   },
   "Open the journal from the main menu to jump to a server list entry.": {
     "value": "Откройте журнал через главное меню, чтобы перейти к записи в списке серверов."
+  },
+  "Routing rule reordered": {
+    "value": "Порядок правила маршрутизации изменён"
+  },
+  "Routing rule enabled": {
+    "value": "Правило маршрутизации включено"
+  },
+  "Routing rule disabled": {
+    "value": "Правило маршрутизации выключено"
+  },
+  "Routing rule changed": {
+    "value": "Правило маршрутизации изменено"
+  },
+  "Routing rule deleted": {
+    "value": "Правило маршрутизации удалено"
+  },
+  "Routing rule created": {
+    "value": "Правило маршрутизации создано"
+  },
+  "Routing rule edited": {
+    "value": "Правило маршрутизации изменено"
+  },
+  "Open the journal from the main menu to jump to a routing rule.": {
+    "value": "Откройте журнал через главное меню, чтобы перейти к правилу маршрутизации."
   }
 }
