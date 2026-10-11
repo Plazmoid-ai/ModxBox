@@ -24,6 +24,7 @@ import '../widgets/user_agent_dialog.dart';
 import '../vpn/box_vpn_client.dart';
 import 'app_settings_screen/app_settings_dialogs.dart';
 import 'dns_settings_screen.dart';
+import 'routing_screen.dart';
 import 'subscriptions_screen.dart';
 import 'app_settings_screen/widgets/appearance_tab.dart';
 import 'app_settings_screen/widgets/automation_tab.dart';
@@ -288,6 +289,32 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     ChangeJournalEntry entry,
   ) async {
     final target = entry.target;
+    if (target.startsWith('routing.rule:') || target == 'routing.rules') {
+      final homeController = widget.homeController;
+      final subController = widget.subController;
+      if (homeController == null || subController == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(getLocalText.s(
+              "Open the journal from the main menu to jump to a routing rule.",
+            )),
+          ),
+        );
+        return;
+      }
+      final ruleId = target.startsWith('routing.rule:')
+          ? target.substring('routing.rule:'.length)
+          : null;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => RoutingScreen(
+          subController: subController,
+          homeController: homeController,
+          focusRuleId: ruleId,
+          initialRulesTab: true,
+        ),
+      ));
+      return;
+    }
     if (target.startsWith('subscriptions.entry:')) {
       final homeController = widget.homeController;
       final subController = widget.subController;
