@@ -1066,7 +1066,6 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
                 target: 'dns.optimistic',
               );
             },
-          ),
             ),
           ),
           KeyedSubtree(
