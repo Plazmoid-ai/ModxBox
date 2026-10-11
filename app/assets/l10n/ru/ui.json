@@ -5954,5 +5954,23 @@
   },
   "DNS server disabled": {
     "value": "DNS-сервер выключен"
+  },
+  "Folder renamed": {
+    "value": "Папка переименована"
+  },
+  "Subscription updated": {
+    "value": "Подписка обновлена"
+  },
+  "Nodes: %d": {
+    "value": "Узлов: %d"
+  },
+  "Added %d, removed %d · total %d": {
+    "value": "Добавлено %d, удалено %d · всего %d"
+  },
+  "Node details changed · %d total": {
+    "value": "Изменилось содержимое узлов · всего %d"
+  },
+  "Open the journal from the main menu to jump to a server list entry.": {
+    "value": "Откройте журнал через главное меню, чтобы перейти к записи в списке серверов."
   }
 }
