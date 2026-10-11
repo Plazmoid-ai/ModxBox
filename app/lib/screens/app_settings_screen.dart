@@ -33,6 +33,7 @@ import 'app_settings_screen/widgets/diagnostics_tab.dart';
 import 'app_settings_screen/widgets/general_tab.dart';
 import 'app_settings_screen/widgets/subscriptions_tab.dart';
 import 'backup_screen.dart';
+import 'settings_tabs_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({
@@ -64,6 +65,8 @@ class AppSettingsScreen extends StatefulWidget {
 }
 
 class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindingObserver {
+  final GlobalKey<SettingsTabsScreenState> _settingsTabsKey =
+      GlobalKey<SettingsTabsScreenState>();
   final _vpn = BoxVpnClient();
   bool _autoStart = false;
   bool _haptic = true;
@@ -395,7 +398,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
                 : target.startsWith('automation.')
                     ? 4
                     : 0;
-    DefaultTabController.of(context).animateTo(tabIndex);
+    _settingsTabsKey.currentState?.selectTab(tabIndex);
 
     String? keyName;
     if (target == 'general.usageRegion') keyName = 'usageRegion';
@@ -824,42 +827,39 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       // и не перерисовывала строки самого экрана настроек.
       animation: Listenable.merge([themeNotifier, LocaleController.I]),
       builder: (context, _) {
-        return DefaultTabController(
-          length: 6,
+        return SettingsTabsScreen(
+          key: _settingsTabsKey,
+          overlayTitle: getLocalText.s("App Settings"),
           initialIndex: widget.initialTab.clamp(0, 5),
-          child: Scaffold(
-            appBar: AppBar(
-              title: Text(getLocalText.s("App Settings")),
-              bottom: _FadingTabBar(
-                tabs: [
-                  Tab(text: getLocalText.s("General")),
-                  Tab(text: getLocalText.s("Appearance")),
-                  Tab(text: getLocalText.s("Subscriptions")),
-                  Tab(text: getLocalText.s("Diagnostics")),
-                  Tab(text: getLocalText.s("Automation")),
-                  Tab(text: getLocalText.s("History")),
-                ],
+          tabs: [
+            SettingsTabSpec(getLocalText.s("General"), Icons.tune),
+            SettingsTabSpec(getLocalText.s("Appearance"), Icons.palette_outlined),
+            SettingsTabSpec(getLocalText.s("Subscriptions"), Icons.rss_feed),
+            SettingsTabSpec(
+              getLocalText.s("Diagnostics"),
+              Icons.monitor_heart_outlined,
+            ),
+            // Automation was added as a separate settings tab; keep it in both
+            // the browser bar and the tab-tile overlay.
+            SettingsTabSpec(getLocalText.s("Automation"), Icons.bolt),
+            SettingsTabSpec(getLocalText.s("History"), Icons.history),
+          ],
+          pages: [
+            _buildGeneralTab(context),
+            _buildAppearanceTab(context),
+            _buildSubscriptionsTab(context),
+            _buildDiagnosticsTab(context),
+            AutomationTab(padding: _tabPadding(context)),
+            Builder(
+              builder: (journalContext) => ChangeJournalTab(
+                padding: _tabPadding(journalContext),
+                onNavigate: (entry) => unawaited(
+                  _navigateToJournalEntry(journalContext, entry),
+                ),
+                onApplyAction: _applyJournalAction,
               ),
             ),
-            body: TabBarView(
-              children: [
-                _buildGeneralTab(context),
-                _buildAppearanceTab(context),
-                _buildSubscriptionsTab(context),
-                _buildDiagnosticsTab(context),
-                AutomationTab(padding: _tabPadding(context)),
-                Builder(
-                  builder: (journalContext) => ChangeJournalTab(
-                    padding: _tabPadding(journalContext),
-                    onNavigate: (entry) => unawaited(
-                      _navigateToJournalEntry(journalContext, entry),
-                    ),
-                    onApplyAction: _applyJournalAction,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         );
       },
     );
@@ -1310,48 +1310,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
         content: Text(enabled
             ? getLocalText.s("Auto-record on. Networks added after 5 min of stay.")
             : getLocalText.s("Auto-record off. Existing history kept.")),
-      ),
-    );
-  }
-}
-
-/// Centered scrollable [TabBar] whose left & right edges fade to transparent,
-/// so a tab clipped by the screen edge dissolves instead of being cut off —
-/// a soft hint that the bar scrolls. The fade is a fixed-width edge gradient
-/// (no scroll-metrics tracking) so it always renders on the first frame.
-class _FadingTabBar extends StatelessWidget implements PreferredSizeWidget {
-  const _FadingTabBar({required this.tabs});
-
-  final List<Widget> tabs;
-
-  // Width of each edge fade, in px.
-  static const double _fadeWidth = 32;
-
-  @override
-  Size get preferredSize => const TabBar(tabs: []).preferredSize;
-
-  @override
-  Widget build(BuildContext context) {
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (rect) {
-        final stop = (_fadeWidth / rect.width).clamp(0.0, 0.5);
-        return LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: const [
-            Colors.transparent,
-            Colors.white,
-            Colors.white,
-            Colors.transparent,
-          ],
-          stops: [0.0, stop, 1.0 - stop, 1.0],
-        ).createShader(rect);
-      },
-      child: TabBar(
-        isScrollable: true,
-        tabAlignment: TabAlignment.center,
-        tabs: tabs,
       ),
     );
   }
