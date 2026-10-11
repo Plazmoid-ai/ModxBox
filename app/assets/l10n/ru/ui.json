@@ -6017,5 +6017,11 @@
   },
   "DNS cache size changed": {
     "value": "Размер DNS-кэша изменён"
+  },
+  "Theme changed": {
+    "value": "Тема изменена"
+  },
+  "Language changed": {
+    "value": "Язык изменён"
   }
 }
