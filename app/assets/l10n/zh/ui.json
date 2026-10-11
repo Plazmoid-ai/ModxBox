@@ -5738,5 +5738,11 @@
   },
   "DNS cache size changed": {
     "value": "DNS 缓存大小已更改"
+  },
+  "Theme changed": {
+    "value": "主题已更改"
+  },
+  "Language changed": {
+    "value": "语言已更改"
   }
 }
