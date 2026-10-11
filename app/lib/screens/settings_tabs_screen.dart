@@ -22,7 +22,7 @@ class SettingsTabsScreen extends StatefulWidget {
     super.key,
     required this.tabs,
     required this.pages,
-    this.overlayTitle = 'Настройки приложения',
+    this.overlayTitle = 'App Settings',
     this.initialIndex = 0,
   });
 
