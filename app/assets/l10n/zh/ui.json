@@ -5747,5 +5747,8 @@
   },
   "Default route changed": {
     "value": "默认路由已更改"
+  },
+  "Theme": {
+    "value": "主题"
   }
 }
