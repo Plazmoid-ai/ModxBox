@@ -862,9 +862,6 @@
   "Add to status-bar shade for one-tap toggle. Android 13+ shows a system prompt; on older versions edit the shade manually.": {
     "value": "Добавьте в шторку, чтобы включать VPN одним нажатием. Android 13+ покажет системный запрос; на старых версиях отредактируйте шторку вручную."
   },
-  "Add user rule": {
-    "value": "Добавить своё правило"
-  },
   "Added": {
     "value": "Добавлено"
   },
@@ -6048,5 +6045,4 @@
   "Main screen": {
     "value": "Главный экран"
   }
-
 }

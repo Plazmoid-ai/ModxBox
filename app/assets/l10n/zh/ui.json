@@ -673,9 +673,6 @@
   "Add to status-bar shade for one-tap toggle. Android 13+ shows a system prompt; on older versions edit the shade manually.": {
     "value": "添加到状态栏下拉栏，一键开关。Android 13+ 会弹出系统提示；更早的版本需手动编辑下拉栏。"
   },
-  "Add user rule": {
-    "value": "添加自定义规则"
-  },
   "Added": {
     "value": "已添加"
   },
@@ -5769,5 +5766,4 @@
   "Main screen": {
     "value": "主界面"
   }
-
 }
