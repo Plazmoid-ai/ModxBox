@@ -1274,6 +1274,8 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           ],
         ),
       ];
+    final selectedTabIndex =
+        widget.singleTabIndex?.clamp(0, tabPages.length - 1).toInt();
     final tabView = TabBarView(controller: _tabController, children: tabPages);
     return Scaffold(
       appBar: widget.showAppBar
@@ -1284,8 +1286,8 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
               bottom: widget.singleTabIndex == null ? tabs : null,
             )
           : null,
-      body: widget.singleTabIndex != null
-          ? tabPages[widget.singleTabIndex!.clamp(0, tabPages.length - 1).toInt()]
+      body: selectedTabIndex != null
+          ? tabPages[selectedTabIndex]
           : Column(
               children: [
                 if (!widget.showAppBar)
