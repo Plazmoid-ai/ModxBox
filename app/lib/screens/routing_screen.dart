@@ -59,6 +59,7 @@ class RoutingScreen extends StatefulWidget {
     required this.subController,
     required this.homeController,
     this.showAppBar = true,
+    this.singleTabIndex,
     this.focusDirectionTag,
     this.initialPresetsTab = false,
     this.focusRuleId,
@@ -69,6 +70,8 @@ class RoutingScreen extends StatefulWidget {
   final SubscriptionController subController;
   final HomeController homeController;
   final bool showAppBar;
+  /// When set, render one existing routing tab without the original TabBar.
+  final int? singleTabIndex;
 
   /// §258 — при открытии показать Направление с этим тегом и мигнуть его тайлом
   /// (навигация «хоп рантайм-цепочки → Направление», openTagOwner). null = нет.
@@ -318,12 +321,26 @@ class _RoutingScreenState extends State<RoutingScreen>
   List<RoutingOutboundOption> _outboundOptions() =>
       _cachedOutboundOptions ??= RoutingHelpers.outboundOptions(_directions);
 
+  String _tabTitle(int index) {
+    final titles = [
+      getLocalText.s("Directions"),
+      getLocalText.s("Presets"),
+      getLocalText.s("Rules"),
+      getLocalText.s("Tunnel apps"),
+    ];
+    return titles[index.clamp(0, titles.length - 1).toInt()];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
         appBar: widget.showAppBar
-            ? AppBar(title: Text(getLocalText.s("Routing")))
+            ? AppBar(
+                title: Text(widget.singleTabIndex == null
+                    ? getLocalText.s("Routing")
+                    : _tabTitle(widget.singleTabIndex!)),
+              )
             : null,
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -335,11 +352,12 @@ class _RoutingScreenState extends State<RoutingScreen>
     return DefaultTabController(
       length: 4,
       // §262 — таб Presets (index 1) первым при навигации из DNS-health листа.
-      initialIndex: (widget.focusRuleId != null || widget.initialRulesTab)
-          ? 2
-          : widget.initialPresetsTab
-              ? 1
-              : 0,
+      initialIndex: widget.singleTabIndex ??
+          ((widget.focusRuleId != null || widget.initialRulesTab)
+              ? 2
+              : widget.initialPresetsTab
+                  ? 1
+                  : 0),
       child: Builder(
         builder: (tabCtx) {
           final rulesMenu = AnimatedBuilder(
@@ -368,8 +386,7 @@ class _RoutingScreenState extends State<RoutingScreen>
               Tab(text: getLocalText.s("Tunnel apps")),
             ],
           );
-          final tabView = TabBarView(
-            children: [
+          final tabPages = <Widget>[
               // ─── Directions: Направления (CRUD) + default fallback + Auto tuning ───
               RoutingDirectionsTab(
                 bottomPad: bottomPad,
@@ -404,18 +421,22 @@ class _RoutingScreenState extends State<RoutingScreen>
                 homeController: widget.homeController,
                 subController: widget.subController,
               ),
-            ],
-          );
+            ];
+          final tabView = TabBarView(children: tabPages);
           return Scaffold(
             appBar: widget.showAppBar
                 ? AppBar(
-                    title: Text(getLocalText.s("Routing")),
+                    title: Text(widget.singleTabIndex == null
+                        ? getLocalText.s("Routing")
+                        : _tabTitle(widget.singleTabIndex!)),
                     actions: [rulesMenu],
-                    bottom: tabBar,
+                    bottom: widget.singleTabIndex == null ? tabBar : null,
                   )
                 : null,
-            body: Column(
-              children: [
+            body: widget.singleTabIndex != null
+                ? tabPages[widget.singleTabIndex!.clamp(0, tabPages.length - 1).toInt()]
+                : Column(
+                    children: [
                 if (!widget.showAppBar) ...[
                   Align(
                     alignment: Alignment.centerRight,
@@ -427,8 +448,8 @@ class _RoutingScreenState extends State<RoutingScreen>
                   ),
                 ],
                 Expanded(child: tabView),
-              ],
-            ),
+                    ],
+                  ),
           );
         },
       ),
