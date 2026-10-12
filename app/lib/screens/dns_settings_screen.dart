@@ -43,6 +43,7 @@ class DnsSettingsScreen extends StatefulWidget {
     super.key,
     required this.subController,
     required this.homeController,
+    this.showAppBar = true,
     this.focusServerTag,
     this.focusField,
     this.focusRuleIdentity,
@@ -50,6 +51,7 @@ class DnsSettingsScreen extends StatefulWidget {
 
   final SubscriptionController subController;
   final HomeController homeController;
+  final bool showAppBar;
 
   /// Optional target used by the settings-change journal to open a specific row.
   final String? focusServerTag;
@@ -926,7 +928,9 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text(getLocalText.s("DNS Settings"))),
+        appBar: widget.showAppBar
+            ? AppBar(title: Text(getLocalText.s("DNS Settings")))
+            : null,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -958,29 +962,25 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       MediaQuery.of(context).padding.bottom + 24,
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(getLocalText.s("DNS Settings")),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: [
-            Tab(
-              key: const ValueKey('dns_tab_label_settings'),
-              text: getLocalText.s("DNS Settings"),
-            ),
-            Tab(
-              key: const ValueKey('dns_tab_label_servers'),
-              text: getLocalText.s("DNS Servers"),
-            ),
-            Tab(
-              key: const ValueKey('dns_tab_label_rules'),
-              text: getLocalText.s("DNS Rules"),
-            ),
-          ],
+    final tabs = TabBar(
+      controller: _tabController,
+      isScrollable: true,
+      tabs: [
+        Tab(
+          key: const ValueKey('dns_tab_label_settings'),
+          text: getLocalText.s("DNS Settings"),
         ),
-      ),
-      body: TabBarView(
+        Tab(
+          key: const ValueKey('dns_tab_label_servers'),
+          text: getLocalText.s("DNS Servers"),
+        ),
+        Tab(
+          key: const ValueKey('dns_tab_label_rules'),
+          text: getLocalText.s("DNS Rules"),
+        ),
+      ],
+    );
+    final tabView = TabBarView(
         controller: _tabController,
         children: [
           ListView(
@@ -1257,6 +1257,23 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
                 ),
             ],
           ),
+        ],
+      );
+    return Scaffold(
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: Text(getLocalText.s("DNS Settings")),
+              bottom: tabs,
+            )
+          : null,
+      body: Column(
+        children: [
+          if (!widget.showAppBar)
+            Material(
+              color: theme.colorScheme.surface,
+              child: tabs,
+            ),
+          Expanded(child: tabView),
         ],
       ),
     );
