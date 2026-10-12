@@ -74,6 +74,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   RefreshIndicatorStatus? _refreshStatus;
   bool _refreshWasArmed = false;
   bool _refreshIconSuppressed = false;
+  bool _manualRefreshGestureCanceled = false;
 
   /// §524 — ОБЩИЙ СПИСОК ИСТОЧНИКОВ в порядке `sources[]`: подписки, серверы,
   /// папки и цепочки одним рядом. Один список — одна истина о порядке; до §524
@@ -350,29 +351,59 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     setState(() => _manualRefreshEnabled = value != 'false');
   }
 
+  bool _onManualRefreshScrollUpdate(ScrollUpdateNotification notification) {
+    if (!_manualRefreshEnabled ||
+        !_refreshWasArmed ||
+        _manualRefreshGestureCanceled ||
+        notification.dragDetails == null ||
+        notification.metrics.axisDirection != AxisDirection.down) {
+      return false;
+    }
+
+    // ScrollDelta is positive when the user reverses the pull and moves
+    // toward the top again. Flutter keeps its standard indicator "armed"
+    // once the threshold has been reached, so observe the drag itself and
+    // suppress the refresh callback on release.
+    if ((notification.scrollDelta ?? 0) > 0) {
+      setState(() {
+        _manualRefreshGestureCanceled = true;
+        _refreshIconSuppressed = true;
+      });
+    }
+    return false;
+  }
+
   void _onManualRefreshStatusChanged(RefreshIndicatorStatus? status) {
     if (!mounted) return;
     setState(() {
       if (status == RefreshIndicatorStatus.drag) {
-        if (_refreshWasArmed) {
-          // The finger moved back up past the trigger threshold: hide the icon
-          // immediately. Releasing now will not start a refresh.
+        if (_refreshWasArmed && !_manualRefreshGestureCanceled) {
           _refreshIconSuppressed = true;
-        } else {
+        } else if (!_manualRefreshGestureCanceled) {
           _refreshIconSuppressed = false;
         }
       } else if (status == RefreshIndicatorStatus.armed) {
         _refreshWasArmed = true;
-        _refreshIconSuppressed = false;
+        if (!_manualRefreshGestureCanceled) {
+          _refreshIconSuppressed = false;
+        }
       } else if (status == RefreshIndicatorStatus.snap ||
           status == RefreshIndicatorStatus.refresh) {
-        _refreshIconSuppressed = false;
+        if (!_manualRefreshGestureCanceled) {
+          _refreshIconSuppressed = false;
+        }
       } else if (status == RefreshIndicatorStatus.canceled) {
         // Keep a suppressed icon hidden for the rest of a canceled gesture.
         _refreshWasArmed = false;
-      } else if (status == RefreshIndicatorStatus.done || status == null) {
+      } else if (status == RefreshIndicatorStatus.done) {
+        _refreshWasArmed = false;
+        if (!_manualRefreshGestureCanceled) {
+          _refreshIconSuppressed = false;
+        }
+      } else if (status == null) {
         _refreshWasArmed = false;
         _refreshIconSuppressed = false;
+        _manualRefreshGestureCanceled = false;
       }
       _refreshStatus = status;
     });
@@ -1195,7 +1226,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               builder: (bodyContext) {
                 // Keep one scroll view for both states; the setting only adds
                 // or removes the pull-to-refresh gesture layer.
-                final scrollContent = CustomScrollView(
+                final scrollView = CustomScrollView(
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
@@ -1302,6 +1333,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   _buildList(ctrl),
                 ],
               );
+                final scrollContent =
+                    NotificationListener<ScrollUpdateNotification>(
+                  onNotification: _onManualRefreshScrollUpdate,
+                  child: scrollView,
+                );
 
                 return Stack(
                   clipBehavior: Clip.none,
@@ -1309,7 +1345,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     if (_manualRefreshEnabled)
                       RefreshIndicator.noSpinner(
                         onRefresh: () async {
-                          if (ctrl.busy || !_manualRefreshEnabled) return;
+                          if (ctrl.busy ||
+                              !_manualRefreshEnabled ||
+                              _manualRefreshGestureCanceled) {
+                            return;
+                          }
                           await _updateAll();
                         },
                         onStatusChange: _onManualRefreshStatusChanged,
