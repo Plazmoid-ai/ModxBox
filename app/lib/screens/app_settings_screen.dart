@@ -57,6 +57,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
   String? _wifiLocationIssue;
   bool _autoPing = true;
   bool _autoUpdateSubs = true;
+  bool _manualRefreshEnabled = true;
   bool _autoUpdateDisabledSubs = false;
   bool _autoReloadOnChange = false;
   bool _autoCheckUpdates = true;
@@ -156,6 +157,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
     final nearbyWifi = await ul.UrlLauncher.checkNearbyWifiPermission();
     final wifiLocationIssue = await _readWifiLocationIssue();
     final autoUpdateSubs = await SettingsStorage.getAutoUpdateSubs();
+    final manualRefreshEnabled =
+        (await SettingsStorage.getVar('manual_subscription_refresh_enabled', 'true')) != 'false';
     final autoUpdateDisabledSubs =
         await SettingsStorage.getAutoUpdateDisabledSubs();
     final autoReloadOnChange = await SettingsStorage.getAutoReloadOnChange();
@@ -204,6 +207,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
         _nearbyWifiGranted = nearbyWifi;
         _wifiLocationIssue = wifiLocationIssue;
         _autoUpdateSubs = autoUpdateSubs;
+        _manualRefreshEnabled = manualRefreshEnabled;
         _autoUpdateDisabledSubs = autoUpdateDisabledSubs;
         _autoReloadOnChange = autoReloadOnChange;
         _autoCheckUpdates = autoCheckUpdates;
@@ -667,6 +671,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
       onAutoUpdateSubsChanged: (val) {
         setState(() => _autoUpdateSubs = val);
         unawaited(SettingsStorage.setAutoUpdateSubs(val));
+      },
+      manualRefreshEnabled: _manualRefreshEnabled,
+      onManualRefreshChanged: (val) {
+        setState(() => _manualRefreshEnabled = val);
+        unawaited(
+          SettingsStorage.setVar('manual_subscription_refresh_enabled', val.toString()),
+        );
       },
       autoUpdateDisabledSubs: _autoUpdateDisabledSubs,
       onAutoUpdateDisabledSubsChanged: (val) {
