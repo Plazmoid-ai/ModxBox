@@ -827,6 +827,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                   ),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    // l10n-exempt: Product brand displayed as the app title.
                     child: Text('L×Box'),
                   ),
                 ),
