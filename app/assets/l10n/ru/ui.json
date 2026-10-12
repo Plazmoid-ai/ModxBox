@@ -5879,5 +5879,8 @@
   },
   "Tags at bottom": {
     "value": "Теги снизу"
+  },
+  "When sorting by name, tag mode keeps the list flat.": {
+    "value": "При сортировке по имени режим тегов оставляет список плоским."
   }
 }
