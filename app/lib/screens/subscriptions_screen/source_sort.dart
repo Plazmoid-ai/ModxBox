@@ -321,7 +321,16 @@ String _latinToCyrillic(String value) {
       }
     }
     if (!matched) {
-      out.write(singles[chars[i]] ?? chars[i]);
+      final next = i + 1 < chars.length ? chars[i + 1] : '';
+      if (chars[i] == 'c') {
+        out.write('eiy'.contains(next) ? 'с' : 'к');
+      } else if (chars[i] == 'g') {
+        out.write('eiy'.contains(next) ? 'дж' : 'г');
+      } else if (chars[i] == 'j') {
+        out.write('дж');
+      } else {
+        out.write(singles[chars[i]] ?? chars[i]);
+      }
       i++;
     }
   }
