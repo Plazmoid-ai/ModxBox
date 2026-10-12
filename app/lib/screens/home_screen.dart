@@ -23,6 +23,7 @@ import 'debug_screen.dart';
 import 'dns_settings_screen.dart';
 import 'home/support_message_screen.dart';
 import 'routing_screen.dart';
+import 'section_hub_screen.dart';
 import 'settings_screen.dart';
 import 'speed_test_screen.dart';
 import 'stats_screen.dart';
@@ -814,7 +815,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           builder: (_, onDrawerChanged) => Scaffold(
               appBar: AppBar(
                 // l10n-exempt: brand name, идентичен во всех локалях
-                title: const Text('L×Box'),
+                title: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => unawaited(
+                    openSectionHub(
+                      context,
+                      homeController: _controller,
+                      subController: _subController,
+                      autoUpdater: _autoUpdater,
+                    ),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: Text('L×Box'),
+                  ),
+                ),
                 // §417 — имя текущего workspace + попап Load / Save as.
                 actions: [
                   WorkspaceMenuButton(stopVpn: _stopForWorkspaceSwitch),
