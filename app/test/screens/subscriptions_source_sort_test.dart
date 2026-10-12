@@ -194,6 +194,18 @@ void main() {
         ).map((e) => e.name).toList(),
         ['Аврора', 'APROTON', '🚀 Beta', '10. Zeta', '🇫🇮', '🚀'],
       );
+
+      expect(
+        _apply(
+          [
+            _Item('Аврора', 'server', null, null),
+            _Item('APROTON', 'server', null, null),
+          ],
+          const SourceSortSettings(),
+          localeTag: 'en',
+        ).map((e) => e.name).toList(),
+        ['APROTON', 'Аврора'],
+      );
     });
 
     test('tag mode puts numeric tags before emoji and uses natural number order', () {
@@ -228,6 +240,30 @@ void main() {
           localeTag: 'ru',
         ).map((e) => e.name).toList(),
         ['Аврора', 'APROTON', '2. Two', '10. Ten', '🇫🇮 Finland', '🚀 Rocket'],
+      );
+    });
+
+    test('tag name mode stays flat even if type grouping was previously enabled', () {
+      final values = [
+        _Item('B letter', 'folder', null, null),
+        _Item('2 number', 'server', null, null),
+        _Item('1 number', 'folder', null, null),
+        _Item('A letter', 'server', null, null),
+      ];
+
+      final sorted = _apply(
+        values,
+        const SourceSortSettings(
+          groupByType: true,
+          nameSortStyle: SourceNameSortStyle.tags,
+          tagPosition: SourceTagPosition.top,
+        ),
+        localeTag: 'en',
+      );
+
+      expect(
+        sorted.map((e) => e.name).toList(),
+        ['1 number', '2 number', 'A letter', 'B letter'],
       );
     });
 
