@@ -50,7 +50,7 @@ class AppSettingsScreen extends StatefulWidget {
   /// Used by deep-links.
   final int initialTab;
 
-app settings property  /// Если true — после первого render'а скроллим к «Forward sing-box logs»
+  /// Если true — после первого render'а скроллим к «Forward sing-box logs»
   /// SwitchListTile и пульсируем подсветку 2.5s. Используется banner'ом
   /// в Live tab чтобы юзер сразу увидел нужный toggle.
   final bool highlightCoreLogs;
