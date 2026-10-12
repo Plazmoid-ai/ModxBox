@@ -382,18 +382,23 @@ Future<void> openSectionHub(
 }) {
   return Navigator.of(context).push<void>(
     MaterialPageRoute<void>(
-      builder: (_) => SectionHubScreen(
-        sections: buildHubSections(
-          homeController: homeController,
-          subController: subController,
-          autoUpdater: autoUpdater,
+      builder: (_) => AnimatedBuilder(
+        // App Settings can change the active locale while this route stays alive.
+        // Rebuild the localized labels without resetting the selected section.
+        animation: LocaleController.I,
+        builder: (_, _) => SectionHubScreen(
+          sections: buildHubSections(
+            homeController: homeController,
+            subController: subController,
+            autoUpdater: autoUpdater,
+          ),
+          tools: buildHubTools(
+            homeController: homeController,
+            subController: subController,
+            autoUpdater: autoUpdater,
+          ),
+          initialIndex: initialIndex,
         ),
-        tools: buildHubTools(
-          homeController: homeController,
-          subController: subController,
-          autoUpdater: autoUpdater,
-        ),
-        initialIndex: initialIndex,
       ),
     ),
   );
