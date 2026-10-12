@@ -1707,7 +1707,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       rows = sourceRows;
     }
 
-    if (!_sortSettings.groupByType) {
+    final tagSortingActive =
+        _sortSettings.nameSortStyle == SourceNameSortStyle.tags &&
+        _sortSettings.effectiveSortState.field == sort_widgets.SortField.name;
+    if (!_sortSettings.groupByType || tagSortingActive) {
       return [for (final row in rows) _SourceDisplayRow.item(row)];
     }
 
