@@ -759,9 +759,7 @@ class ActiveFilterButton extends StatelessWidget {
     final plateFill = isAll ? gray : inner;
     final plateOutline = isAll ? colors.outline : innerOutline;
 
-    return Tooltip(
-      message: value.label(),
-      child: Semantics(
+    return Semantics(
         button: true,
         label: value.label(),
         value: value.name,
@@ -809,7 +807,6 @@ class ActiveFilterButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }
