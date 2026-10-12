@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -90,6 +91,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   /// отображения.
   SourceSortSettings _sortSettings = const SourceSortSettings();
   final Map<String, SourceSortTimestamps> _sortMetadata = {};
+
+  // Sorting is delegated to an isolate. The signature prevents stale worker
+  // results from overwriting a newer filter, source list, locale or setting.
+  String? _displaySortRequestSignature;
+  String? _displaySortReadySignature;
+  List<int> _displaySortIndices = const [];
   static const _sortSettingsStorageKey = 'server_list_sorting';
   static const _sortMetadataStorageKey = 'server_list_sort_meta';
   bool _sortStateReady = false;
@@ -1618,19 +1625,86 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     return rows;
   }
 
+  Map<String, dynamic> _displaySortPayload(List<_SourceRow> rows) => {
+        'locale': LocaleController.I.effectiveTag,
+        'settings': _sortSettings.toJson(),
+        'items': [
+          for (final row in rows)
+            {
+              'name': row.displayLabel,
+              'kind': row.kind,
+              'enabled': row.enabled,
+              'created_at': _sortMetadata[row.sourceKey]
+                  ?.createdAt
+                  ?.toUtc()
+                  .toIso8601String(),
+              'modified_at': _sortMetadata[row.sourceKey]
+                  ?.modifiedAt
+                  ?.toUtc()
+                  .toIso8601String(),
+            },
+        ],
+      };
+
+  Future<void> _computeDisplaySort(
+    List<_SourceRow> sourceRows,
+    Map<String, dynamic> payload,
+    String signature,
+  ) async {
+    List<int> indices;
+    try {
+      indices = await compute(sortSerializedSourceIndices, payload);
+    } catch (_) {
+      // Safety fallback if an isolate cannot be started on this platform.
+      final settings = SourceSortSettings.fromJson(
+        jsonEncode(Map<String, dynamic>.from(payload['settings'] as Map)),
+      );
+      final localeTag = payload['locale']?.toString() ?? 'en';
+      final sorted = sortSourceItems<_SourceRow>(
+        sourceRows,
+        settings,
+        nameOf: (row) => row.displayLabel,
+        kindOf: (row) => row.kind,
+        modifiedOf: (row) => _sortMetadata[row.sourceKey]?.modifiedAt,
+        createdOf: (row) => _sortMetadata[row.sourceKey]?.createdAt,
+        enabledOf: (row) => row.enabled,
+        localeTag: localeTag,
+      );
+      indices = [
+        for (final row in sorted) sourceRows.indexOf(row),
+      ];
+    }
+
+    if (!mounted || _displaySortRequestSignature != signature) return;
+    setState(() {
+      _displaySortReadySignature = signature;
+      _displaySortIndices = indices;
+    });
+  }
+
   List<_SourceDisplayRow> _displayRows(SubscriptionController ctrl) {
     final sourceRows = _rows(ctrl)
         .where((row) => _sortSettings.activeFilter.accepts(row.enabled))
         .toList();
-    final rows = sortSourceItems(
-      sourceRows,
-      _sortSettings,
-      nameOf: (row) => row.displayLabel,
-      kindOf: (row) => row.kind,
-      modifiedOf: (row) => _sortMetadata[row.sourceKey]?.modifiedAt,
-      createdOf: (row) => _sortMetadata[row.sourceKey]?.createdAt,
-      enabledOf: (row) => row.enabled,
-    );
+    final payload = _displaySortPayload(sourceRows);
+    final signature = jsonEncode(payload);
+
+    List<_SourceRow> rows;
+    if (_displaySortReadySignature == signature &&
+        _displaySortIndices.length == sourceRows.length) {
+      rows = [
+        for (final index in _displaySortIndices)
+          if (index >= 0 && index < sourceRows.length) sourceRows[index],
+      ];
+    } else {
+      if (_displaySortRequestSignature != signature) {
+        _displaySortRequestSignature = signature;
+        unawaited(_computeDisplaySort(sourceRows, payload, signature));
+      }
+      // The isolate result arrives on the next event-loop turn. Keep the list
+      // responsive meanwhile; the cached order replaces it as soon as ready.
+      rows = sourceRows;
+    }
 
     if (!_sortSettings.groupByType) {
       return [for (final row in rows) _SourceDisplayRow.item(row)];
