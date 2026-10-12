@@ -1391,7 +1391,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
   }
 
-  Widget _buildToolbarHint(String message) {
+  Widget _buildToolbarHint(String message, {required Widget leading}) {
     final theme = Theme.of(context);
     return IgnorePointer(
       child: AnimatedOpacity(
@@ -1403,13 +1403,32 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            child: Text(
-              message,
-              maxLines: 1,
-              softWrap: false,
-              style: TextStyle(
-                color: theme.colorScheme.onInverseSurface,
-                fontSize: 12,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width - 32,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Center(child: leading),
+                  ),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Text(
+                      message,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                      style: TextStyle(
+                        color: theme.colorScheme.onInverseSurface,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1496,7 +1515,18 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                       // and the right edge of the rightmost toolbar button.
                       child: Transform.translate(
                         offset: const Offset(-6, 0),
-                        child: _buildToolbarHint(_filterTooltipMessage!),
+                        child: _buildToolbarHint(
+                          _filterTooltipMessage!,
+                          leading: Icon(
+                            switch (_sortSettings.activeFilter) {
+                              ActiveFilter.all => Icons.filter_alt_outlined,
+                              ActiveFilter.active => Icons.filter_alt,
+                              ActiveFilter.inactive => Icons.filter_alt_off,
+                            },
+                            size: 18,
+                            color: Theme.of(context).colorScheme.onInverseSurface,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1508,7 +1538,15 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     child: Center(
                       child: Transform.translate(
                         offset: const Offset(-6, 0),
-                        child: _buildToolbarHint(_sortTooltipMessage!),
+                        child: _buildToolbarHint(
+                          _sortTooltipMessage!,
+                          leading: sort_widgets.SortGlyph(
+                            field: _sortSettings.sortState.field,
+                            reversed: _sortSettings.sortState.reverse,
+                            color: Theme.of(context).colorScheme.onInverseSurface,
+                            compact: true,
+                          ),
+                        ),
                       ),
                     ),
                   ),
