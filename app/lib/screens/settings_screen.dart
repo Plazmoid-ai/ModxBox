@@ -50,10 +50,12 @@ class SettingsScreen extends StatefulWidget {
     required this.subController,
     required this.homeController,
     this.initialTab = 0,
+    this.showAppBar = true,
   });
 
   final SubscriptionController subController;
   final HomeController homeController;
+  final bool showAppBar;
 
   /// 0 = System, 1 = Core, 2 = Mode (§119). Used by deep-links.
   final int initialTab;
@@ -340,7 +342,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text(getLocalText.s("VPN Settings"))),
+        appBar: widget.showAppBar
+            ? AppBar(title: Text(getLocalText.s("VPN Settings")))
+            : null,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -351,28 +355,42 @@ class _SettingsScreenState extends State<SettingsScreen>
         .where((v) => v.isEditable)
         .toList();
 
+    final tabs = TabBar(
+      tabs: [
+        Tab(text: getLocalText.s("System")),
+        Tab(text: getLocalText.s("Core")),
+        Tab(text: getLocalText.s("Mode")),
+      ],
+    );
     return DefaultTabController(
       length: 3,
       initialIndex: widget.initialTab.clamp(0, 2),
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(getLocalText.s("VPN Settings")),
-          bottom: TabBar(
-            tabs: [
-              Tab(text: getLocalText.s("System")),
-              Tab(text: getLocalText.s("Core")),
-              Tab(text: getLocalText.s("Mode")),
-            ],
-          ),
-        ),
-        body: TabBarView(
+        appBar: widget.showAppBar
+            ? AppBar(
+                title: Text(getLocalText.s("VPN Settings")),
+                bottom: tabs,
+              )
+            : null,
+        body: Column(
           children: [
-            _buildSystemTab(context),
-            _buildCoreTab(context, template, editableVars),
-            VpnModeTab(
-              homeController: widget.homeController,
-              subController: widget.subController,
-              template: template,
+            if (!widget.showAppBar)
+              Material(
+                color: Theme.of(context).colorScheme.surface,
+                child: tabs,
+              ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildSystemTab(context),
+                  _buildCoreTab(context, template, editableVars),
+                  VpnModeTab(
+                    homeController: widget.homeController,
+                    subController: widget.subController,
+                    template: template,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
