@@ -3593,8 +3593,14 @@
   "Refresh now": {
     "value": "立即刷新"
   },
-  "Refresh on app start, after VPN connects, and periodically. Manual ⟳ works regardless.": {
-    "value": "在应用启动、VPN 连接后以及定期刷新。手动 ⟳ 始终可用。"
+  "Refresh on app start, after VPN connects, and periodically.": {
+    "value": "在应用启动、VPN 连接后以及定期刷新。"
+  },
+  "Manual update": {
+    "value": "手动更新"
+  },
+  "Pull down on the server list to refresh subscriptions.": {
+    "value": "在服务器列表中向下拉动即可刷新订阅。"
   },
   "Refresh rule-sets": {
     "value": "刷新规则集"
