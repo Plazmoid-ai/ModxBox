@@ -1631,6 +1631,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         'items': [
           for (final row in rows)
             {
+              'key': row.sourceKey,
               'name': row.displayLabel,
               'kind': row.kind,
               'enabled': row.enabled,
