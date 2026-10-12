@@ -114,16 +114,22 @@ void main() {
     var tabBar = tester.widget<TabBar>(tabBarFinder);
     expect(tabBar.tabs, hasLength(3));
     expect(tabBar.controller?.index, 0);
+    expect(find.byKey(const ValueKey('dns_add_tab_server')), findsNothing);
+    expect(find.byKey(const ValueKey('dns_add_tab_rule')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('dns_tab_label_servers')));
     await tester.pumpAndSettle();
     tabBar = tester.widget<TabBar>(tabBarFinder);
     expect(tabBar.controller?.index, 1);
+    expect(find.byKey(const ValueKey('dns_add_tab_server')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dns_add_tab_rule')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('dns_tab_label_rules')));
     await tester.pumpAndSettle();
     tabBar = tester.widget<TabBar>(tabBarFinder);
     expect(tabBar.controller?.index, 2);
+    expect(find.byKey(const ValueKey('dns_add_tab_server')), findsNothing);
+    expect(find.byKey(const ValueKey('dns_add_tab_rule')), findsOneWidget);
     await close(tester);
   });
 

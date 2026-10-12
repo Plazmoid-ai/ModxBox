@@ -962,23 +962,40 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
       MediaQuery.of(context).padding.bottom + 24,
     );
 
-    final tabs = TabBar(
-      controller: _tabController,
-      isScrollable: true,
-      tabs: [
-        Tab(
-          key: const ValueKey('dns_tab_label_settings'),
-          text: getLocalText.s("DNS Settings"),
-        ),
-        Tab(
-          key: const ValueKey('dns_tab_label_servers'),
-          text: getLocalText.s("DNS Servers"),
-        ),
-        Tab(
-          key: const ValueKey('dns_tab_label_rules'),
-          text: getLocalText.s("DNS Rules"),
-        ),
-      ],
+    final tabs = PreferredSize(
+      preferredSize: const Size.fromHeight(48),
+      child: AnimatedBuilder(
+        animation: _tabController.animation!,
+        builder: (context, _) {
+          final i = _tabController.animation!.value.round();
+          return TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 10),
+            tabs: [
+              Tab(
+                key: const ValueKey('dns_tab_label_settings'),
+                text: getLocalText.s("DNS Settings"),
+              ),
+              _AddTab(
+                tabKey: const ValueKey('dns_tab_label_servers'),
+                label: getLocalText.s("DNS Servers"),
+                active: i == 1,
+                addKey: const ValueKey('dns_add_tab_server'),
+                onAdd: _addServer,
+              ),
+              _AddTab(
+                tabKey: const ValueKey('dns_tab_label_rules'),
+                label: getLocalText.s("DNS Rules"),
+                active: i == 2,
+                addKey: const ValueKey('dns_add_tab_rule'),
+                onAdd: _addUserRule,
+              ),
+            ],
+          );
+        },
+      ),
     );
     final tabPages = <Widget>[
         ListView(
@@ -1171,16 +1188,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           key: const ValueKey('dns_tab_servers'),
           padding: pagePadding,
           children: [
-            // --- Servers ---
-            Row(
-              children: [
-                Text(getLocalText.s("DNS Servers"),
-                    style: theme.textTheme.titleMedium),
-                const Spacer(),
-                IconButton(icon: const Icon(Icons.add), onPressed: _addServer),
-              ],
-            ),
-            const SizedBox(height: 4),
+            // Список начинается сразу под полоской вкладок.
             // §042: единый render через 3-tier merged list. §117 задача 4:
             // тайл — только switch + тап→полноэкранный редактор.
             ...displayed.map((entry) => MergedServerTile(
@@ -1196,19 +1204,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           key: const ValueKey('dns_tab_rules'),
           padding: pagePadding,
           children: [
-            // --- DNS Rules (§061 dns-rules-refactor) ---
-            Row(
-              children: [
-                Text(getLocalText.s("DNS Rules"), style: theme.textTheme.titleMedium),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _addUserRule,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(getLocalText.s("Add user rule")),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
+            // Список начинается сразу под полоской вкладок.
             if (_rules.isEmpty && mirrors.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1494,4 +1490,59 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     );
   }
 
+}
+
+/// Вкладка DNS с кнопкой добавления, видимой только у выбранной вкладки.
+class _AddTab extends StatelessWidget {
+  const _AddTab({
+    required this.tabKey,
+    required this.label,
+    required this.active,
+    required this.onAdd,
+    required this.addKey,
+  });
+
+  final Key tabKey;
+  final String label;
+  final bool active;
+  final VoidCallback onAdd;
+  final Key addKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return Tab(
+      key: tabKey,
+      height: 48,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: active
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: InkWell(
+                      key: addKey,
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: onAdd,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: color, width: 1.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.add, size: 18, color: color),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
 }
