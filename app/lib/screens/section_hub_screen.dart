@@ -19,6 +19,18 @@ class HubSection {
   const HubSection({
     required this.title,
     required this.icon,
+    required this.tabs,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<HubTab> tabs;
+}
+
+class HubTab {
+  const HubTab({
+    required this.title,
+    required this.icon,
     required this.builder,
   });
 
@@ -101,14 +113,10 @@ class _SectionHubScreenState extends State<SectionHubScreen> {
                         Expanded(
                           child: PageView.builder(
                             controller: _pages,
-                            // The section screens contain their own horizontal
-                            // tab swipes. Use the ribbon for changing sections,
-                            // so those gestures are not captured by two PageViews.
-                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: widget.sections.length,
                             onPageChanged: (i) => setState(() => _index = i),
                             itemBuilder: (c, i) => _KeepAlive(
-                              child: widget.sections[i].builder(c),
+                              child: _HubTabList(section: widget.sections[i]),
                             ),
                           ),
                         ),
@@ -292,40 +300,234 @@ List<HubSection> buildHubSections({
       HubSection(
         title: getLocalText.s("Routing"),
         icon: Icons.route_outlined,
-        builder: (_) => RoutingScreen(
-          subController: subController,
-          homeController: homeController,
-          showAppBar: false,
-        ),
+        tabs: [
+          HubTab(
+            title: getLocalText.s("Directions"),
+            icon: Icons.alt_route,
+            builder: (_) => RoutingScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 0,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("Presets"),
+            icon: Icons.grid_view_outlined,
+            builder: (_) => RoutingScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 1,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("Rules"),
+            icon: Icons.rule_outlined,
+            builder: (_) => RoutingScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 2,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("Tunnel apps"),
+            icon: Icons.apps_outlined,
+            builder: (_) => RoutingScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 3,
+            ),
+          ),
+        ],
       ),
       HubSection(
         title: getLocalText.s("DNS Settings"),
         icon: Icons.language,
-        builder: (_) => DnsSettingsScreen(
-          subController: subController,
-          homeController: homeController,
-          showAppBar: false,
-        ),
+        tabs: [
+          HubTab(
+            title: getLocalText.s("Settings"),
+            icon: Icons.tune,
+            builder: (_) => DnsSettingsScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 0,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("DNS Servers"),
+            icon: Icons.dns_outlined,
+            builder: (_) => DnsSettingsScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 1,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("DNS Rules"),
+            icon: Icons.rule_outlined,
+            builder: (_) => DnsSettingsScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 2,
+            ),
+          ),
+        ],
       ),
       HubSection(
         title: getLocalText.s("VPN Settings"),
         icon: Icons.tune,
-        builder: (_) => SettingsScreen(
-          subController: subController,
-          homeController: homeController,
-          showAppBar: false,
-        ),
+        tabs: [
+          HubTab(
+            title: getLocalText.s("System"),
+            icon: Icons.settings_suggest_outlined,
+            builder: (_) => SettingsScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 0,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("Core"),
+            icon: Icons.data_object,
+            builder: (_) => SettingsScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 1,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("Mode"),
+            icon: Icons.vpn_key_outlined,
+            builder: (_) => SettingsScreen(
+              subController: subController,
+              homeController: homeController,
+              singleTabIndex: 2,
+            ),
+          ),
+        ],
       ),
       HubSection(
         title: getLocalText.s("App Settings"),
         icon: Icons.settings_outlined,
-        builder: (_) => AppSettingsScreen(
-          homeController: homeController,
-          subController: subController,
-          autoUpdater: autoUpdater,
-        ),
+        tabs: [
+          HubTab(
+            title: getLocalText.s("General"),
+            icon: Icons.tune,
+            builder: (_) => AppSettingsScreen(
+              homeController: homeController,
+              subController: subController,
+              autoUpdater: autoUpdater,
+              initialTab: 0,
+              singleTabIndex: 0,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("Subscriptions"),
+            icon: Icons.rss_feed,
+            builder: (_) => AppSettingsScreen(
+              homeController: homeController,
+              subController: subController,
+              autoUpdater: autoUpdater,
+              initialTab: 2,
+              singleTabIndex: 2,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("Diagnostics"),
+            icon: Icons.monitor_heart_outlined,
+            builder: (_) => AppSettingsScreen(
+              homeController: homeController,
+              subController: subController,
+              autoUpdater: autoUpdater,
+              initialTab: 3,
+              singleTabIndex: 3,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("Automation"),
+            icon: Icons.bolt,
+            builder: (_) => AppSettingsScreen(
+              homeController: homeController,
+              subController: subController,
+              autoUpdater: autoUpdater,
+              initialTab: 4,
+              singleTabIndex: 4,
+            ),
+          ),
+          HubTab(
+            title: getLocalText.s("History"),
+            icon: Icons.history,
+            builder: (_) => AppSettingsScreen(
+              homeController: homeController,
+              subController: subController,
+              autoUpdater: autoUpdater,
+              initialTab: 5,
+              singleTabIndex: 5,
+            ),
+          ),
+        ],
       ),
     ];
+
+class _HubTabList extends StatelessWidget {
+  const _HubTabList({required this.section});
+
+  final HubSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      itemCount: section.tabs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final tab = section.tabs[index];
+        return SizedBox(
+          height: 60,
+          child: Material(
+            color: cs.surfaceContainerLow,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: cs.outlineVariant),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: tab.builder),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 44,
+                      child: Icon(
+                        tab.icon,
+                        size: 26,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        tab.title,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleMedium?.copyWith(fontSize: 19),
+                      ),
+                    ),
+                    const SizedBox(width: 44),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 List<HubTool> buildHubTools({
   required HomeController homeController,
