@@ -24,14 +24,12 @@ class SettingsTabsScreen extends StatefulWidget {
     required this.pages,
     this.overlayTitle = 'App Settings',
     this.initialIndex = 0,
-    this.singleTabIndex,
   });
 
   final List<SettingsTabSpec> tabs;
   final List<Widget> pages;
   final String overlayTitle;
   final int initialIndex;
-  final int? singleTabIndex;
 
   @override
   SettingsTabsScreenState createState() => SettingsTabsScreenState();
@@ -46,7 +44,6 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
   static const Duration _holdTime = Duration(milliseconds: 350);
 
   late final TabController _tc;
-  int? _soloIndex;
   int _indexAtPointerDown = 0;
   bool _tilesOpen = false;
 
@@ -62,12 +59,10 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
     super.initState();
     assert(widget.tabs.length == widget.pages.length);
     assert(widget.tabs.isNotEmpty);
-    _soloIndex = widget.singleTabIndex;
     _tc = TabController(
       length: widget.tabs.length,
       vsync: this,
-      initialIndex: (widget.singleTabIndex ?? widget.initialIndex)
-          .clamp(0, widget.tabs.length - 1),
+      initialIndex: widget.initialIndex.clamp(0, widget.tabs.length - 1),
     );
   }
 
@@ -84,9 +79,6 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
   void selectTab(int index) {
     if (index < 0 || index >= widget.tabs.length) return;
     if (_tilesOpen) setState(() => _tilesOpen = false);
-    if (widget.singleTabIndex != null && _soloIndex != index) {
-      setState(() => _soloIndex = index);
-    }
     if (_tc.index != index) _tc.animateTo(index);
   }
 
@@ -162,17 +154,6 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    if (widget.singleTabIndex != null) {
-      final index = (_soloIndex ?? widget.singleTabIndex!)
-          .clamp(0, widget.tabs.length - 1)
-          .toInt();
-      return Scaffold(
-        backgroundColor: cs.surface,
-        appBar: AppBar(title: Text(widget.tabs[index].title)),
-        body: widget.pages[index],
-      );
-    }
-
     return PopScope(
       // Пока плитки открыты, «назад» закрывает их, а не выходит из настроек.
       canPop: !_tilesOpen,
@@ -499,12 +480,12 @@ class _TabTilesOverlay extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         for (final i in others) ...[
                           _TabTile(spec: tabs[i], onTap: () => onSelect(i)),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                         ],
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 3),
                         Text(
                           getLocalText.s("Tap outside tiles or swipe up to close"),
                           textAlign: TextAlign.center,
@@ -545,22 +526,22 @@ class _TabTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 58,
+          height: 44,
           child: Stack(
             children: [
-              // Значок: у левого края, рамка 24px (18..42).
+              // Compact icon on the left; title remains centered in the free area.
               Positioned(
-                left: 18,
+                left: 14,
                 top: 0,
                 bottom: 0,
-                width: 24,
+                width: 20,
                 child: Center(
-                  child: Icon(spec.icon, size: 24, color: cs.onSurfaceVariant),
+                  child: Icon(spec.icon, size: 20, color: cs.onSurfaceVariant),
                 ),
               ),
               // Текст центрируется справа от значка, длинное имя уменьшается.
               Positioned(
-                left: 42,
+                left: 36,
                 right: 0,
                 top: 0,
                 bottom: 0,
@@ -573,7 +554,7 @@ class _TabTile extends StatelessWidget {
                         spec.title,
                         maxLines: 1,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w500,
                           color: cs.onSurface,
                         ),
