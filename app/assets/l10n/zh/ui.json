@@ -5765,5 +5765,9 @@
   },
   "Tap outside tiles or swipe up to close": {
     "value": "点击卡片外部或向上滑动关闭"
+  },
+  "Main screen": {
+    "value": "主界面"
   }
+
 }
