@@ -58,6 +58,7 @@ class RoutingScreen extends StatefulWidget {
     super.key,
     required this.subController,
     required this.homeController,
+    this.showAppBar = true,
     this.focusDirectionTag,
     this.initialPresetsTab = false,
     this.focusRuleId,
@@ -67,6 +68,7 @@ class RoutingScreen extends StatefulWidget {
 
   final SubscriptionController subController;
   final HomeController homeController;
+  final bool showAppBar;
 
   /// §258 — при открытии показать Направление с этим тегом и мигнуть его тайлом
   /// (навигация «хоп рантайм-цепочки → Направление», openTagOwner). null = нет.
@@ -320,7 +322,9 @@ class _RoutingScreenState extends State<RoutingScreen>
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text(getLocalText.s("Routing"))),
+        appBar: widget.showAppBar
+            ? AppBar(title: Text(getLocalText.s("Routing")))
+            : null,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -337,48 +341,34 @@ class _RoutingScreenState extends State<RoutingScreen>
               ? 1
               : 0,
       child: Builder(
-        builder: (tabCtx) => Scaffold(
-          appBar: AppBar(
-            title: Text(getLocalText.s("Routing")),
-            actions: [
-              // §396 — меню экспорта/импорта правил. Живёт в AppBar (решение
-              // владельца: «⋮ на самом верху, напротив Routing»), но видно
-              // только на табе Rules (index 2) — на остальных табах меню про
-              // правила сбивало бы с толку. animation (а не index) — чтобы
-              // кнопка появлялась уже во время свайпа, а не по его завершении.
-              AnimatedBuilder(
-                animation: DefaultTabController.of(tabCtx).animation!,
-                builder: (_, _) {
-                  final onRulesTab =
-                      DefaultTabController.of(
-                        tabCtx,
-                      ).animation!.value.round() ==
-                      2;
-                  if (!onRulesTab) return const SizedBox.shrink();
-                  return RulesMenuButton(
-                  // §398 — пресеты не экспортируются; при этом уйти на шаг
-                  // DNS можно и без правил, поэтому гейт снят до «есть хоть
-                  // какие-то настройки» (пустой storage — экран пуст в любом
-                  // случае).
-                  canExport: true,
-                    onExport: _exportRules,
-                    onImport: _importRules,
-                  );
-                },
-              ),
+        builder: (tabCtx) {
+          final rulesMenu = AnimatedBuilder(
+            animation: DefaultTabController.of(tabCtx).animation!,
+            builder: (_, _) {
+              final onRulesTab =
+                  DefaultTabController.of(tabCtx).animation!.value.round() == 2;
+              if (!onRulesTab) return const SizedBox.shrink();
+              return RulesMenuButton(
+                // §398 — пресеты не экспортируются; при этом уйти на шаг DNS
+                // можно и без правил, поэтому гейт снят до «есть хоть какие-то
+                // настройки» (пустой storage — экран пуст в любом случае).
+                canExport: true,
+                onExport: _exportRules,
+                onImport: _importRules,
+              );
+            },
+          );
+          final tabBar = TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [
+              Tab(text: getLocalText.s("Directions")),
+              Tab(text: getLocalText.s("Presets")),
+              Tab(text: getLocalText.s("Rules")),
+              Tab(text: getLocalText.s("Tunnel apps")),
             ],
-            bottom: TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                Tab(text: getLocalText.s("Directions")),
-                Tab(text: getLocalText.s("Presets")),
-                Tab(text: getLocalText.s("Rules")),
-                Tab(text: getLocalText.s("Tunnel apps")),
-              ],
-            ),
-          ),
-          body: TabBarView(
+          );
+          final tabView = TabBarView(
             children: [
               // ─── Directions: Направления (CRUD) + default fallback + Auto tuning ───
               RoutingDirectionsTab(
@@ -415,8 +405,32 @@ class _RoutingScreenState extends State<RoutingScreen>
                 subController: widget.subController,
               ),
             ],
-          ),
-        ),
+          );
+          return Scaffold(
+            appBar: widget.showAppBar
+                ? AppBar(
+                    title: Text(getLocalText.s("Routing")),
+                    actions: [rulesMenu],
+                    bottom: tabBar,
+                  )
+                : null,
+            body: Column(
+              children: [
+                if (!widget.showAppBar) ...[
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: rulesMenu,
+                  ),
+                  Material(
+                    color: Theme.of(tabCtx).colorScheme.surface,
+                    child: tabBar,
+                  ),
+                ],
+                Expanded(child: tabView),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
