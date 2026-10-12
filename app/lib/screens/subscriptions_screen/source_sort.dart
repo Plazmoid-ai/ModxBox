@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:characters/characters.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -48,6 +50,9 @@ const List<String> defaultSourceGroupOrder = <String>[
   'chain',
 ];
 
+enum SourceNameSortStyle { letters, tags }
+enum SourceTagPosition { top, bottom }
+
 class SourceSortSettings {
   const SourceSortSettings({
     this.mode = SourceSortMode.nameAsc,
@@ -56,6 +61,8 @@ class SourceSortSettings {
     this.enabledFirst = false,
     this.groupOrder = defaultSourceGroupOrder,
     this.activeFilter = ActiveFilter.all,
+    this.nameSortStyle = SourceNameSortStyle.letters,
+    this.tagPosition = SourceTagPosition.top,
   });
 
   /// Concrete mode used by the comparator. It is kept for compatibility with
@@ -69,6 +76,8 @@ class SourceSortSettings {
   final bool enabledFirst;
   final List<String> groupOrder;
   final ActiveFilter activeFilter;
+  final SourceNameSortStyle nameSortStyle;
+  final SourceTagPosition tagPosition;
 
   /// Resolve settings created through the old single-mode constructor while
   /// the screen itself uses the per-field state model.
@@ -84,6 +93,8 @@ class SourceSortSettings {
     bool? enabledFirst,
     List<String>? groupOrder,
     ActiveFilter? activeFilter,
+    SourceNameSortStyle? nameSortStyle,
+    SourceTagPosition? tagPosition,
   }) {
     final nextState = sortState ??
         (mode == null ? effectiveSortState : _sortStateFromLegacyMode(mode));
@@ -97,6 +108,8 @@ class SourceSortSettings {
       enabledFirst: enabledFirst ?? this.enabledFirst,
       groupOrder: groupOrder ?? this.groupOrder,
       activeFilter: activeFilter ?? this.activeFilter,
+      nameSortStyle: nameSortStyle ?? this.nameSortStyle,
+      tagPosition: tagPosition ?? this.tagPosition,
     );
   }
 
@@ -111,6 +124,8 @@ class SourceSortSettings {
       'enabled_first': enabledFirst,
       'group_order': groupOrder,
       'active_filter': activeFilter.name,
+      'name_sort_style': nameSortStyle.name,
+      'tag_position': tagPosition.name,
     };
   }
 
@@ -135,6 +150,15 @@ class SourceSortSettings {
       final activeFilter = ActiveFilter.values.firstWhere(
         (f) => f.name == decoded['active_filter'],
         orElse: () => ActiveFilter.all,
+      );
+
+      final nameSortStyle = SourceNameSortStyle.values.firstWhere(
+        (style) => style.name == decoded['name_sort_style'],
+        orElse: () => SourceNameSortStyle.letters,
+      );
+      final tagPosition = SourceTagPosition.values.firstWhere(
+        (position) => position.name == decoded['tag_position'],
+        orElse: () => SourceTagPosition.top,
       );
 
       final order = <String>[];
@@ -163,6 +187,8 @@ class SourceSortSettings {
             : decoded['group_by_active'] == true,
         groupOrder: List<String>.unmodifiable(order),
         activeFilter: activeFilter,
+        nameSortStyle: nameSortStyle,
+        tagPosition: tagPosition,
       );
     } catch (_) {
       return const SourceSortSettings();
@@ -224,6 +250,9 @@ bool isSourceSortNonDefault(SourceSortSettings settings) =>
     settings.groupByType ||
     settings.enabledFirst ||
     settings.activeFilter != ActiveFilter.all ||
+    settings.nameSortStyle != SourceNameSortStyle.letters ||
+    (settings.nameSortStyle == SourceNameSortStyle.tags &&
+        settings.tagPosition != SourceTagPosition.top) ||
     !listEquals(settings.groupOrder, defaultSourceGroupOrder);
 
 String sourceTypeLabel(String kind) => switch (kind) {
@@ -242,6 +271,278 @@ IconData sourceTypeIcon(String kind) => switch (kind) {
       _ => Icons.category_outlined,
     };
 
+
+const String _russianAlphabet = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя';
+final RegExp _firstSortLetter = RegExp(
+  r'[a-zA-ZÀ-ɏа-яА-ЯёЁ㐀-䶿一-鿿぀-ヿ가-힯]',
+);
+final RegExp _asciiDigit = RegExp(r'^[0-9]$');
+
+String? _letterSortKey(String value, String localeTag) {
+  final match = _firstSortLetter.firstMatch(value);
+  if (match == null) return null;
+  return _normalizePhonetic(value.substring(match.start), localeTag);
+}
+
+String _normalizePhonetic(String value, String localeTag) {
+  final lower = value.toLowerCase();
+  return localeTag == 'ru'
+      ? _latinToCyrillic(lower)
+      : _cyrillicToLatin(lower);
+}
+
+String _latinToCyrillic(String value) {
+  final chars = value.characters.toList();
+  const digraphs = <String, String>{
+    'shch': 'щ', 'sch': 'щ', 'zh': 'ж', 'kh': 'х',
+    'ts': 'ц', 'ch': 'ч', 'sh': 'ш', 'yu': 'ю',
+    'ya': 'я', 'yo': 'ё', 'jo': 'ё', 'ye': 'е',
+    'ph': 'ф', 'th': 'т', 'qu': 'кв', 'ck': 'к',
+  };
+  const singles = <String, String>{
+    'a': 'а', 'b': 'б', 'c': 'к', 'd': 'д', 'e': 'е', 'f': 'ф',
+    'g': 'г', 'h': 'х', 'i': 'и', 'j': 'й', 'k': 'к', 'l': 'л',
+    'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'q': 'к', 'r': 'р',
+    's': 'с', 't': 'т', 'u': 'у', 'v': 'в', 'w': 'в', 'x': 'кс',
+    'y': 'й', 'z': 'з',
+  };
+  final out = StringBuffer();
+  var i = 0;
+  while (i < chars.length) {
+    var matched = false;
+    for (final entry in digraphs.entries) {
+      final end = i + entry.key.length;
+      if (end <= chars.length &&
+          chars.skip(i).take(entry.key.length).join() == entry.key) {
+        out.write(entry.value);
+        i = end;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      out.write(singles[chars[i]] ?? chars[i]);
+      i++;
+    }
+  }
+  return out.toString();
+}
+
+String _cyrillicToLatin(String value) {
+  const letters = <String, String>{
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e',
+    'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k',
+    'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r',
+    'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts',
+    'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ъ': '', 'ы': 'y', 'ь': '',
+    'э': 'e', 'ю': 'yu', 'я': 'ya',
+  };
+  final out = StringBuffer();
+  for (final character in value.characters) {
+    out.write(letters[character] ?? character);
+  }
+  return out.toString();
+}
+
+int _compareCodePoints(String a, String b) {
+  final left = a.runes.toList();
+  final right = b.runes.toList();
+  final common = left.length < right.length ? left.length : right.length;
+  for (var i = 0; i < common; i++) {
+    if (left[i] != right[i]) return left[i].compareTo(right[i]);
+  }
+  return left.length.compareTo(right.length);
+}
+
+int _compareTextByLocale(String a, String b, String localeTag) {
+  final left = _normalizePhonetic(a, localeTag);
+  final right = _normalizePhonetic(b, localeTag);
+  if (localeTag != 'ru') return left.compareTo(right);
+
+  final leftRunes = left.runes.toList();
+  final rightRunes = right.runes.toList();
+  final common = leftRunes.length < rightRunes.length
+      ? leftRunes.length
+      : rightRunes.length;
+  for (var i = 0; i < common; i++) {
+    final leftRune = leftRunes[i];
+    final rightRune = rightRunes[i];
+    final leftIndex = _russianAlphabet.indexOf(String.fromCharCode(leftRune));
+    final rightIndex = _russianAlphabet.indexOf(String.fromCharCode(rightRune));
+    final leftWeight = leftIndex >= 0 ? 0x110000 + leftIndex : leftRune;
+    final rightWeight = rightIndex >= 0 ? 0x110000 + rightIndex : rightRune;
+    if (leftWeight != rightWeight) {
+      return leftWeight.compareTo(rightWeight);
+    }
+  }
+  return leftRunes.length.compareTo(rightRunes.length);
+}
+
+String _leadingVisibleGrapheme(String value) {
+  final visible =
+      value.characters.skipWhile((character) => character.trim().isEmpty);
+  return visible.isEmpty ? '' : visible.first;
+}
+
+bool _isEmojiGrapheme(String value) {
+  if (value.isEmpty) return false;
+  final runes = value.runes.toList();
+  if (runes.contains(0xFE0F) ||
+      runes.contains(0x200D) ||
+      runes.contains(0x20E3)) {
+    return true;
+  }
+  final first = runes.first;
+  return (first >= 0x1F000 && first <= 0x1FAFF) ||
+      (first >= 0x1F1E6 && first <= 0x1F1FF) ||
+      (first >= 0x2600 && first <= 0x27BF) ||
+      (first >= 0x2300 && first <= 0x23FF);
+}
+
+enum _NamePrefixKind { digit, emoji, ordinary }
+
+_NamePrefixKind _namePrefixKind(String name) {
+  final first = _leadingVisibleGrapheme(name);
+  if (_isEmojiGrapheme(first)) return _NamePrefixKind.emoji;
+  if (_asciiDigit.hasMatch(first)) return _NamePrefixKind.digit;
+  return _NamePrefixKind.ordinary;
+}
+
+bool _isAsciiDigitRune(int rune) => rune >= 0x30 && rune <= 0x39;
+
+int _compareNatural(String a, String b, String localeTag) {
+  final left = a.runes.toList();
+  final right = b.runes.toList();
+  var i = 0;
+  var j = 0;
+  while (i < left.length && j < right.length) {
+    final leftIsDigit = _isAsciiDigitRune(left[i]);
+    final rightIsDigit = _isAsciiDigitRune(right[j]);
+    if (leftIsDigit && rightIsDigit) {
+      final leftStart = i;
+      final rightStart = j;
+      while (i < left.length && _isAsciiDigitRune(left[i])) {
+        i++;
+      }
+      while (j < right.length && _isAsciiDigitRune(right[j])) {
+        j++;
+      }
+      var leftSignificant = leftStart;
+      var rightSignificant = rightStart;
+      while (leftSignificant < i && left[leftSignificant] == 0x30) {
+        leftSignificant++;
+      }
+      while (rightSignificant < j && right[rightSignificant] == 0x30) {
+        rightSignificant++;
+      }
+      final leftDigits = left.sublist(leftSignificant, i);
+      final rightDigits = right.sublist(rightSignificant, j);
+      if (leftDigits.length != rightDigits.length) {
+        return leftDigits.length.compareTo(rightDigits.length);
+      }
+      final numeric = _compareCodePoints(
+        String.fromCharCodes(leftDigits),
+        String.fromCharCodes(rightDigits),
+      );
+      if (numeric != 0) return numeric;
+      final leftZeroes = leftSignificant - leftStart;
+      final rightZeroes = rightSignificant - rightStart;
+      if (leftZeroes != rightZeroes) {
+        return leftZeroes.compareTo(rightZeroes);
+      }
+      continue;
+    }
+    if (leftIsDigit != rightIsDigit) return leftIsDigit ? -1 : 1;
+
+    final leftStart = i;
+    final rightStart = j;
+    while (i < left.length && !_isAsciiDigitRune(left[i])) {
+      i++;
+    }
+    while (j < right.length && !_isAsciiDigitRune(right[j])) {
+      j++;
+    }
+    final textCompare = _compareTextByLocale(
+      String.fromCharCodes(left.sublist(leftStart, i)),
+      String.fromCharCodes(right.sublist(rightStart, j)),
+      localeTag,
+    );
+    if (textCompare != 0) return textCompare;
+  }
+  return (left.length - i).compareTo(right.length - j);
+}
+
+int _compareLetterNames(
+  String a,
+  String b,
+  String localeTag, {
+  required bool descending,
+}) {
+  final leftKey = _letterSortKey(a, localeTag);
+  final rightKey = _letterSortKey(b, localeTag);
+  if (leftKey == null || rightKey == null) {
+    // Values without recognized letters remain last in either direction.
+    if (leftKey == null && rightKey != null) return 1;
+    if (leftKey != null && rightKey == null) return -1;
+    final raw = _compareCodePoints(a, b);
+    return descending ? -raw : raw;
+  }
+  final result = _compareTextByLocale(leftKey, rightKey, localeTag);
+  return descending ? -result : result;
+}
+
+int _compareEmojiNames(
+  String a,
+  String b,
+  String localeTag, {
+  required bool descending,
+}) {
+  final leftTag = _leadingVisibleGrapheme(a);
+  final rightTag = _leadingVisibleGrapheme(b);
+  final tags = _compareCodePoints(leftTag, rightTag);
+  if (tags != 0) return descending ? -tags : tags;
+  return _compareLetterNames(a, b, localeTag, descending: descending);
+}
+
+int compareSourceNames(
+  String a,
+  String b, {
+  required SourceSortSettings settings,
+  required String localeTag,
+}) {
+  final descending = settings.effectiveSortState.reverse;
+  if (settings.nameSortStyle == SourceNameSortStyle.letters) {
+    return _compareLetterNames(a, b, localeTag, descending: descending);
+  }
+
+  final leftKind = _namePrefixKind(a);
+  final rightKind = _namePrefixKind(b);
+  int rank(_NamePrefixKind kind) => switch (settings.tagPosition) {
+        SourceTagPosition.top => switch (kind) {
+            _NamePrefixKind.digit => 0,
+            _NamePrefixKind.emoji => 1,
+            _NamePrefixKind.ordinary => 2,
+          },
+        SourceTagPosition.bottom => switch (kind) {
+            _NamePrefixKind.ordinary => 0,
+            _NamePrefixKind.digit => 1,
+            _NamePrefixKind.emoji => 2,
+          },
+      };
+  final leftRank = rank(leftKind);
+  final rightRank = rank(rightKind);
+  if (leftRank != rightRank) return leftRank.compareTo(rightRank);
+  return switch (leftKind) {
+    _NamePrefixKind.digit => descending
+        ? -_compareNatural(a, b, localeTag)
+        : _compareNatural(a, b, localeTag),
+    _NamePrefixKind.emoji =>
+      _compareEmojiNames(a, b, localeTag, descending: descending),
+    _NamePrefixKind.ordinary =>
+      _compareLetterNames(a, b, localeTag, descending: descending),
+  };
+}
+
 List<T> sortSourceItems<T>(
   List<T> items,
   SourceSortSettings settings, {
@@ -250,17 +551,19 @@ List<T> sortSourceItems<T>(
   required DateTime? Function(T item) modifiedOf,
   required DateTime? Function(T item) createdOf,
   bool Function(T item)? enabledOf,
+  String? localeTag,
 }) {
   final indexed = [
     for (var i = 0; i < items.length; i++)
       (item: items[i], index: i),
   ];
 
-  int compareNames(String a, String b) {
-    final lower = a.toLowerCase().compareTo(b.toLowerCase());
-    if (lower != 0) return lower;
-    return a.compareTo(b);
-  }
+  int compareNames(String a, String b) => compareSourceNames(
+        a,
+        b,
+        settings: settings,
+        localeTag: localeTag ?? LocaleController.I.effectiveTag,
+      );
 
   int compareDates(DateTime? a, DateTime? b, {required bool newestFirst}) {
     if (a == null && b == null) return 0;
@@ -277,9 +580,10 @@ List<T> sortSourceItems<T>(
     final state = settings.effectiveSortState;
     final reversed = state.reverse;
     final result = switch (state.field) {
-      modern_sort.SortField.name => reversed
-          ? compareNames(nameOf(b.item), nameOf(a.item))
-          : compareNames(nameOf(a.item), nameOf(b.item)),
+      modern_sort.SortField.name => compareNames(
+          nameOf(a.item),
+          nameOf(b.item),
+        ),
       modern_sort.SortField.modified => compareDates(
           modifiedOf(a.item),
           modifiedOf(b.item),
@@ -301,7 +605,31 @@ List<T> sortSourceItems<T>(
     final copy = [...bucket];
     copy.sort(compareItems);
     if (settings.enabledFirst && enabledOf != null) {
-      // Stable partition: enabled entries first, retaining each side's order.
+      final tagSortingActive =
+          settings.nameSortStyle == SourceNameSortStyle.tags &&
+          settings.effectiveSortState.field == modern_sort.SortField.name;
+      if (tagSortingActive) {
+        final result = <({T item, int index})>[];
+        var start = 0;
+        while (start < copy.length) {
+          final kind = _namePrefixKind(nameOf(copy[start].item));
+          var end = start + 1;
+          while (end < copy.length &&
+              _namePrefixKind(nameOf(copy[end].item)) == kind) {
+            end++;
+          }
+          final enabled = <({T item, int index})>[];
+          final disabled = <({T item, int index})>[];
+          for (final entry in copy.sublist(start, end)) {
+            (enabledOf(entry.item) ? enabled : disabled).add(entry);
+          }
+          result
+            ..addAll(enabled)
+            ..addAll(disabled);
+          start = end;
+        }
+        return result;
+      }
       final enabled = <({T item, int index})>[];
       final disabled = <({T item, int index})>[];
       for (final entry in copy) {
@@ -312,7 +640,10 @@ List<T> sortSourceItems<T>(
     return copy;
   }
 
-  if (!settings.groupByType) {
+  final tagSortingActive =
+      settings.nameSortStyle == SourceNameSortStyle.tags &&
+      settings.effectiveSortState.field == modern_sort.SortField.name;
+  if (!settings.groupByType || tagSortingActive) {
     return [
       for (final item in sortBucket(indexed)) item.item,
     ];
