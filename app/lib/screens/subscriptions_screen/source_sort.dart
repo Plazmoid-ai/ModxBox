@@ -966,6 +966,10 @@ Future<void> showSourceSortOptions(
           setSheetState(() {});
         }
 
+        final tagSortingActive =
+            local.nameSortStyle == SourceNameSortStyle.tags &&
+            local.effectiveSortState.field == modern_sort.SortField.name;
+
         return SafeArea(
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -1002,7 +1006,9 @@ Future<void> showSourceSortOptions(
                   )),
                   title: Text(getLocalText.s("Sort by tags")),
                   subtitle: Text(getLocalText.s(
-                    "Letter mode ignores leading numbers, emoji and punctuation.",
+                    local.nameSortStyle == SourceNameSortStyle.tags
+                        ? "When sorting by name, tag mode keeps the list flat."
+                        : "Letter mode ignores leading numbers, emoji and punctuation.",
                   )),
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
@@ -1047,63 +1053,65 @@ Future<void> showSourceSortOptions(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
-                CheckboxListTile(
-                  value: local.groupByType,
-                  onChanged: (value) =>
-                      apply(local.copyWith(groupByType: value ?? false)),
-                  title: Text(getLocalText.s("Group by type")),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                  alignment: Alignment.topCenter,
-                  child: local.groupByType
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              getLocalText.s("Group order"),
-                              style: Theme.of(sheetCtx).textTheme.labelLarge,
-                            ),
-                            const SizedBox(height: 4),
-                            ReorderableListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              buildDefaultDragHandles: false,
-                              itemCount: local.groupOrder.length,
-                              onReorderItem: (oldIndex, newIndex) {
-                                final next = [...local.groupOrder];
-                                final moved = next.removeAt(oldIndex);
-                                next.insert(newIndex, moved);
-                                apply(local.copyWith(
-                                  groupOrder: List<String>.unmodifiable(next),
-                                ));
-                              },
-                              itemBuilder: (_, index) {
-                                final kind = local.groupOrder[index];
-                                return ListTile(
-                                  key: ValueKey(kind),
-                                  dense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: Icon(sourceTypeIcon(kind), size: 20),
-                                  title: Text(sourceTypeLabel(kind)),
-                                  trailing: ReorderableDragStartListener(
-                                    index: index,
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(8),
-                                      child: Icon(Icons.drag_handle),
+                if (!tagSortingActive) ...[
+                  CheckboxListTile(
+                    value: local.groupByType,
+                    onChanged: (value) =>
+                        apply(local.copyWith(groupByType: value ?? false)),
+                    title: Text(getLocalText.s("Group by type")),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    alignment: Alignment.topCenter,
+                    child: local.groupByType
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                getLocalText.s("Group order"),
+                                style: Theme.of(sheetCtx).textTheme.labelLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              ReorderableListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                buildDefaultDragHandles: false,
+                                itemCount: local.groupOrder.length,
+                                onReorderItem: (oldIndex, newIndex) {
+                                  final next = [...local.groupOrder];
+                                  final moved = next.removeAt(oldIndex);
+                                  next.insert(newIndex, moved);
+                                  apply(local.copyWith(
+                                    groupOrder: List<String>.unmodifiable(next),
+                                  ));
+                                },
+                                itemBuilder: (_, index) {
+                                  final kind = local.groupOrder[index];
+                                  return ListTile(
+                                    key: ValueKey(kind),
+                                    dense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: Icon(sourceTypeIcon(kind), size: 20),
+                                    title: Text(sourceTypeLabel(kind)),
+                                    trailing: ReorderableDragStartListener(
+                                      index: index,
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(8),
+                                        child: Icon(Icons.drag_handle),
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        )
-                      : const SizedBox(width: double.infinity),
-                ),
+                                  );
+                                },
+                              ),
+                            ],
+                          )
+                        : const SizedBox(width: double.infinity),
+                  ),
+                ],
                   ],
                 ),
               ),
