@@ -5864,5 +5864,20 @@
   },
   "Enabled first": {
     "value": "Включённые сверху"
+  },
+  "Name sorting": {
+    "value": "Сортировка имён"
+  },
+  "Sort by tags": {
+    "value": "Сортировать по тегам"
+  },
+  "Letter mode ignores leading numbers, emoji and punctuation.": {
+    "value": "Буквенный режим игнорирует начальные цифры, эмодзи и знаки."
+  },
+  "Tags at top": {
+    "value": "Теги сверху"
+  },
+  "Tags at bottom": {
+    "value": "Теги снизу"
   }
 }
