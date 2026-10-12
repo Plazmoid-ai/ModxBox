@@ -1267,6 +1267,33 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
   }
 
+  Widget _buildToolbarHint(String message) {
+    final theme = Theme.of(context);
+    return IgnorePointer(
+      child: AnimatedOpacity(
+        opacity: 1,
+        duration: const Duration(milliseconds: 120),
+        child: Material(
+          elevation: 4,
+          color: theme.colorScheme.inverseSurface,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Text(
+              message,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                color: theme.colorScheme.onInverseSurface,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInputBar(SubscriptionController ctrl) {
     final hasSources = _sources.isNotEmpty || ctrl.entries.isNotEmpty;
     return Padding(
@@ -1305,105 +1332,62 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               ),
             ],
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ActiveFilterButton(
-                      value: _sortSettings.activeFilter,
-                      enabled: hasSources,
-                      onChanged: (value) {
-                        _updateSortSettings(
-                          _sortSettings.copyWith(activeFilter: value),
-                        );
-                        _showFilterModeHint(value.label());
-                      },
-                    ),
-                    if (_showFilterTooltip && _filterTooltipMessage != null)
-                      Positioned(
-                        left: 22,
-                        bottom: 48,
-                        child: FractionalTranslation(
-                          translation: const Offset(-0.5, 0),
-                          child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              opacity: _showFilterTooltip ? 1 : 0,
-                              duration: const Duration(milliseconds: 120),
-                              child: Material(
-                                elevation: 4,
-                                color: Theme.of(context).colorScheme.inverseSurface,
-                                borderRadius: BorderRadius.circular(8),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 7,
-                                  ),
-                                  child: Text(
-                                    _filterTooltipMessage!,
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onInverseSurface,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ActiveFilterButton(
+                        value: _sortSettings.activeFilter,
+                        enabled: hasSources,
+                        onChanged: (value) {
+                          _updateSortSettings(
+                            _sortSettings.copyWith(activeFilter: value),
+                          );
+                          _showFilterModeHint(value.label());
+                        },
                       ),
-                  ],
-                ),
-                const SizedBox(width: 2),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    sort_widgets.SortToolbarButton(
-                      state: _sortSettings.sortState,
-                      onChanged: _onSortStateChanged,
-                      onOpenMenu: _openSourceSortOptions,
-                    ),
-                    if (_showSortTooltip && _sortTooltipMessage != null)
-                      Positioned(
-                        left: 22,
-                        bottom: 48,
-                        child: FractionalTranslation(
-                          translation: const Offset(-0.5, 0),
-                          child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              opacity: _showSortTooltip ? 1 : 0,
-                              duration: const Duration(milliseconds: 120),
-                              child: Material(
-                                elevation: 4,
-                                color: Theme.of(context).colorScheme.inverseSurface,
-                                borderRadius: BorderRadius.circular(8),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 7,
-                                  ),
-                                  child: Text(
-                                    _sortTooltipMessage!,
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onInverseSurface,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                      const SizedBox(width: 2),
+                      sort_widgets.SortToolbarButton(
+                        state: _sortSettings.sortState,
+                        onChanged: _onSortStateChanged,
+                        onOpenMenu: _openSourceSortOptions,
                       ),
-                  ],
+                    ],
+                  ),
                 ),
+                if (_showFilterTooltip && _filterTooltipMessage != null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 52,
+                    child: Center(
+                      // The tooltip is centered between the screen's left edge
+                      // and the right edge of the rightmost toolbar button.
+                      child: Transform.translate(
+                        offset: const Offset(-6, 0),
+                        child: _buildToolbarHint(_filterTooltipMessage!),
+                      ),
+                    ),
+                  ),
+                if (_showSortTooltip && _sortTooltipMessage != null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 52,
+                    child: Center(
+                      child: Transform.translate(
+                        offset: const Offset(-6, 0),
+                        child: _buildToolbarHint(_sortTooltipMessage!),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
