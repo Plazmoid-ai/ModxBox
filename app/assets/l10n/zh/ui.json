@@ -5600,5 +5600,8 @@
   },
   "Tags at bottom": {
     "value": "标签置底"
+  },
+  "When sorting by name, tag mode keeps the list flat.": {
+    "value": "按名称排序时，标签模式会保持列表平铺。"
   }
 }
