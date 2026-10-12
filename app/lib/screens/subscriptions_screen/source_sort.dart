@@ -1321,6 +1321,15 @@ int _compareLetterNames(
   return descending ? -result : result;
 }
 
+int _compareEmojiNames(String a, String b, String localeTag) {
+  final leftTag = _leadingVisibleGrapheme(a);
+  final rightTag = _leadingVisibleGrapheme(b);
+  final tagResult = _compareCodePoints(leftTag, rightTag);
+  return tagResult != 0
+      ? tagResult
+      : _compareLetterNames(a, b, localeTag, descending: false);
+}
+
 int compareSourceNames(
   String a,
   String b, {
@@ -1359,14 +1368,7 @@ int compareSourceNames(
 
   final result = switch (leftKind) {
     _NamePrefixKind.digit => _compareNatural(a, b, localeTag),
-    _NamePrefixKind.emoji => () {
-        final leftTag = _leadingVisibleGrapheme(a);
-        final rightTag = _leadingVisibleGrapheme(b);
-        final tagResult = _compareCodePoints(leftTag, rightTag);
-        return tagResult != 0
-            ? tagResult
-            : _compareLetterNames(a, b, localeTag, descending: false);
-      }(),
+    _NamePrefixKind.emoji => _compareEmojiNames(a, b, localeTag),
     _NamePrefixKind.ordinary =>
       _compareLetterNames(a, b, localeTag, descending: false),
   };
