@@ -1524,14 +1524,14 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         offset: const Offset(-6, 0),
                         child: _buildToolbarHint(
                           _filterTooltipMessage!,
-                          leading: Icon(
-                            switch (_sortSettings.activeFilter) {
-                              ActiveFilter.all => Icons.filter_alt_outlined,
-                              ActiveFilter.active => Icons.filter_alt,
-                              ActiveFilter.inactive => Icons.filter_alt_off,
-                            },
-                            size: 18,
-                            color: Theme.of(context).colorScheme.onInverseSurface,
+                          leading: ExcludeSemantics(
+                            child: FittedBox(
+                              child: ActiveFilterButton(
+                                value: _sortSettings.activeFilter,
+                                enabled: false,
+                                onChanged: (_) {},
+                              ),
+                            ),
                           ),
                         ),
                       ),
