@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:characters/characters.dart';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -1133,11 +1132,12 @@ String? _letterSortKey(String value, String localeTag) {
 String _normalizePhonetic(String value, String localeTag) {
   final lower = value.toLowerCase();
   if (localeTag == 'ru') return _latinToCyrillic(lower);
-  if (localeTag == 'en') return _cyrillicToLatin(lower);
-  // Chinese is kept in Unicode order: without a bundled Han-to-pinyin
-  // dictionary, inventing phonetics would be less reliable than stable text
-  // order. Latin/Cyrillic merge phonetically for the ru/en app locales.
-  return lower;
+
+  // For English and other non-Russian app locales, map Cyrillic to Latin so
+  // romanized/Cyrillic names do not end up in separate script blocks. Chinese
+  // characters themselves retain Unicode order; no Han-to-pinyin dictionary
+  // is bundled into the app.
+  return _cyrillicToLatin(lower);
 }
 
 String _latinToCyrillic(String value) {
