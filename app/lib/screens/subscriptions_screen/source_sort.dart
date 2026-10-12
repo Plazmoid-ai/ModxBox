@@ -275,7 +275,9 @@ IconData sourceTypeIcon(String kind) => switch (kind) {
 
 
 const String _russianAlphabet = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя';
-final RegExp _firstSortLetter = RegExp(r'[a-zA-Zа-яА-ЯёЁ]');
+final RegExp _firstSortLetter = RegExp(
+  r'[a-zA-Z\\u00C0-\\u024Fа-яА-ЯёЁ\\u3400-\\u4DBF\\u4E00-\\u9FFF\\u3040-\\u30FF\\uAC00-\\uD7AF]',
+);
 final RegExp _asciiDigit = RegExp(r'^[0-9]  List<T> items,
   SourceSortSettings settings, {
   required String Function(T item) nameOf,
