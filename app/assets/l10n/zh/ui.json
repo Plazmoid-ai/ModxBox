@@ -5585,5 +5585,20 @@
   },
   "Enabled first": {
     "value": "已启用的置顶"
+  },
+  "Name sorting": {
+    "value": "名称排序"
+  },
+  "Sort by tags": {
+    "value": "按标签排序"
+  },
+  "Letter mode ignores leading numbers, emoji and punctuation.": {
+    "value": "字母排序会忽略名称开头的数字、表情符号和标点。"
+  },
+  "Tags at top": {
+    "value": "标签置顶"
+  },
+  "Tags at bottom": {
+    "value": "标签置底"
   }
 }
