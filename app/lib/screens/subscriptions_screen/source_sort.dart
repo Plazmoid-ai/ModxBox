@@ -684,6 +684,7 @@ List<T> sortSourceItems<T>(
 
 class _SerializedSourceRow {
   const _SerializedSourceRow({
+    required this.index,
     required this.name,
     required this.kind,
     required this.createdAt,
@@ -691,6 +692,7 @@ class _SerializedSourceRow {
     required this.enabled,
   });
 
+  final int index;
   final String name;
   final String kind;
   final DateTime? createdAt;
@@ -702,9 +704,10 @@ class _SerializedSourceRow {
 List<int> sortSerializedSourceIndices(Map<String, dynamic> payload) {
   final rawItems = payload['items'] as List<dynamic>;
   final items = <_SerializedSourceRow>[];
-  for (final value in rawItems) {
-    final raw = Map<String, dynamic>.from(value as Map);
+  for (var index = 0; index < rawItems.length; index++) {
+    final raw = Map<String, dynamic>.from(rawItems[index] as Map);
     items.add(_SerializedSourceRow(
+      index: index,
       name: raw['name']?.toString() ?? '',
       kind: raw['kind']?.toString() ?? '',
       createdAt: DateTime.tryParse(raw['created_at']?.toString() ?? ''),
@@ -726,7 +729,7 @@ List<int> sortSerializedSourceIndices(Map<String, dynamic> payload) {
     enabledOf: (item) => item.enabled,
     localeTag: payload['locale']?.toString() ?? 'en',
   );
-  return [for (final row in sorted) items.indexOf(row)];
+  return [for (final row in sorted) row.index];
 }
 
 
