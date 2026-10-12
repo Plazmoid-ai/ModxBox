@@ -24,12 +24,14 @@ class SettingsTabsScreen extends StatefulWidget {
     required this.pages,
     this.overlayTitle = 'App Settings',
     this.initialIndex = 0,
+    this.singleTabIndex,
   });
 
   final List<SettingsTabSpec> tabs;
   final List<Widget> pages;
   final String overlayTitle;
   final int initialIndex;
+  final int? singleTabIndex;
 
   @override
   SettingsTabsScreenState createState() => SettingsTabsScreenState();
@@ -154,6 +156,14 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    if (widget.singleTabIndex != null) {
+      final index = widget.singleTabIndex!.clamp(0, widget.tabs.length - 1).toInt();
+      return Scaffold(
+        backgroundColor: cs.surface,
+        appBar: AppBar(title: Text(widget.tabs[index].title)),
+        body: widget.pages[index],
+      );
+    }
 
     return PopScope(
       // Пока плитки открыты, «назад» закрывает их, а не выходит из настроек.
