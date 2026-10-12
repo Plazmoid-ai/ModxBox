@@ -740,18 +740,31 @@ class ActiveFilterButton extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAll = value == ActiveFilter.all;
-    final isActive = value == ActiveFilter.active;
     final gray = colors.surfaceContainerHighest;
     const lightBlue = Color(0xFFBAC3FF);
     final blue = isDark ? colors.primary : lightBlue;
     final inner = isDark ? Colors.black : Colors.white;
     final innerOutline = isDark ? Colors.white : Colors.black;
 
+    final geometry = switch (value) {
+      ActiveFilter.all => const _FilterGeometry(0, 0, 1, 0.070, 0.25),
+      ActiveFilter.active => const _FilterGeometry(0.10, 0.12, 0.34, 0.055, 0.13),
+      ActiveFilter.inactive => const _FilterGeometry(0.10, 0.54, 0.34, 0.055, 0.13),
+    };
+    final background = switch (value) {
+      ActiveFilter.all => Colors.transparent,
+      ActiveFilter.active => blue,
+      ActiveFilter.inactive => gray,
+    };
+    final plateFill = isAll ? gray : inner;
+    final plateOutline = isAll ? colors.outline : innerOutline;
+
     return Tooltip(
       message: value.label(),
       child: Semantics(
         button: true,
         label: value.label(),
+        value: value.name,
         child: InkResponse(
           onTap: enabled ? () => onChanged(value.next) : null,
           radius: 24,
@@ -764,30 +777,33 @@ class ActiveFilterButton extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: isActive ? blue : gray,
+                  color: background,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isAll ? colors.outline : Colors.transparent,
-                    width: 2,
-                  ),
                 ),
-                child: Center(
-                  child: AnimatedOpacity(
-                    duration: _duration,
-                    opacity: isAll ? 0 : 1,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: inner,
-                        borderRadius: BorderRadius.circular(4.5),
-                        border: Border.all(
-                          color: innerOutline,
-                          width: 2,
+                child: Stack(
+                  children: [
+                    AnimatedPositioned(
+                      duration: _duration,
+                      curve: Curves.easeOutCubic,
+                      left: 32 * geometry.inset,
+                      right: 32 * geometry.inset,
+                      top: 32 * geometry.top,
+                      height: 32 * geometry.height,
+                      child: AnimatedContainer(
+                        duration: _duration,
+                        curve: Curves.easeOutCubic,
+                        decoration: BoxDecoration(
+                          color: plateFill,
+                          border: Border.all(
+                            color: plateOutline,
+                            width: 32 * geometry.border,
+                          ),
+                          borderRadius:
+                              BorderRadius.circular(32 * geometry.radius),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -796,6 +812,22 @@ class ActiveFilterButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FilterGeometry {
+  const _FilterGeometry(
+    this.inset,
+    this.top,
+    this.height,
+    this.border,
+    this.radius,
+  );
+
+  final double inset;
+  final double top;
+  final double height;
+  final double border;
+  final double radius;
 }
 
 Future<void> showSourceSortOptions(
