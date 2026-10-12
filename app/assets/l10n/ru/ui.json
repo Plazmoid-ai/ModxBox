@@ -3848,8 +3848,14 @@
   "Refresh now": {
     "value": "Обновить сейчас"
   },
-  "Refresh on app start, after VPN connects, and periodically. Manual ⟳ works regardless.": {
-    "value": "Обновлять при запуске приложения, после подключения VPN и периодически. Ручное ⟳ работает всегда."
+  "Refresh on app start, after VPN connects, and periodically.": {
+    "value": "Обновлять при запуске приложения, после подключения VPN и периодически."
+  },
+  "Manual update": {
+    "value": "Ручное обновление"
+  },
+  "Pull down on the server list to refresh subscriptions.": {
+    "value": "Потяните список серверов вниз, чтобы обновить подписки."
   },
   "Refresh rule-sets": {
     "value": "Обновить rule-set-файлы"
