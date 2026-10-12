@@ -46,6 +46,7 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
   static const Duration _holdTime = Duration(milliseconds: 350);
 
   late final TabController _tc;
+  int? _soloIndex;
   int _indexAtPointerDown = 0;
   bool _tilesOpen = false;
 
@@ -61,10 +62,12 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
     super.initState();
     assert(widget.tabs.length == widget.pages.length);
     assert(widget.tabs.isNotEmpty);
+    _soloIndex = widget.singleTabIndex;
     _tc = TabController(
       length: widget.tabs.length,
       vsync: this,
-      initialIndex: widget.initialIndex.clamp(0, widget.tabs.length - 1),
+      initialIndex: (widget.singleTabIndex ?? widget.initialIndex)
+          .clamp(0, widget.tabs.length - 1),
     );
   }
 
@@ -81,6 +84,9 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
   void selectTab(int index) {
     if (index < 0 || index >= widget.tabs.length) return;
     if (_tilesOpen) setState(() => _tilesOpen = false);
+    if (widget.singleTabIndex != null && _soloIndex != index) {
+      setState(() => _soloIndex = index);
+    }
     if (_tc.index != index) _tc.animateTo(index);
   }
 
@@ -157,7 +163,9 @@ class SettingsTabsScreenState extends State<SettingsTabsScreen>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     if (widget.singleTabIndex != null) {
-      final index = widget.singleTabIndex!.clamp(0, widget.tabs.length - 1).toInt();
+      final index = (_soloIndex ?? widget.singleTabIndex!)
+          .clamp(0, widget.tabs.length - 1)
+          .toInt();
       return Scaffold(
         backgroundColor: cs.surface,
         appBar: AppBar(title: Text(widget.tabs[index].title)),
