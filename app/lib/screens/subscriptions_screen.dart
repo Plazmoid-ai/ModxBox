@@ -72,6 +72,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   bool _autoUpdateEnabled = true;
   bool _manualRefreshEnabled = true;
   RefreshIndicatorStatus? _refreshStatus;
+  bool _refreshWasArmed = false;
+  bool _refreshIconSuppressed = false;
 
   /// §524 — ОБЩИЙ СПИСОК ИСТОЧНИКОВ в порядке `sources[]`: подписки, серверы,
   /// папки и цепочки одним рядом. Один список — одна истина о порядке; до §524
@@ -350,7 +352,25 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   void _onManualRefreshStatusChanged(RefreshIndicatorStatus? status) {
     if (!mounted) return;
-    setState(() => _refreshStatus = status);
+    setState(() {
+      if (status == RefreshIndicatorStatus.armed) {
+        _refreshWasArmed = true;
+        _refreshIconSuppressed = false;
+      } else if (status == RefreshIndicatorStatus.drag && _refreshWasArmed) {
+        // The finger moved back up past the trigger threshold: hide the icon
+        // immediately. Releasing now will not start a refresh.
+        _refreshIconSuppressed = true;
+      } else if (status == RefreshIndicatorStatus.snap ||
+          status == RefreshIndicatorStatus.refresh) {
+        _refreshIconSuppressed = false;
+      } else if (status == RefreshIndicatorStatus.done ||
+          status == RefreshIndicatorStatus.canceled ||
+          status == null) {
+        _refreshWasArmed = false;
+        _refreshIconSuppressed = false;
+      }
+      _refreshStatus = status;
+    });
   }
 
   /// §375 — спрашиваем платформу о камере один раз при открытии экрана:
@@ -1300,22 +1320,18 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         child: IgnorePointer(
                           child: Center(
                             child: _OperaRefreshIcon(
-                              visible: _refreshStatus ==
-                                      RefreshIndicatorStatus.drag ||
-                                  _refreshStatus ==
-                                      RefreshIndicatorStatus.armed ||
-                                  _refreshStatus ==
-                                      RefreshIndicatorStatus.snap ||
-                                  _refreshStatus ==
-                                      RefreshIndicatorStatus.refresh,
-                              spinning: _refreshStatus ==
-                                      RefreshIndicatorStatus.drag ||
-                                  _refreshStatus ==
-                                      RefreshIndicatorStatus.armed ||
-                                  _refreshStatus ==
-                                      RefreshIndicatorStatus.snap ||
-                                  _refreshStatus ==
-                                      RefreshIndicatorStatus.refresh,
+                              visible: !_refreshIconSuppressed &&
+                                  (_refreshStatus == RefreshIndicatorStatus.drag ||
+                                      _refreshStatus == RefreshIndicatorStatus.armed ||
+                                      _refreshStatus == RefreshIndicatorStatus.snap ||
+                                      _refreshStatus == RefreshIndicatorStatus.refresh ||
+                                      _refreshStatus == RefreshIndicatorStatus.done ||
+                                      _refreshStatus == RefreshIndicatorStatus.canceled),
+                              spinning: !_refreshIconSuppressed &&
+                                  (_refreshStatus == RefreshIndicatorStatus.drag ||
+                                      _refreshStatus == RefreshIndicatorStatus.armed ||
+                                      _refreshStatus == RefreshIndicatorStatus.snap ||
+                                      _refreshStatus == RefreshIndicatorStatus.refresh),
                             ),
                           ),
                         ),
