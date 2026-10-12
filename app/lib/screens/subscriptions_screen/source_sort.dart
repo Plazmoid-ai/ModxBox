@@ -315,7 +315,7 @@ final RegExp _asciiDigit = RegExp(r'^[0-9]  List<T> items,
       modern_sort.SortField.name => compareNames(
           nameOf(a.item),
           nameOf(b.item),
-        ) * (reversed ? -1 : 1),
+        ),
       modern_sort.SortField.modified => compareDates(
           modifiedOf(a.item),
           modifiedOf(b.item),
