@@ -1263,11 +1263,15 @@ Future<void> showSourceSortOptions(
                         : SourceNameSortStyle.letters,
                   )),
                   title: Text(getLocalText.s("Sort by tags")),
-                  subtitle: Text(getLocalText.s(
+                  subtitle: Text(
                     local.nameSortStyle == SourceNameSortStyle.tags
-                        ? "When sorting by name, tag mode keeps the list flat."
-                        : "Letter mode ignores leading numbers, emoji and punctuation.",
-                  )),
+                        ? getLocalText.s(
+                            "When sorting by name, tag mode keeps the list flat.",
+                          )
+                        : getLocalText.s(
+                            "Letter mode ignores leading numbers, emoji and punctuation.",
+                          ),
+                  ),
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   dense: true,
