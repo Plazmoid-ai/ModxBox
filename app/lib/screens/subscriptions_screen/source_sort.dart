@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:characters/characters.dart';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -51,6 +50,7 @@ const List<String> defaultSourceGroupOrder = <String>[
 ];
 
 enum SourceNameSortStyle { letters, tags }
+
 enum SourceTagPosition { top, bottom }
 
 class SourceSortSettings {
