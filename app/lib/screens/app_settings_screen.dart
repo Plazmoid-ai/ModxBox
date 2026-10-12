@@ -39,7 +39,6 @@ class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({
     super.key,
     this.initialTab = 0,
-    this.singleTabIndex,
     this.highlightCoreLogs = false,
     this.homeController,
     this.subController,
@@ -51,10 +50,7 @@ class AppSettingsScreen extends StatefulWidget {
   /// Used by deep-links.
   final int initialTab;
 
-  /// When set, display one existing app-settings tab as a standalone page.
-  final int? singleTabIndex;
-
-  /// Если true — после первого render'а скроллим к «Forward sing-box logs»
+app settings property  /// Если true — после первого render'а скроллим к «Forward sing-box logs»
   /// SwitchListTile и пульсируем подсветку 2.5s. Используется banner'ом
   /// в Live tab чтобы юзер сразу увидел нужный toggle.
   final bool highlightCoreLogs;
@@ -835,7 +831,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> with WidgetsBindi
           key: _settingsTabsKey,
           overlayTitle: getLocalText.s("App Settings"),
           initialIndex: widget.initialTab.clamp(0, 5),
-          singleTabIndex: widget.singleTabIndex,
           tabs: [
             SettingsTabSpec(getLocalText.s("General"), Icons.tune),
             SettingsTabSpec(getLocalText.s("Appearance"), Icons.palette_outlined),
