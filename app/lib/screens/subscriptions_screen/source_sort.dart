@@ -339,6 +339,32 @@ final RegExp _asciiDigit = RegExp(r'^[0-9]  List<T> items,
     final copy = [...bucket];
     copy.sort(compareItems);
     if (settings.enabledFirst && enabledOf != null) {
+      final tagSortingActive =
+          settings.nameSortStyle == SourceNameSortStyle.tags &&
+          settings.effectiveSortState.field == modern_sort.SortField.name;
+      if (tagSortingActive) {
+        final result = <({T item, int index})>[];
+        var start = 0;
+        while (start < copy.length) {
+          final kind = _namePrefixKind(nameOf(copy[start].item));
+          var end = start + 1;
+          while (end < copy.length &&
+              _namePrefixKind(nameOf(copy[end].item)) == kind) {
+            end++;
+          }
+          final enabled = <({T item, int index})>[];
+          final disabled = <({T item, int index})>[];
+          for (final entry in copy.sublist(start, end)) {
+            (enabledOf(entry.item) ? enabled : disabled).add(entry);
+          }
+          result
+            ..addAll(enabled)
+            ..addAll(disabled);
+          start = end;
+        }
+        return result;
+      }
+
       // Stable partition: enabled entries first, retaining each side's order.
       final enabled = <({T item, int index})>[];
       final disabled = <({T item, int index})>[];
@@ -350,7 +376,10 @@ final RegExp _asciiDigit = RegExp(r'^[0-9]  List<T> items,
     return copy;
   }
 
-  if (!settings.groupByType) {
+  final tagSortingActive =
+      settings.nameSortStyle == SourceNameSortStyle.tags &&
+      settings.effectiveSortState.field == modern_sort.SortField.name;
+  if (!settings.groupByType || tagSortingActive) {
     return [
       for (final item in sortBucket(indexed)) item.item,
     ];
@@ -1321,13 +1350,25 @@ int _compareLetterNames(
   return descending ? -result : result;
 }
 
-int _compareEmojiNames(String a, String b, String localeTag) {
+int _compareEmojiNames(
+  String a,
+  String b,
+  String localeTag, {
+  required bool descending,
+}) {
   final leftTag = _leadingVisibleGrapheme(a);
   final rightTag = _leadingVisibleGrapheme(b);
   final tagResult = _compareCodePoints(leftTag, rightTag);
-  return tagResult != 0
-      ? tagResult
-      : _compareLetterNames(a, b, localeTag, descending: false);
+  if (tagResult != 0) return descending ? -tagResult : tagResult;
+
+  // When the tag is identical, sort the remainder alphabetically. Names with
+  // no letters stay at the end in either direction.
+  return _compareLetterNames(
+    a,
+    b,
+    localeTag,
+    descending: descending,
+  );
 }
 
 int compareSourceNames(
@@ -1366,13 +1407,23 @@ int compareSourceNames(
   final rightRank = rank(rightKind);
   if (leftRank != rightRank) return leftRank.compareTo(rightRank);
 
-  final result = switch (leftKind) {
-    _NamePrefixKind.digit => _compareNatural(a, b, localeTag),
-    _NamePrefixKind.emoji => _compareEmojiNames(a, b, localeTag),
-    _NamePrefixKind.ordinary =>
-      _compareLetterNames(a, b, localeTag, descending: false),
+  return switch (leftKind) {
+    _NamePrefixKind.digit => descending
+        ? -_compareNatural(a, b, localeTag)
+        : _compareNatural(a, b, localeTag),
+    _NamePrefixKind.emoji => _compareEmojiNames(
+        a,
+        b,
+        localeTag,
+        descending: descending,
+      ),
+    _NamePrefixKind.ordinary => _compareLetterNames(
+        a,
+        b,
+        localeTag,
+        descending: descending,
+      ),
   };
-  return descending ? -result : result;
 }
 
 List<T> sortSourceItems<T>(
