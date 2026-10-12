@@ -392,6 +392,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               template: template,
             ),
           ];
+          final selectedTabIndex =
+              widget.singleTabIndex?.clamp(0, tabPages.length - 1).toInt();
           return Scaffold(
             appBar: widget.showAppBar
                 ? AppBar(
@@ -401,8 +403,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     bottom: widget.singleTabIndex == null ? tabs : null,
                   )
                 : null,
-            body: widget.singleTabIndex != null
-                ? tabPages[widget.singleTabIndex!.clamp(0, tabPages.length - 1).toInt()]
+            body: selectedTabIndex != null
+                ? tabPages[selectedTabIndex]
                 : Column(
                     children: [
                       if (!widget.showAppBar)
