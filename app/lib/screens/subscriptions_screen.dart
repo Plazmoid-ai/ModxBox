@@ -353,19 +353,24 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   void _onManualRefreshStatusChanged(RefreshIndicatorStatus? status) {
     if (!mounted) return;
     setState(() {
-      if (status == RefreshIndicatorStatus.armed) {
+      if (status == RefreshIndicatorStatus.drag) {
+        if (_refreshWasArmed) {
+          // The finger moved back up past the trigger threshold: hide the icon
+          // immediately. Releasing now will not start a refresh.
+          _refreshIconSuppressed = true;
+        } else {
+          _refreshIconSuppressed = false;
+        }
+      } else if (status == RefreshIndicatorStatus.armed) {
         _refreshWasArmed = true;
         _refreshIconSuppressed = false;
-      } else if (status == RefreshIndicatorStatus.drag && _refreshWasArmed) {
-        // The finger moved back up past the trigger threshold: hide the icon
-        // immediately. Releasing now will not start a refresh.
-        _refreshIconSuppressed = true;
       } else if (status == RefreshIndicatorStatus.snap ||
           status == RefreshIndicatorStatus.refresh) {
         _refreshIconSuppressed = false;
-      } else if (status == RefreshIndicatorStatus.done ||
-          status == RefreshIndicatorStatus.canceled ||
-          status == null) {
+      } else if (status == RefreshIndicatorStatus.canceled) {
+        // Keep a suppressed icon hidden for the rest of a canceled gesture.
+        _refreshWasArmed = false;
+      } else if (status == RefreshIndicatorStatus.done || status == null) {
         _refreshWasArmed = false;
         _refreshIconSuppressed = false;
       }
