@@ -118,12 +118,13 @@ class _NameGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = compact ? 13.0 : 16.0;
-    final dash = compact ? 8.0 : 10.0;
-    final gap = compact ? 3.0 : 4.0;
-    final fs = compact ? 18.0 : 20.0;
-    final h = compact ? 22.0 : 24.0;
-    final dt = compact ? 2.0 : 2.5;
+    // The compact glyph fits inside the 32×32 toolbar tile.
+    final s = compact ? 10.0 : 16.0;
+    final dash = compact ? 6.0 : 10.0;
+    final gap = compact ? 2.0 : 4.0;
+    final fs = compact ? 15.0 : 20.0;
+    final h = compact ? 18.0 : 24.0;
+    final dt = compact ? 1.8 : 2.5;
     final right = s + gap + dash + gap;
 
     Widget slot(String t) => SizedBox(
@@ -189,7 +190,7 @@ class _ClockGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final w = compact ? 28.0 : 30.0;
+    final w = compact ? 23.0 : 30.0;
     return TweenAnimationBuilder<double>(
       tween: Tween(end: reversed ? -1.0 : 1.0),
       duration: _anim,
@@ -275,7 +276,7 @@ class _CalendarGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = compact ? 24.0 : 28.0;
+    final s = compact ? 21.0 : 28.0;
     final r = (s * 0.21).roundToDouble();
     final header = (s * 0.25).roundToDouble();
     final ringInset = (s * 0.2).roundToDouble();
@@ -610,7 +611,7 @@ class SortToolbarButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final label = sortLabel(state.field, state.reverse);
-    final r = BorderRadius.circular(14);
+    final r = BorderRadius.circular(8);
 
     return Semantics(
       button: true,
@@ -624,25 +625,36 @@ class SortToolbarButton extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            borderRadius: r,
+            borderRadius: BorderRadius.circular(14),
             onTap: () => onChanged(state.next()),
             onLongPress: onOpenMenu,
             child: Center(
-              child: AnimatedSwitcher(
+              child: AnimatedContainer(
                 duration: _anim,
-                transitionBuilder: (child, a) => FadeTransition(
-                  opacity: a,
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.8, end: 1).animate(a),
-                    child: child,
-                  ),
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: r,
                 ),
-                child: SortGlyph(
-                  key: ValueKey(state.field),
-                  field: state.field,
-                  reversed: state.reverse,
-                  color: cs.onSurface,
-                  compact: true,
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: _anim,
+                    transitionBuilder: (child, a) => FadeTransition(
+                      opacity: a,
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: 0.8, end: 1).animate(a),
+                        child: child,
+                      ),
+                    ),
+                    child: SortGlyph(
+                      key: ValueKey(state.field),
+                      field: state.field,
+                      reversed: state.reverse,
+                      color: cs.onSurface,
+                      compact: true,
+                    ),
+                  ),
                 ),
               ),
             ),
