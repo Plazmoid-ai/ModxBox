@@ -44,7 +44,6 @@ class DnsSettingsScreen extends StatefulWidget {
     required this.subController,
     required this.homeController,
     this.showAppBar = true,
-    this.singleTabIndex,
     this.focusServerTag,
     this.focusField,
     this.focusRuleIdentity,
@@ -53,8 +52,6 @@ class DnsSettingsScreen extends StatefulWidget {
   final SubscriptionController subController;
   final HomeController homeController;
   final bool showAppBar;
-  /// When set, present one existing DNS tab as a standalone page.
-  final int? singleTabIndex;
 
   /// Optional target used by the settings-change journal to open a specific row.
   final String? focusServerTag;
@@ -172,9 +169,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
   void initState() {
     super.initState();
     final int initialTabIndex;
-    if (widget.singleTabIndex != null) {
-      initialTabIndex = widget.singleTabIndex!.clamp(0, 2).toInt();
-    } else if (widget.focusRuleIdentity != null) {
+    if (widget.focusRuleIdentity != null) {
       initialTabIndex = 2;
     } else if (widget.focusServerTag != null) {
       initialTabIndex = 1;
@@ -929,25 +924,12 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
     );
   }
 
-  String _tabTitle(int index) {
-    final titles = [
-      getLocalText.s("Settings"),
-      getLocalText.s("DNS Servers"),
-      getLocalText.s("DNS Rules"),
-    ];
-    return titles[index.clamp(0, titles.length - 1).toInt()];
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
         appBar: widget.showAppBar
-            ? AppBar(
-                title: Text(widget.singleTabIndex == null
-                    ? getLocalText.s("DNS Settings")
-                    : _tabTitle(widget.singleTabIndex!)),
-              )
+            ? AppBar(title: Text(getLocalText.s("DNS Settings")))
             : null,
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -1274,21 +1256,15 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen>
           ],
         ),
       ];
-    final selectedTabIndex =
-        widget.singleTabIndex?.clamp(0, tabPages.length - 1).toInt();
     final tabView = TabBarView(controller: _tabController, children: tabPages);
     return Scaffold(
       appBar: widget.showAppBar
           ? AppBar(
-              title: Text(widget.singleTabIndex == null
-                  ? getLocalText.s("DNS Settings")
-                  : _tabTitle(widget.singleTabIndex!)),
-              bottom: widget.singleTabIndex == null ? tabs : null,
+              title: Text(getLocalText.s("DNS Settings")),
+              bottom: tabs,
             )
           : null,
-      body: selectedTabIndex != null
-          ? tabPages[selectedTabIndex]
-          : Column(
+      body: Column(
               children: [
                 if (!widget.showAppBar)
                   Material(
