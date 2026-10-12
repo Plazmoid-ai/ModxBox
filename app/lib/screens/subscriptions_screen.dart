@@ -810,9 +810,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   /// Открыть App Settings сразу на табе «Subscriptions» (initialTab: 2).
   void _openSubscriptionSettings() {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => const AppSettingsScreen(initialTab: 2),
-    ));
+    unawaited(
+      Navigator.of(context)
+          .push<void>(MaterialPageRoute<void>(
+            builder: (_) => const AppSettingsScreen(initialTab: 2),
+          ))
+          .then((_) => _loadManualRefreshFlag()),
+    );
   }
 
   /// §025 — открыть full-screen визард Cloudflare WARP.
