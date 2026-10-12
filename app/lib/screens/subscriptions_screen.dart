@@ -70,6 +70,8 @@ class SubscriptionsScreen extends StatefulWidget {
 class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   final _inputController = TextEditingController();
   bool _autoUpdateEnabled = true;
+  bool _manualRefreshEnabled = true;
+  RefreshIndicatorStatus? _refreshStatus;
 
   /// §524 — ОБЩИЙ СПИСОК ИСТОЧНИКОВ в порядке `sources[]`: подписки, серверы,
   /// папки и цепочки одним рядом. Один список — одна истина о порядке; до §524
@@ -150,6 +152,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     super.initState();
     unawaited(_loadCompactEntries());
     unawaited(_loadAutoUpdateFlag());
+    unawaited(_loadManualRefreshFlag());
     unawaited(_loadCameraAvailability());
     unawaited(_loadSortState());
     widget.subController.addListener(_onControllerForSourceOrder);
@@ -334,6 +337,20 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     final v = await SettingsStorage.getAutoUpdateSubs();
     if (!mounted) return;
     setState(() => _autoUpdateEnabled = v);
+  }
+
+  Future<void> _loadManualRefreshFlag() async {
+    final value = await SettingsStorage.getVar(
+      'manual_subscription_refresh_enabled',
+      'true',
+    );
+    if (!mounted) return;
+    setState(() => _manualRefreshEnabled = value != 'false');
+  }
+
+  void _onManualRefreshStatusChanged(RefreshIndicatorStatus? status) {
+    if (!mounted) return;
+    setState(() => _refreshStatus = status);
   }
 
   /// §375 — спрашиваем платформу о камере один раз при открытии экрана:
@@ -1145,15 +1162,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             }
           },
           child: Scaffold(
-            body: RefreshIndicator(
-              // SliverAppBar + CustomScrollView позволяют верхней части
-              // (заголовок + поле URL) автоматически уезжать при прокрутке
-              // вниз и возвращаться при прокрутке вверх.
-              onRefresh: () async {
-                if (ctrl.busy) return;
-                await _updateAll();
-              },
-              child: CustomScrollView(
+            body: Builder(
+              builder: (bodyContext) {
+                // Keep one scroll view for both states; the setting only adds
+                // or removes the pull-to-refresh gesture layer.
+                final scrollContent = CustomScrollView(
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
@@ -1259,7 +1272,53 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     ),
                   _buildList(ctrl),
                 ],
-              ),
+              );
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    if (_manualRefreshEnabled)
+                      RefreshIndicator.noSpinner(
+                        onRefresh: () async {
+                          if (ctrl.busy || !_manualRefreshEnabled) return;
+                          await _updateAll();
+                        },
+                        onStatusChange: _onManualRefreshStatusChanged,
+                        child: scrollContent,
+                      )
+                    else
+                      scrollContent,
+                    if (_manualRefreshEnabled)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: MediaQuery.paddingOf(bodyContext).top + 4,
+                        child: IgnorePointer(
+                          child: Center(
+                            child: _OperaRefreshIcon(
+                              visible: _refreshStatus ==
+                                      RefreshIndicatorStatus.drag ||
+                                  _refreshStatus ==
+                                      RefreshIndicatorStatus.armed ||
+                                  _refreshStatus ==
+                                      RefreshIndicatorStatus.snap ||
+                                  _refreshStatus ==
+                                      RefreshIndicatorStatus.refresh,
+                              spinning: _refreshStatus ==
+                                      RefreshIndicatorStatus.drag ||
+                                  _refreshStatus ==
+                                      RefreshIndicatorStatus.armed ||
+                                  _refreshStatus ==
+                                      RefreshIndicatorStatus.snap ||
+                                  _refreshStatus ==
+                                      RefreshIndicatorStatus.refresh,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             )
           ),
         );
@@ -1766,4 +1825,81 @@ class _SourceDisplayRow {
   final String? groupKind;
 
   bool get isHeader => groupKind != null;
+}
+
+
+/// A noticeable pull-to-refresh glyph: drops in from the top and rotates while
+/// the gesture is active. The RefreshIndicator itself runs without its spinner.
+class _OperaRefreshIcon extends StatefulWidget {
+  const _OperaRefreshIcon({
+    required this.visible,
+    required this.spinning,
+  });
+
+  final bool visible;
+  final bool spinning;
+
+  @override
+  State<_OperaRefreshIcon> createState() => _OperaRefreshIconState();
+}
+
+class _OperaRefreshIconState extends State<_OperaRefreshIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rotation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.spinning) _rotation.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _OperaRefreshIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.spinning) {
+      if (!_rotation.isAnimating) _rotation.repeat();
+    } else {
+      _rotation.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return AnimatedSlide(
+      offset: widget.visible ? Offset.zero : const Offset(0, -1.8),
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        opacity: widget.visible ? 1 : 0,
+        duration: const Duration(milliseconds: 120),
+        child: RotationTransition(
+          turns: _rotation,
+          child: Material(
+            elevation: 6,
+            color: colors.primaryContainer,
+            shape: const CircleBorder(),
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(
+                Icons.refresh,
+                size: 25,
+                color: colors.onPrimaryContainer,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
