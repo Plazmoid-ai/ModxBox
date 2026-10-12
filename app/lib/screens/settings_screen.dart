@@ -51,14 +51,11 @@ class SettingsScreen extends StatefulWidget {
     required this.homeController,
     this.initialTab = 0,
     this.showAppBar = true,
-    this.singleTabIndex,
   });
 
   final SubscriptionController subController;
   final HomeController homeController;
   final bool showAppBar;
-  /// When set, present one existing VPN settings tab as a standalone page.
-  final int? singleTabIndex;
 
   /// 0 = System, 1 = Core, 2 = Mode (§119). Used by deep-links.
   final int initialTab;
@@ -341,25 +338,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     });
   }
 
-  String _tabTitle(int index) {
-    final titles = [
-      getLocalText.s("System"),
-      getLocalText.s("Core"),
-      getLocalText.s("Mode"),
-    ];
-    return titles[index.clamp(0, titles.length - 1).toInt()];
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
         appBar: widget.showAppBar
-            ? AppBar(
-                title: Text(widget.singleTabIndex == null
-                    ? getLocalText.s("VPN Settings")
-                    : _tabTitle(widget.singleTabIndex!)),
-              )
+            ? AppBar(title: Text(getLocalText.s("VPN Settings")))
             : null,
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -380,7 +364,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
     return DefaultTabController(
       length: 3,
-      initialIndex: (widget.singleTabIndex ?? widget.initialTab).clamp(0, 2),
+      initialIndex: widget.initialTab.clamp(0, 2),
       child: Builder(
         builder: (tabContext) {
           final tabPages = <Widget>[
@@ -392,20 +376,14 @@ class _SettingsScreenState extends State<SettingsScreen>
               template: template,
             ),
           ];
-          final selectedTabIndex =
-              widget.singleTabIndex?.clamp(0, tabPages.length - 1).toInt();
           return Scaffold(
             appBar: widget.showAppBar
                 ? AppBar(
-                    title: Text(widget.singleTabIndex == null
-                        ? getLocalText.s("VPN Settings")
-                        : _tabTitle(widget.singleTabIndex!)),
-                    bottom: widget.singleTabIndex == null ? tabs : null,
+                    title: Text(getLocalText.s("VPN Settings")),
+                    bottom: tabs,
                   )
                 : null,
-            body: selectedTabIndex != null
-                ? tabPages[selectedTabIndex]
-                : Column(
+            body: Column(
                     children: [
                       if (!widget.showAppBar)
                         Material(
