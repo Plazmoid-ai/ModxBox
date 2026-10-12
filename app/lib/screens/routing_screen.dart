@@ -387,41 +387,43 @@ class _RoutingScreenState extends State<RoutingScreen>
             ],
           );
           final tabPages = <Widget>[
-              // ─── Directions: Направления (CRUD) + default fallback + Auto tuning ───
-              RoutingDirectionsTab(
-                bottomPad: bottomPad,
-                groupTiles: _directions.map(_buildDirectionTile).toList(),
-                directionCount: _directions.length,
-                // §393 A3 — лимита на количество Направлений больше нет
-                // (паритет с лаунчером); счётчик показывает, сколько их.
-                onAddDirection: _addDirection,
-                routeFinalTile: _buildRouteFinalTile(),
-              ),
+            // ─── Directions: Направления (CRUD) + default fallback + Auto tuning ───
+            RoutingDirectionsTab(
+              bottomPad: bottomPad,
+              groupTiles: _directions.map(_buildDirectionTile).toList(),
+              directionCount: _directions.length,
+              // §393 A3 — лимита на количество Направлений больше нет
+              // (паритет с лаунчером); счётчик показывает, сколько их.
+              onAddDirection: _addDirection,
+              routeFinalTile: _buildRouteFinalTile(),
+            ),
 
-              // ─── Presets: catalog of pre-built rules to copy into Rules ───
-              RoutingPresetsTab(
-                bottomPad: bottomPad,
-                catalogTiles: template.selectableRules
-                    .map(_buildPresetCatalogTile)
-                    .toList(),
-              ),
+            // ─── Presets: catalog of pre-built rules to copy into Rules ───
+            RoutingPresetsTab(
+              bottomPad: bottomPad,
+              catalogTiles: template.selectableRules
+                  .map(_buildPresetCatalogTile)
+                  .toList(),
+            ),
 
-              // ─── Rules: unified custom routing (spec §030) ───
-              RoutingRulesTab(
-                bottomPad: bottomPad,
-                itemCount: _customRules.length,
-                onReorder: _onReorderCustomRule,
-                itemKey: (i) => ValueKey(_customRules[i].id),
-                itemBuilder: _buildCustomRuleTile,
-                onAdd: _addCustomRule,
-              ),
+            // ─── Rules: unified custom routing (spec §030) ───
+            RoutingRulesTab(
+              bottomPad: bottomPad,
+              itemCount: _customRules.length,
+              onReorder: _onReorderCustomRule,
+              itemKey: (i) => ValueKey(_customRules[i].id),
+              itemBuilder: _buildCustomRuleTile,
+              onAdd: _addCustomRule,
+            ),
 
-              // ─── Tunnel apps: §046 OS-level split-tunneling ───
-              TunAppsTab(
-                homeController: widget.homeController,
-                subController: widget.subController,
-              ),
-            ];
+            // ─── Tunnel apps: §046 OS-level split-tunneling ───
+            TunAppsTab(
+              homeController: widget.homeController,
+              subController: widget.subController,
+            ),
+          ];
+          final selectedTabIndex =
+              widget.singleTabIndex?.clamp(0, tabPages.length - 1).toInt();
           final tabView = TabBarView(children: tabPages);
           return Scaffold(
             appBar: widget.showAppBar
@@ -433,21 +435,21 @@ class _RoutingScreenState extends State<RoutingScreen>
                     bottom: widget.singleTabIndex == null ? tabBar : null,
                   )
                 : null,
-            body: widget.singleTabIndex != null
-                ? tabPages[widget.singleTabIndex!.clamp(0, tabPages.length - 1).toInt()]
+            body: selectedTabIndex != null
+                ? tabPages[selectedTabIndex]
                 : Column(
                     children: [
-                if (!widget.showAppBar) ...[
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: rulesMenu,
-                  ),
-                  Material(
-                    color: Theme.of(tabCtx).colorScheme.surface,
-                    child: tabBar,
-                  ),
-                ],
-                Expanded(child: tabView),
+                      if (!widget.showAppBar) ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: rulesMenu,
+                        ),
+                        Material(
+                          color: Theme.of(tabCtx).colorScheme.surface,
+                          child: tabBar,
+                        ),
+                      ],
+                      Expanded(child: tabView),
                     ],
                   ),
           );
