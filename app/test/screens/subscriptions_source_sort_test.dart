@@ -21,8 +21,9 @@ class _Item {
 
 List<_Item> _apply(
   List<_Item> items,
-  SourceSortSettings settings,
-) =>
+  SourceSortSettings settings, {
+  String? localeTag,
+}) =>
     sortSourceItems(
       items,
       settings,
@@ -31,6 +32,7 @@ List<_Item> _apply(
       createdOf: (item) => item.createdAt,
       modifiedOf: (item) => item.modifiedAt,
       enabledOf: (item) => item.enabled,
+      localeTag: localeTag,
     );
 
 void main() {
@@ -174,6 +176,61 @@ void main() {
       );
     });
 
+    test('letter mode ignores prefixes and merges Latin with Cyrillic by sound', () {
+      final values = [
+        _Item('🚀 Beta', 'server', null, null),
+        _Item('🇫🇮', 'server', null, null),
+        _Item('10. Zeta', 'server', null, null),
+        _Item('APROTON', 'server', null, null),
+        _Item('🚀', 'server', null, null),
+        _Item('Аврора', 'server', null, null),
+      ];
+
+      expect(
+        _apply(
+          values,
+          const SourceSortSettings(),
+          localeTag: 'ru',
+        ).map((e) => e.name).toList(),
+        ['Аврора', 'APROTON', '🚀 Beta', '10. Zeta', '🇫🇮', '🚀'],
+      );
+    });
+
+    test('tag mode puts numeric tags before emoji and uses natural number order', () {
+      final values = [
+        _Item('🚀 Rocket', 'server', null, null),
+        _Item('10. Ten', 'server', null, null),
+        _Item('APROTON', 'server', null, null),
+        _Item('🇫🇮 Finland', 'server', null, null),
+        _Item('2. Two', 'server', null, null),
+        _Item('Аврора', 'server', null, null),
+      ];
+
+      expect(
+        _apply(
+          values,
+          const SourceSortSettings(
+            nameSortStyle: SourceNameSortStyle.tags,
+            tagPosition: SourceTagPosition.top,
+          ),
+          localeTag: 'ru',
+        ).map((e) => e.name).toList(),
+        ['2. Two', '10. Ten', '🇫🇮 Finland', '🚀 Rocket', 'Аврора', 'APROTON'],
+      );
+
+      expect(
+        _apply(
+          values,
+          const SourceSortSettings(
+            nameSortStyle: SourceNameSortStyle.tags,
+            tagPosition: SourceTagPosition.bottom,
+          ),
+          localeTag: 'ru',
+        ).map((e) => e.name).toList(),
+        ['Аврора', 'APROTON', '2. Two', '10. Ten', '🇫🇮 Finland', '🚀 Rocket'],
+      );
+    });
+
     test('sorts modified dates newest and oldest, unknown dates last', () {
       expect(
         _apply(
@@ -306,12 +363,16 @@ void main() {
         mode: SourceSortMode.createdNewest,
         enabledFirst: true,
         activeFilter: ActiveFilter.inactive,
+        nameSortStyle: SourceNameSortStyle.tags,
+        tagPosition: SourceTagPosition.bottom,
       );
       final restored = SourceSortSettings.fromJson(jsonEncode(source.toJson()));
 
       expect(restored.mode, SourceSortMode.createdNewest);
       expect(restored.enabledFirst, isTrue);
       expect(restored.activeFilter, ActiveFilter.inactive);
+      expect(restored.nameSortStyle, SourceNameSortStyle.tags);
+      expect(restored.tagPosition, SourceTagPosition.bottom);
     });
 
     test('persists independently remembered reverse flags for every field', () {
@@ -363,6 +424,25 @@ void main() {
         settings.groupOrder,
         ['chain', 'server', 'folder', 'subscription'],
       );
+    });
+
+    test('isolate worker returns original indexes in sorted order', () {
+      final settings = const SourceSortSettings(
+        nameSortStyle: SourceNameSortStyle.tags,
+        tagPosition: SourceTagPosition.top,
+      );
+      final indices = sortSerializedSourceIndices({
+        'locale': 'ru',
+        'settings': settings.toJson(),
+        'items': [
+          {'name': '🚀 Rocket', 'kind': 'server', 'enabled': true},
+          {'name': '10. Ten', 'kind': 'server', 'enabled': true},
+          {'name': '2. Two', 'kind': 'server', 'enabled': true},
+          {'name': 'Аврора', 'kind': 'server', 'enabled': true},
+        ],
+      });
+
+      expect(indices, [2, 1, 0, 3]);
     });
   });
 }
