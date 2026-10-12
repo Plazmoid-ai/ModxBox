@@ -286,6 +286,7 @@ class _KeepAliveState extends State<_KeepAlive>
 List<HubSection> buildHubSections({
   required HomeController homeController,
   required SubscriptionController subController,
+  required AutoUpdater autoUpdater,
 }) =>
     [
       HubSection(
@@ -318,7 +319,11 @@ List<HubSection> buildHubSections({
       HubSection(
         title: getLocalText.s("App Settings"),
         icon: Icons.settings_outlined,
-        builder: (_) => const AppSettingsScreen(),
+        builder: (_) => AppSettingsScreen(
+          homeController: homeController,
+          subController: subController,
+          autoUpdater: autoUpdater,
+        ),
       ),
     ];
 
@@ -381,6 +386,7 @@ Future<void> openSectionHub(
         sections: buildHubSections(
           homeController: homeController,
           subController: subController,
+          autoUpdater: autoUpdater,
         ),
         tools: buildHubTools(
           homeController: homeController,
