@@ -16,6 +16,8 @@ class SubscriptionsTab extends StatelessWidget {
     required this.padding,
     required this.autoUpdateSubs,
     required this.onAutoUpdateSubsChanged,
+    required this.manualRefreshEnabled,
+    required this.onManualRefreshChanged,
     required this.autoUpdateDisabledSubs,
     required this.onAutoUpdateDisabledSubsChanged,
     required this.userAgent,
@@ -39,6 +41,9 @@ class SubscriptionsTab extends StatelessWidget {
 
   final bool autoUpdateSubs;
   final ValueChanged<bool> onAutoUpdateSubsChanged;
+
+  final bool manualRefreshEnabled;
+  final ValueChanged<bool> onManualRefreshChanged;
 
   /// §337 — обновлять и выключенные подписки. Зависимая от [autoUpdateSubs].
   final bool autoUpdateDisabledSubs;
@@ -76,10 +81,17 @@ class SubscriptionsTab extends StatelessWidget {
         const SizedBox(height: 8),
         SwitchListTile(
           title: Text(getLocalText.s("Auto-update subscriptions")),
-          subtitle: Text(getLocalText.s("Refresh on app start, after VPN connects, and periodically. Manual ⟳ works regardless.")),
+          subtitle: Text(getLocalText.s("Refresh on app start, after VPN connects, and periodically.")),
           secondary: const Icon(Icons.cloud_sync_outlined),
           value: autoUpdateSubs,
           onChanged: loaded ? onAutoUpdateSubsChanged : null,
+        ),
+        SwitchListTile(
+          title: Text(getLocalText.s("Manual update")),
+          subtitle: Text(getLocalText.s("Pull down on the server list to refresh subscriptions.")),
+          secondary: const Icon(Icons.refresh),
+          value: manualRefreshEnabled,
+          onChanged: loaded ? onManualRefreshChanged : null,
         ),
         SwitchListTile(
           title: Text(getLocalText.s("Update disabled subscriptions")),
