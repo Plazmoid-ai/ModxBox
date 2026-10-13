@@ -243,6 +243,28 @@ void main() {
       );
     });
 
+    test('enabled-first keeps identical emoji tags in one contiguous group', () {
+      final values = [
+        _Item('🔥 Z', 'server', null, null, enabled: false),
+        _Item('🚀 Rocket', 'server', null, null, enabled: true),
+        _Item('🔥 B', 'folder', null, null, enabled: false),
+        _Item('🔥 A', 'server', null, null, enabled: true),
+        _Item('APROTON', 'server', null, null, enabled: true),
+      ];
+
+      expect(
+        _apply(
+          values,
+          const SourceSortSettings(
+            nameSortStyle: SourceNameSortStyle.tags,
+            enabledFirst: true,
+          ),
+          localeTag: 'ru',
+        ).map((e) => e.name).toList(),
+        ['🔥 A', '🔥 B', '🔥 Z', '🚀 Rocket', 'APROTON'],
+      );
+    });
+
     test('tag name mode stays flat even if type grouping was previously enabled', () {
       final values = [
         _Item('B letter', 'folder', null, null),
@@ -409,6 +431,21 @@ void main() {
       expect(restored.activeFilter, ActiveFilter.inactive);
       expect(restored.nameSortStyle, SourceNameSortStyle.tags);
       expect(restored.tagPosition, SourceTagPosition.bottom);
+    });
+
+    test('enabling tag mode switches the active field to name sorting', () {
+      const dateSorted = SourceSortSettings(
+        sortState: modern_sort.SortState(
+          field: modern_sort.SortField.modified,
+        ),
+      );
+
+      final tags = dateSorted.copyWith(
+        nameSortStyle: SourceNameSortStyle.tags,
+      );
+
+      expect(tags.nameSortStyle, SourceNameSortStyle.tags);
+      expect(tags.sortState.field, modern_sort.SortField.name);
     });
 
     test('persists independently remembered reverse flags for every field', () {
