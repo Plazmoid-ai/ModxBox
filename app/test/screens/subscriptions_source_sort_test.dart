@@ -247,7 +247,7 @@ void main() {
       final values = [
         _Item('🔥 Z', 'server', null, null, enabled: false),
         _Item('🚀 Rocket', 'server', null, null, enabled: true),
-        _Item('🔥 B', 'folder', null, null, enabled: false),
+        _Item('🔥\uFE0F B', 'folder', null, null, enabled: false),
         _Item('🔥 A', 'server', null, null, enabled: true),
         _Item('APROTON', 'server', null, null, enabled: true),
       ];
