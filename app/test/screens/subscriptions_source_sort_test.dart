@@ -204,7 +204,24 @@ void main() {
           const SourceSortSettings(),
           localeTag: 'en',
         ).map((e) => e.name).toList(),
-        ['APROTON', 'Аврора'],
+        ['Аврора', 'APROTON'],
+      );
+    });
+
+    test('Cyrillic names sort before Latin names without phonetic merging', () {
+      final values = [
+        _Item('Zebra', 'server', null, null),
+        _Item('Япония', 'server', null, null),
+        _Item('Apple', 'server', null, null),
+        _Item('Аврора', 'server', null, null),
+        _Item('Бета', 'server', null, null),
+      ];
+
+      expect(
+        _apply(values, const SourceSortSettings(), localeTag: 'ru')
+            .map((e) => e.name)
+            .toList(),
+        ['Аврора', 'Бета', 'Япония', 'Apple', 'Zebra'],
       );
     });
 
