@@ -40,7 +40,7 @@ void main() {
     final iconFinder = find.byKey(const ValueKey('opera-pull-refresh-icon'));
     expect(iconFinder, findsOneWidget);
     final opacity = tester.widget<Opacity>(
-      find.ancestor(of: iconFinder, matching: find.byType(Opacity)).first,
+      find.descendant(of: iconFinder, matching: find.byType(Opacity)).first,
     );
     expect(opacity.opacity, 0);
   });
@@ -61,7 +61,7 @@ void main() {
     expect(refreshCount, 0);
     final iconFinder = find.byKey(const ValueKey('opera-pull-refresh-icon'));
     final opacity = tester.widget<Opacity>(
-      find.ancestor(of: iconFinder, matching: find.byType(Opacity)).first,
+      find.descendant(of: iconFinder, matching: find.byType(Opacity)).first,
     );
     expect(opacity.opacity, 0);
   });
