@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart' show TickerCanceled;
 import 'package:flutter/services.dart';
 
 import '../controllers/home_controller.dart';
@@ -1947,7 +1946,8 @@ class _SourceDisplayRow {
 /// bottom-edge swipes starting the operation.
 /// Pull-to-refresh widget that starts only after a downward drag reaches the top-edge threshold.
 class OperaPullToRefresh extends StatefulWidget {
-  const _OperaPullToRefresh({
+  const OperaPullToRefresh({
+    super.key,
     required this.child,
     required this.onRefresh,
     required this.canRefresh,
