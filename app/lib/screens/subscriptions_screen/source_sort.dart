@@ -95,10 +95,15 @@ class SourceSortSettings {
     SourceNameSortStyle? nameSortStyle,
     SourceTagPosition? tagPosition,
   }) {
-    final nextState = sortState ??
+    var nextState = sortState ??
         (mode == null ? effectiveSortState : _sortStateFromLegacyMode(mode));
-    final nextMode = sortState != null
-        ? _sortModeFromState(sortState)
+    final enteringTagMode = nameSortStyle == SourceNameSortStyle.tags &&
+        this.nameSortStyle != SourceNameSortStyle.tags;
+    if (enteringTagMode && nextState.field != modern_sort.SortField.name) {
+      nextState = nextState.select(modern_sort.SortField.name);
+    }
+    final nextMode = sortState != null || enteringTagMode
+        ? _sortModeFromState(nextState)
         : (mode ?? _sortModeFromState(nextState));
     return SourceSortSettings(
       mode: nextMode,
@@ -617,13 +622,23 @@ List<T> sortSourceItems<T>(
           settings.nameSortStyle == SourceNameSortStyle.tags &&
           settings.effectiveSortState.field == modern_sort.SortField.name;
       if (tagSortingActive) {
+        String tagGroupKey(T item) {
+          final name = nameOf(item);
+          final kind = _namePrefixKind(name);
+          // Emoji are the actual visual tags. Keep each identical leading
+          // emoji together even when enabledFirst is also active.
+          if (kind == _NamePrefixKind.emoji) {
+            return 'emoji:${_leadingVisibleGrapheme(name)}';
+          }
+          return kind.name;
+        }
+
         final result = <({T item, int index})>[];
         var start = 0;
         while (start < copy.length) {
-          final kind = _namePrefixKind(nameOf(copy[start].item));
+          final tag = tagGroupKey(copy[start].item);
           var end = start + 1;
-          while (end < copy.length &&
-              _namePrefixKind(nameOf(copy[end].item)) == kind) {
+          while (end < copy.length && tagGroupKey(copy[end].item) == tag) {
             end++;
           }
           final enabled = <({T item, int index})>[];
@@ -1326,21 +1341,27 @@ Future<void> showSourceSortOptions(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
-                if (!tagSortingActive) ...[
-                  CheckboxListTile(
-                    value: local.groupByType,
-                    onChanged: (value) =>
-                        apply(local.copyWith(groupByType: value ?? false)),
-                    title: Text(getLocalText.s("Group by type")),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                  ),
+                CheckboxListTile(
+                  value: local.groupByType,
+                  onChanged: tagSortingActive
+                      ? null
+                      : (value) =>
+                          apply(local.copyWith(groupByType: value ?? false)),
+                  title: Text(getLocalText.s("Group by type")),
+                  subtitle: tagSortingActive
+                      ? Text(getLocalText.s(
+                          "When sorting by name, tag mode keeps the list flat.",
+                        ))
+                      : null,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOut,
                     alignment: Alignment.topCenter,
-                    child: local.groupByType
+                    child: !tagSortingActive && local.groupByType
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -1384,7 +1405,6 @@ Future<void> showSourceSortOptions(
                           )
                         : const SizedBox(width: double.infinity),
                   ),
-                ],
                   ],
                 ),
               ),
