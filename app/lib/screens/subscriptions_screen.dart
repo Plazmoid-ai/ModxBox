@@ -1398,7 +1398,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
   }
 
-  Widget _buildToolbarHint(String message, {required Widget leading}) {
+  Widget _buildToolbarHint(
+    String message, {
+    Widget? leading,
+    double leadingSize = 20,
+  }) {
     final theme = Theme.of(context);
     return IgnorePointer(
       child: AnimatedOpacity(
@@ -1417,12 +1421,14 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: Center(child: leading),
-                  ),
-                  const SizedBox(width: 7),
+                  if (leading != null) ...[
+                    SizedBox(
+                      width: leadingSize,
+                      height: leadingSize,
+                      child: Center(child: leading),
+                    ),
+                    const SizedBox(width: 7),
+                  ],
                   Flexible(
                     child: Text(
                       message,
@@ -1524,6 +1530,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         offset: const Offset(-6, 0),
                         child: _buildToolbarHint(
                           _filterTooltipMessage!,
+                          leadingSize: 32,
                           leading: ExcludeSemantics(
                             child: FittedBox(
                               child: ActiveFilterButton(
@@ -1547,12 +1554,17 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         offset: const Offset(-6, 0),
                         child: _buildToolbarHint(
                           _sortTooltipMessage!,
-                          leading: sort_widgets.SortGlyph(
-                            field: _sortSettings.sortState.field,
-                            reversed: _sortSettings.sortState.reverse,
-                            color: Theme.of(context).colorScheme.onInverseSurface,
-                            compact: true,
-                          ),
+                          leading: _sortSettings.sortState.field ==
+                                  sort_widgets.SortField.name
+                              ? null
+                              : sort_widgets.SortGlyph(
+                                  field: _sortSettings.sortState.field,
+                                  reversed: _sortSettings.sortState.reverse,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onInverseSurface,
+                                  compact: true,
+                                ),
                         ),
                       ),
                     ),
