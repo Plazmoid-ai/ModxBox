@@ -216,7 +216,7 @@ void main() {
       final snackRect = tester.getRect(find.byType(SnackBar));
       final scrollable = tester.getRect(find
           .descendant(
-            of: find.byType(RefreshIndicator),
+            of: find.byType(OperaPullToRefresh),
             matching: find.byType(Scrollable),
           )
           .first);
