@@ -97,6 +97,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   String? _displaySortRequestSignature;
   String? _displaySortReadySignature;
   List<int> _displaySortIndices = const [];
+  String? _displaySortFallbackSignature;
+  List<int> _displaySortFallbackIndices = const [];
   static const _sortSettingsStorageKey = 'server_list_sorting';
   static const _sortMetadataStorageKey = 'server_list_sort_meta';
   bool _sortStateReady = false;
@@ -1714,9 +1716,30 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         _displaySortRequestSignature = signature;
         unawaited(_computeDisplaySort(sourceRows, payload, signature));
       }
-      // The isolate result arrives on the next event-loop turn. Keep the list
-      // responsive meanwhile; the cached order replaces it as soon as ready.
-      rows = sourceRows;
+
+      // Immediately show the correctly sorted list while the isolate works.
+      // Previously the UI showed raw source order until compute() completed,
+      // which could look as if sorting ignored the selected options.
+      if (_displaySortFallbackSignature != signature) {
+        final sorted = sortSourceItems<_SourceRow>(
+          sourceRows,
+          _sortSettings,
+          nameOf: (row) => row.displayLabel,
+          kindOf: (row) => row.kind,
+          modifiedOf: (row) => _sortMetadata[row.sourceKey]?.modifiedAt,
+          createdOf: (row) => _sortMetadata[row.sourceKey]?.createdAt,
+          enabledOf: (row) => row.enabled,
+          localeTag: LocaleController.I.effectiveTag,
+        );
+        _displaySortFallbackSignature = signature;
+        _displaySortFallbackIndices = [
+          for (final row in sorted) sourceRows.indexOf(row),
+        ];
+      }
+      rows = [
+        for (final index in _displaySortFallbackIndices)
+          if (index >= 0 && index < sourceRows.length) sourceRows[index],
+      ];
     }
 
     final tagSortingActive =
