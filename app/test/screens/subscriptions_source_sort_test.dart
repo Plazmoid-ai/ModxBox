@@ -434,8 +434,8 @@ void main() {
     });
 
     test('enabling tag mode switches the active field to name sorting', () {
-      const dateSorted = SourceSortSettings(
-        sortState: modern_sort.SortState(
+      final dateSorted = const SourceSortSettings().copyWith(
+        sortState: const modern_sort.SortState(
           field: modern_sort.SortField.modified,
         ),
       );
