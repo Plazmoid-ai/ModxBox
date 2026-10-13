@@ -119,6 +119,34 @@ Future<void> _pumpServersScreen(
   await tester.pump(const Duration(milliseconds: 200));
 }
 
+/// Sorting the display list uses [compute], so its isolate result runs outside
+/// the widget test's fake-async clock. A fixed pump delay alone is not enough
+/// on a cold CI runner; let real async work finish while continuing to pump
+/// frames until the resulting display order is observable.
+Future<void> _pumpUntilSorted(
+  WidgetTester tester, {
+  required Finder first,
+  required Finder second,
+  required Finder third,
+}) async {
+  bool sorted() =>
+      tester.getCenter(first).dy < tester.getCenter(second).dy &&
+      tester.getCenter(second).dy < tester.getCenter(third).dy;
+
+  for (var attempt = 0; attempt < 60 && !sorted(); attempt++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 25)),
+    );
+    await tester.pump();
+  }
+
+  expect(
+    sorted(),
+    isTrue,
+    reason: 'display sort isolate should finish and order c1, First, Second',
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -200,12 +228,15 @@ void main() {
     expect(find.text('c1'), findsOneWidget);
     expect(find.text('Second'), findsOneWidget);
 
-    // Отображение сортируется по имени: c1, First, Second.
-    final yVia = tester.getCenter(find.text('c1')).dy;
-    final yFirst = tester.getCenter(find.text('First')).dy;
-    final ySecond = tester.getCenter(find.text('Second')).dy;
-    expect(yVia, lessThan(yFirst));
-    expect(yFirst, lessThan(ySecond));
+    // Отображение сортируется по имени: c1, First, Second. Сортировка
+    // вычисляется через compute/isolate; дождёмся результата, а не будем
+    // предполагать, что фиксированные 200 мс гарантируют готовность на CI.
+    await _pumpUntilSorted(
+      tester,
+      first: find.text('c1'),
+      second: find.text('First'),
+      third: find.text('Second'),
+    );
   });
 
   testWidgets('перестановка — ОДНА запись на жест', (tester) async {
