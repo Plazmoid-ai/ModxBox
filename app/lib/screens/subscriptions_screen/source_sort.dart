@@ -282,10 +282,31 @@ final RegExp _firstSortLetter = RegExp(
 );
 final RegExp _asciiDigit = RegExp(r'^[0-9]$');
 
-String? _letterSortKey(String value, String localeTag) {
+String? _letterSortKey(String value) {
   final match = _firstSortLetter.firstMatch(value);
   if (match == null) return null;
-  return _normalizePhonetic(value.substring(match.start), localeTag);
+  return value.substring(match.start).toLowerCase();
+}
+
+int _letterScriptRank(String value) {
+  final match = _firstSortLetter.firstMatch(value);
+  if (match == null) return 3;
+  final rune = value.substring(match.start).runes.first;
+
+  // Cyrillic first, Latin second, other recognized scripts after those.
+  if ((rune >= 0x0400 && rune <= 0x052F) ||
+      (rune >= 0x1C80 && rune <= 0x1C8F) ||
+      (rune >= 0x2DE0 && rune <= 0x2DFF) ||
+      (rune >= 0xA640 && rune <= 0xA69F)) {
+    return 0;
+  }
+  if ((rune >= 0x0041 && rune <= 0x005A) ||
+      (rune >= 0x0061 && rune <= 0x007A) ||
+      (rune >= 0x00C0 && rune <= 0x024F) ||
+      (rune >= 0x1E00 && rune <= 0x1EFF)) {
+    return 1;
+  }
+  return 2;
 }
 
 String _normalizePhonetic(String value, String localeTag) {
@@ -497,8 +518,8 @@ int _compareLetterNames(
   String localeTag, {
   required bool descending,
 }) {
-  final leftKey = _letterSortKey(a, localeTag);
-  final rightKey = _letterSortKey(b, localeTag);
+  final leftKey = _letterSortKey(a);
+  final rightKey = _letterSortKey(b);
   if (leftKey == null || rightKey == null) {
     // Values without recognized letters remain last in either direction.
     if (leftKey == null && rightKey != null) return 1;
@@ -506,7 +527,15 @@ int _compareLetterNames(
     final raw = _compareCodePoints(a, b);
     return descending ? -raw : raw;
   }
-  final result = _compareTextByLocale(leftKey, rightKey, localeTag);
+
+  final scriptOrder = _letterScriptRank(a).compareTo(_letterScriptRank(b));
+  if (scriptOrder != 0) return scriptOrder;
+
+  // Sort within a script. Russian Cyrillic keeps the proper ё placement;
+  // Latin is compared as Latin instead of being transliterated into Cyrillic.
+  final result = _letterScriptRank(a) == 0 && localeTag == 'ru'
+      ? _compareTextByLocale(leftKey, rightKey, localeTag)
+      : leftKey.compareTo(rightKey);
   return descending ? -result : result;
 }
 
