@@ -261,7 +261,7 @@ void main() {
           ),
           localeTag: 'ru',
         ).map((e) => e.name).toList(),
-        ['🔥 A', '🔥 B', '🔥 Z', '🚀 Rocket', 'APROTON'],
+        ['🔥 A', '🔥\uFE0F B', '🔥 Z', '🚀 Rocket', 'APROTON'],
       );
     });
 
