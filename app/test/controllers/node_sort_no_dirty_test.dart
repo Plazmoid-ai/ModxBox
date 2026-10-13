@@ -70,8 +70,7 @@ void main() {
     controller.debugSeedNodeState(group: 'vpn-1', activeNode: '🇫🇮node');
     expect(controller.state.configChangedNeedRestart, isFalse);
 
-    controller.setSortMode(NodeSortMode.nameAsc);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await controller.setSortMode(NodeSortMode.nameAsc);
 
     expect(controller.state.sortMode, NodeSortMode.nameAsc);
     expect(controller.state.configChangedNeedRestart, isFalse,
@@ -82,12 +81,9 @@ void main() {
       () async {
     controller.debugSeedNodeState(group: 'vpn-1', activeNode: '🇫🇮node');
 
-    controller.cycleSortMode();
-    controller.cycleSortMode();
-    controller.cycleSortMode();
-    // _persistSort — unawaited fire-and-forget save. Явно дождаться
-    // завершения записи до tearDown, чтобы не удалить tempDir во время rename.
-    await SettingsStorage.flushToDisk();
+    await controller.cycleSortMode();
+    await controller.cycleSortMode();
+    await controller.cycleSortMode();
 
     expect(controller.state.configChangedNeedRestart, isFalse);
   });
@@ -100,7 +96,7 @@ void main() {
         activeNode: '🇫🇮node',
         groups: const ['vpn-1', 'a', 'b', 'c']);
 
-    controller.commitManualReorder(const ['c', 'a', 'b']);
+    await controller.commitManualReorder(const ['c', 'a', 'b']);
 
     expect(controller.state.sortMode, NodeSortMode.manual);
     expect(controller.state.manualOrder, ['c', 'a', 'b']);
