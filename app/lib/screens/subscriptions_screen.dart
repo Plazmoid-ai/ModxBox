@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show TickerCanceled;
 import 'package:flutter/services.dart';
 
 import '../controllers/home_controller.dart';
@@ -2020,8 +2021,8 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
           !_isLoading &&
           !_isSettling &&
           notification.dragDetails != null &&
-          _offset > 0 &&
-          _isAtTop(notification.metrics)) {
+          notification.metrics.axisDirection == AxisDirection.down &&
+          _offset > 0) {
         final delta = notification.scrollDelta ?? 0;
         if (delta > 0) _setPullOffset(_offset - delta);
       }
@@ -2029,11 +2030,18 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
       if (_isDragging && !_isLoading) {
         _isDragging = false;
         final armed = _isThresholdReached && _offset >= _threshold;
-        setState(() {});
         if (armed && widget.canRefresh) {
+          setState(() {});
           unawaited(_runRefresh());
-        } else {
+        } else if (_offset > 0 ||
+            _appearance.value > 0 ||
+            _position.value > 0) {
+          setState(() {});
           unawaited(_settleBack());
+        } else {
+          _isThresholdReached = false;
+          _syncRotation();
+          setState(() {});
         }
       }
     }
@@ -2058,7 +2066,6 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
     final clamped = next.clamp(0.0, _maxPull).toDouble();
     if ((clamped - _offset).abs() < 0.1) return;
 
-    final wasArmed = _isThresholdReached;
     _offset = clamped;
     _isThresholdReached = _offset >= _threshold;
     _appearance.value =
@@ -2116,7 +2123,11 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
     _syncRotation();
 
     // Bounce the icon on completion, then fade and return it to its origin.
-    await _bounce.forward(from: 0);
+    try {
+      await _bounce.forward(from: 0);
+    } on TickerCanceled {
+      return;
+    }
     if (!mounted) return;
     setState(() => _isBouncing = false);
     await _animateBack();
@@ -2134,18 +2145,22 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
     if (!mounted) return;
     setState(() => _isSettling = true);
 
-    await Future.wait<void>([
-      _appearance.animateBack(
-        0,
-        duration: _animationDuration,
-        curve: Curves.easeIn,
-      ),
-      _position.animateBack(
-        0,
-        duration: _animationDuration,
-        curve: Curves.easeIn,
-      ),
-    ]);
+    try {
+      await Future.wait<void>([
+        _appearance.animateBack(
+          0,
+          duration: _animationDuration,
+          curve: Curves.easeIn,
+        ),
+        _position.animateBack(
+          0,
+          duration: _animationDuration,
+          curve: Curves.easeIn,
+        ),
+      ]);
+    } on TickerCanceled {
+      return;
+    }
 
     if (!mounted) return;
     setState(() {
