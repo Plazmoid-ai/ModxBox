@@ -397,6 +397,12 @@ String _leadingVisibleGrapheme(String value) {
   return visible.isEmpty ? '' : visible.first;
 }
 
+/// Unicode permits the same emoji to be written with or without a variation
+/// selector. Normalize that difference so visually identical tags sort together.
+String _emojiTagKey(String value) => _leadingVisibleGrapheme(value)
+    .replaceAll('\uFE0F', '')
+    .replaceAll('\uFE0E', '');
+
 bool _isEmojiGrapheme(String value) {
   if (value.isEmpty) return false;
   final runes = value.runes.toList();
@@ -510,8 +516,8 @@ int _compareEmojiNames(
   String localeTag, {
   required bool descending,
 }) {
-  final leftTag = _leadingVisibleGrapheme(a);
-  final rightTag = _leadingVisibleGrapheme(b);
+  final leftTag = _emojiTagKey(a);
+  final rightTag = _emojiTagKey(b);
   final tags = _compareCodePoints(leftTag, rightTag);
   if (tags != 0) return descending ? -tags : tags;
   return _compareLetterNames(a, b, localeTag, descending: descending);
@@ -628,7 +634,7 @@ List<T> sortSourceItems<T>(
           // Emoji are the actual visual tags. Keep each identical leading
           // emoji together even when enabledFirst is also active.
           if (kind == _NamePrefixKind.emoji) {
-            return 'emoji:${_leadingVisibleGrapheme(name)}';
+            return 'emoji:${_emojiTagKey(name)}';
           }
           return kind.name;
         }
@@ -1289,15 +1295,15 @@ Future<void> showSourceSortOptions(
                         : SourceNameSortStyle.letters,
                   )),
                   title: Text(getLocalText.s("Sort by tags")),
-                  subtitle: Text(
-                    local.nameSortStyle == SourceNameSortStyle.tags
-                        ? getLocalText.s(
-                            "When sorting by name, tag mode keeps the list flat.",
-                          )
-                        : getLocalText.s(
-                            "Letter mode ignores leading numbers, emoji and punctuation.",
-                          ),
-                  ),
+                  subtitle: local.nameSortStyle == SourceNameSortStyle.tags
+                      ? (tagSortingActive
+                          ? null
+                          : Text(getLocalText.s(
+                              "When sorting by name, tag mode keeps the list flat.",
+                            )))
+                      : Text(getLocalText.s(
+                          "Letter mode ignores leading numbers, emoji and punctuation.",
+                        )),
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   dense: true,
