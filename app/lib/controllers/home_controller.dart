@@ -1923,26 +1923,29 @@ class HomeController extends ChangeNotifier
     _emit(_state.copyWith(highlightedNode: nodeTag));
   }
 
-  void cycleSortMode() {
+  Future<void> cycleSortMode() async {
     // §100 — manualOrder больше НЕ сбрасывается при уходе из manual: порядок
     // персистится, повторный выбор «Custom» восстанавливает его.
     _emit(_state.copyWith(sortMode: _state.sortMode.next));
-    _persistSort();
+    await _persistSort();
   }
 
   /// §100 — выбрать режим сортировки напрямую (из sort-меню), включая `manual`
   /// (раньше manual входился только через drag). При выборе manual — видимые
   /// grab-strip'ы (§098). Порядок ручной сортировки сохраняется.
-  void setSortMode(NodeSortMode mode) {
+  Future<void> setSortMode(NodeSortMode mode) async {
     if (mode == _state.sortMode) return;
     _emit(_state.copyWith(sortMode: mode));
-    _persistSort();
+    await _persistSort();
   }
 
   /// §100 — персист текущего режима + manual-порядка в `lxbox_settings.json`.
-  void _persistSort() {
-    unawaited(
-        SettingsStorage.setNodeSort(_state.sortMode.name, _state.manualOrder));
+  Future<void> _persistSort() {
+    // Снимаем значения сразу: несколько быстрых переключений не должны
+    // изменить аргументы уже начатой асинхронной записи.
+    final mode = _state.sortMode.name;
+    final order = List<String>.from(_state.manualOrder);
+    return SettingsStorage.setNodeSort(mode, order);
   }
 
   // §070 — sort options setters (per-session toggle'ы).
@@ -1966,12 +1969,12 @@ class HomeController extends ChangeNotifier
   /// §071: commit drag-reorder в manual mode.
   /// [newOrder] — полный non-pinned порядок (без direct/auto если они pinned).
   /// Заодно переключает sortMode на `manual`.
-  void commitManualReorder(List<String> newOrder) {
+  Future<void> commitManualReorder(List<String> newOrder) async {
     _emit(_state.copyWith(
       sortMode: NodeSortMode.manual,
       manualOrder: List<String>.unmodifiable(newOrder),
     ));
-    _persistSort(); // §100 — сохранить порядок ручной сортировки
+    await _persistSort(); // §100 — сохранить порядок ручной сортировки
   }
 
   void clearError() {
