@@ -1281,7 +1281,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 ],
               );
                 return _manualRefreshEnabled
-                    ? _OperaPullToRefresh(
+                    ? OperaPullToRefresh(
                         canRefresh: !ctrl.busy,
                         onRefresh: _updateAll,
                         child: scrollView,
@@ -1944,7 +1944,8 @@ class _SourceDisplayRow {
 /// The gesture is driven by scroll notifications (never GestureDetector), and
 /// only negative overscroll at the top edge can arm a refresh. This avoids
 /// bottom-edge swipes starting the operation.
-class _OperaPullToRefresh extends StatefulWidget {
+/// Pull-to-refresh widget that starts only after a downward drag reaches the top-edge threshold.
+class OperaPullToRefresh extends StatefulWidget {
   const _OperaPullToRefresh({
     required this.child,
     required this.onRefresh,
@@ -1956,10 +1957,10 @@ class _OperaPullToRefresh extends StatefulWidget {
   final bool canRefresh;
 
   @override
-  State<_OperaPullToRefresh> createState() => _OperaPullToRefreshState();
+  State<OperaPullToRefresh> createState() => _OperaPullToRefreshState();
 }
 
-class _OperaPullToRefreshState extends State<_OperaPullToRefresh>
+class _OperaPullToRefreshState extends State<OperaPullToRefresh>
     with TickerProviderStateMixin {
   static const double _threshold = 120.0;
   static const double _maxPull = 180.0;
@@ -2044,27 +2045,28 @@ class _OperaPullToRefreshState extends State<_OperaPullToRefresh>
     if (amount <= 0) return;
 
     // Linear motion up to the threshold, then damp additional movement by 0.5.
-    final beforeThreshold = (_threshold - _offset).clamp(0.0, amount);
+    final beforeThreshold =
+        (_threshold - _offset).clamp(0.0, amount).toDouble();
     final afterThreshold = amount - beforeThreshold;
     final next = (_offset + beforeThreshold + afterThreshold * 0.5)
-        .clamp(0.0, _maxPull);
+        .clamp(0.0, _maxPull)
+        .toDouble();
     _setPullOffset(next);
   }
 
   void _setPullOffset(double next) {
-    final clamped = next.clamp(0.0, _maxPull);
+    final clamped = next.clamp(0.0, _maxPull).toDouble();
     if ((clamped - _offset).abs() < 0.1) return;
 
     final wasArmed = _isThresholdReached;
     _offset = clamped;
     _isThresholdReached = _offset >= _threshold;
-    _appearance.value = (_offset / _threshold).clamp(0.0, 1.0);
-    _position.value = (_offset / _maxPull).clamp(0.0, 1.0);
+    _appearance.value =
+        (_offset / _threshold).clamp(0.0, 1.0).toDouble();
+    _position.value = (_offset / _maxPull).clamp(0.0, 1.0).toDouble();
     _syncRotation();
 
-    if (wasArmed != _isThresholdReached || mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   void _syncRotation() {
@@ -2192,7 +2194,8 @@ class _OperaPullToRefreshState extends State<_OperaPullToRefresh>
                     _bounce,
                   ]),
                   builder: (context, _) {
-                    final appearance = _appearance.value.clamp(0.0, 1.0);
+                    final appearance =
+                        _appearance.value.clamp(0.0, 1.0).toDouble();
                     final scale = _isBouncing
                         ? Tween<double>(begin: 0.8, end: 1.0).transform(
                             Curves.bounceOut.transform(_bounce.value),
