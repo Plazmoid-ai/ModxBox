@@ -1939,12 +1939,8 @@ class _SourceDisplayRow {
 }
 
 
-/// Pull-to-refresh tuned for the subscription source list.
-///
-/// The gesture is driven by scroll notifications (never GestureDetector), and
-/// only negative overscroll at the top edge can arm a refresh. This avoids
-/// bottom-edge swipes starting the operation.
-/// Pull-to-refresh widget that starts only after a downward drag reaches the top-edge threshold.
+/// Утилитарное ручное обновление общего списка источников.
+/// Жест определяется только ScrollNotification; запускается лишь у верхнего края.
 class OperaPullToRefresh extends StatefulWidget {
   const OperaPullToRefresh({
     super.key,
@@ -1962,35 +1958,22 @@ class OperaPullToRefresh extends StatefulWidget {
 }
 
 class _OperaPullToRefreshState extends State<OperaPullToRefresh>
-    with TickerProviderStateMixin {
-  static const double _threshold = 120.0;
-  static const double _maxPull = 180.0;
-  static const double _maxVisualOffset = 78.0;
-  static const Duration _animationDuration = Duration(milliseconds: 300);
-  static const Color _activeColor = Color(0xFFF79C1F);
+    with SingleTickerProviderStateMixin {
+  static const double _threshold = 100.0;
+  static const double _maxVisualOffset = 56.0;
+  static const Duration _rotationDuration = Duration(milliseconds: 800);
 
   double _offset = 0;
-  bool _isLoading = false;
   bool _isDragging = false;
-  bool _isThresholdReached = false;
-  bool _isSettling = false;
-  bool _isBouncing = false;
+  bool _isLoading = false;
+  bool _thresholdHapticSent = false;
 
-  late final AnimationController _appearance = AnimationController(
-    vsync: this,
-    duration: _animationDuration,
-  );
-  late final AnimationController _position = AnimationController(
-    vsync: this,
-    duration: _animationDuration,
-  );
+  double get _progress => (_offset / _threshold).clamp(0.0, 1.0).toDouble();
+  bool get _isThresholdReached => _progress >= 1.0;
+
   late final AnimationController _rotation = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 800),
-  );
-  late final AnimationController _bounce = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 520),
+    duration: _rotationDuration,
   );
 
   bool _isAtTop(ScrollMetrics metrics) =>
@@ -2001,25 +1984,21 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
     if (notification.depth != 0) return false;
 
     if (notification is ScrollStartNotification) {
-      if (notification.dragDetails != null &&
-          !_isLoading &&
-          !_isSettling) {
+      if (notification.dragDetails != null && !_isLoading) {
         _isDragging = true;
+        _thresholdHapticSent = false;
       }
     } else if (notification is OverscrollNotification) {
       if (_isDragging &&
           !_isLoading &&
-          !_isSettling &&
           _isAtTop(notification.metrics) &&
           notification.overscroll < 0) {
         _addPull(-notification.overscroll);
       }
     } else if (notification is ScrollUpdateNotification) {
-      // A positive delta at the top means the finger is retracting the pull.
-      // Subtract it instead of permanently canceling an already-armed drag.
+      // Positive delta at the top means the finger is retracting the pull.
       if (_isDragging &&
           !_isLoading &&
-          !_isSettling &&
           notification.dragDetails != null &&
           notification.metrics.axisDirection == AxisDirection.down &&
           _offset > 0) {
@@ -2029,18 +2008,14 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
     } else if (notification is ScrollEndNotification) {
       if (_isDragging && !_isLoading) {
         _isDragging = false;
-        final armed = _isThresholdReached && _offset >= _threshold;
+        final armed = _isThresholdReached;
         if (armed && widget.canRefresh) {
           setState(() {});
           unawaited(_runRefresh());
-        } else if (_offset > 0 ||
-            _appearance.value > 0 ||
-            _position.value > 0) {
-          setState(() {});
-          unawaited(_settleBack());
+        } else if (_offset > 0) {
+          _cancelPull();
         } else {
-          _isThresholdReached = false;
-          _syncRotation();
+          _thresholdHapticSent = false;
           setState(() {});
         }
       }
@@ -2052,33 +2027,28 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
   void _addPull(double amount) {
     if (amount <= 0) return;
 
-    // Linear motion up to the threshold, then damp additional movement by 0.5.
-    final beforeThreshold =
-        (_threshold - _offset).clamp(0.0, amount).toDouble();
-    final afterThreshold = amount - beforeThreshold;
-    final next = (_offset + beforeThreshold + afterThreshold * 0.5)
-        .clamp(0.0, _maxPull)
-        .toDouble();
-    _setPullOffset(next);
-  }
+    final wasThresholdReached = _isThresholdReached;
+    final next = (_offset + amount).clamp(0.0, _threshold).toDouble();
+    _offset = next;
 
-  void _setPullOffset(double next) {
-    final clamped = next.clamp(0.0, _maxPull).toDouble();
-    if ((clamped - _offset).abs() < 0.1) return;
-
-    _offset = clamped;
-    _isThresholdReached = _offset >= _threshold;
-    _appearance.value =
-        (_offset / _threshold).clamp(0.0, 1.0).toDouble();
-    _position.value = (_offset / _maxPull).clamp(0.0, 1.0).toDouble();
-    _syncRotation();
+    if (!_thresholdHapticSent &&
+        !wasThresholdReached &&
+        _isThresholdReached) {
+      _thresholdHapticSent = true;
+      unawaited(HapticFeedback.mediumImpact());
+    }
 
     if (mounted) setState(() {});
   }
 
+  void _setPullOffset(double next) {
+    final clamped = next.clamp(0.0, _threshold).toDouble();
+    if ((clamped - _offset).abs() < 0.1) return;
+    setState(() => _offset = clamped);
+  }
+
   void _syncRotation() {
-    final shouldSpin = _isLoading || (_isDragging && _isThresholdReached);
-    if (shouldSpin) {
+    if (_isLoading) {
       if (!_rotation.isAnimating) _rotation.repeat();
     } else if (_rotation.isAnimating || _rotation.value != 0) {
       _rotation
@@ -2089,14 +2059,13 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
 
   Future<void> _runRefresh() async {
     if (_isLoading || !widget.canRefresh) {
-      await _settleBack();
+      _cancelPull();
       return;
     }
 
     setState(() {
       _isLoading = true;
       _isDragging = false;
-      _isThresholdReached = true;
     });
     _syncRotation();
 
@@ -2116,75 +2085,39 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
     if (!mounted) return;
     setState(() {
       _isLoading = false;
-      _isThresholdReached = false;
-      _isBouncing = true;
-      _isSettling = true;
+      _offset = 0;
+      _thresholdHapticSent = false;
     });
     _syncRotation();
-
-    // Bounce the icon on completion, then fade and return it to its origin.
-    try {
-      await _bounce.forward(from: 0);
-    } on TickerCanceled {
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _isBouncing = false);
-    await _animateBack();
   }
 
-  Future<void> _settleBack() async {
-    if (_isSettling || _isLoading) return;
-    _isDragging = false;
-    _isThresholdReached = false;
-    _syncRotation();
-    await _animateBack();
-  }
-
-  Future<void> _animateBack() async {
-    if (!mounted) return;
-    setState(() => _isSettling = true);
-
-    try {
-      await Future.wait<void>([
-        _appearance.animateBack(
-          0,
-          duration: _animationDuration,
-          curve: Curves.easeIn,
-        ),
-        _position.animateBack(
-          0,
-          duration: _animationDuration,
-          curve: Curves.easeIn,
-        ),
-      ]);
-    } on TickerCanceled {
-      return;
-    }
-
+  void _cancelPull() {
     if (!mounted) return;
     setState(() {
       _offset = 0;
       _isDragging = false;
-      _isThresholdReached = false;
-      _isSettling = false;
-      _isBouncing = false;
+      _thresholdHapticSent = false;
     });
-    _syncRotation();
   }
 
   @override
   void dispose() {
-    _appearance.dispose();
-    _position.dispose();
     _rotation.dispose();
-    _bounce.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final progress = _progress;
+    final color = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white70
+        : Colors.black87;
+
+    // While pulling, the arc follows _progress. During loading it becomes a
+    // short segment so the single rotation controller visibly communicates work.
+    final arcProgress = _isLoading ? 0.25 : progress;
     final topInset = MediaQuery.paddingOf(context).top + 4;
+
     return Stack(
       fit: StackFit.expand,
       clipBehavior: Clip.none,
@@ -2201,64 +2134,21 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
             child: Center(
               child: RepaintBoundary(
                 key: const ValueKey('opera-pull-refresh-icon'),
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([
-                    _appearance,
-                    _position,
-                    _rotation,
-                    _bounce,
-                  ]),
-                  builder: (context, _) {
-                    final appearance =
-                        _appearance.value.clamp(0.0, 1.0).toDouble();
-                    final scale = _isBouncing
-                        ? Tween<double>(begin: 0.8, end: 1.0).transform(
-                            Curves.bounceOut.transform(_bounce.value),
-                          )
-                        : 0.8 + 0.2 * appearance;
-                    final stretchY = 1.0 + 0.10 * appearance;
-                    final active = _isThresholdReached ||
-                        _isLoading ||
-                        _isBouncing;
-                    final color = active ? _activeColor : Colors.grey.shade400;
-
-                    return Opacity(
-                      opacity: appearance,
-                      child: Transform.translate(
-                        offset: Offset(0, _maxVisualOffset * _position.value),
-                        child: Transform.scale(
-                          scale: scale,
-                          child: Transform(
-                            alignment: Alignment.center,
-                            transform: Matrix4.diagonal3Values(
-                              1,
-                              stretchY,
-                              1,
-                            ),
-                            child: Material(
-                              elevation: 4,
-                              color: Theme.of(context).colorScheme.surface,
-                              shape: const CircleBorder(),
-                              child: SizedBox(
-                                width: 56,
-                                height: 56,
-                                child: Center(
-                                  child: RotationTransition(
-                                    turns: _rotation,
-                                    child: Icon(
-                                      Icons.refresh,
-                                      size: 48,
-                                      color: color,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                child: Opacity(
+                  opacity: progress,
+                  child: Transform.translate(
+                    offset: Offset(0, _maxVisualOffset * progress),
+                    child: RotationTransition(
+                      turns: _rotation,
+                      child: CustomPaint(
+                        size: const Size(32, 32),
+                        painter: _ArcPainter(
+                          progress: arcProgress,
+                          color: color,
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -2267,4 +2157,48 @@ class _OperaPullToRefreshState extends State<OperaPullToRefresh>
       ],
     );
   }
+}
+
+class _ArcPainter extends CustomPainter {
+  const _ArcPainter({
+    required this.progress,
+    required this.color,
+  });
+
+  static const double _strokeWidth = 2.5;
+  static const double _twoPi = 6.283185307179586;
+
+  final double progress;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final radius = size.shortestSide / 2 - _strokeWidth / 2;
+    final center = Offset(size.width / 2, size.height / 2);
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final trackPaint = Paint()
+      ..color = color.withValues(alpha: 0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth;
+
+    final arcPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, trackPaint);
+    canvas.drawArc(
+      rect,
+      -_twoPi / 4,
+      _twoPi * progress.clamp(0.0, 1.0).toDouble(),
+      false,
+      arcPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArcPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.color != color;
 }
